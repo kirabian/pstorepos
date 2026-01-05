@@ -13,7 +13,7 @@
                 <div class="bg-dark text-white p-2 rounded-3 shadow-sm">
                     <i class="fas fa-shield-alt fs-4"></i>
                 </div>
-                <h1 class="fw-900 text-dark mb-0 display-6 tracking-tighter">Superadmin Center</h1>
+                <h1 class="fw-900 text-dark mb-0 display-6 tracking-tighter">Superadmin Center Test</h1>
             </div>
             <p class="text-muted small fw-bold text-uppercase ms-5 ps-2" style="letter-spacing: 4px; opacity: 0.6;">PSTORE Core Intelligence System</p>
         </div>
