@@ -4,7 +4,7 @@
             <div class="card border-0 shadow rounded-4">
                 <div class="card-header bg-white p-4 border-bottom-0">
                     <h5 class="mb-1 fw-bold text-dark">Tambah Produk Baru</h5>
-                    <p class="text-muted small mb-0">Isi data fisik produk. Stok akan terisi otomatis dari input.</p>
+                    <p class="text-muted small mb-0">Lengkapi data produk di bawah ini.</p>
                 </div>
                 
                 <div class="card-body p-4 pt-0">
@@ -26,7 +26,7 @@
                     <form wire:submit.prevent="save">
                         <div class="row g-3">
                             
-                            {{-- --- BAGIAN 1: BRAND & NAMA --- --}}
+                            {{-- --- BAGIAN 1: IDENTITAS PRODUK --- --}}
                             @if($form_type != 'jasa')
                             <div class="col-12 col-md-6">
                                 <label class="form-label fw-bold small text-secondary">Merek / Brand <span class="text-danger">*</span></label>
@@ -42,7 +42,7 @@
                                 <label class="form-label fw-bold small text-secondary">Nama Tipe / Produk <span class="text-danger">*</span></label>
                                 <div class="position-relative">
                                     <input type="text" wire:model="name" class="form-control form-control-lg fs-6 rounded-3" 
-                                           list="product-list" placeholder="Contoh: iPhone 13 Pro" autocomplete="off">
+                                           list="product-list" placeholder="{{ $form_type == 'jasa' ? 'Contoh: Ganti LCD iPhone 11' : 'Contoh: iPhone 13 Pro' }}" autocomplete="off">
                                     <datalist id="product-list">
                                         @foreach($existing_types as $type) <option value="{{ $type }}"> @endforeach
                                     </datalist>
@@ -102,13 +102,12 @@
                                 <div class="col-12 mt-4">
                                     <div class="card bg-light border-0 rounded-3">
                                         <div class="card-body">
-                                            <label class="form-label fw-bold small text-secondary d-flex justify-content-between align-items-center mb-2">
-                                                <span>Input Daftar IMEI</span>
-                                                <span class="badge bg-primary rounded-pill">Total: {{ $stock }} Unit</span>
+                                            <label class="form-label fw-bold small text-secondary mb-2">
+                                                Input Daftar IMEI (Stok)
                                             </label>
                                             <textarea wire:model.live="imei_list" class="form-control font-monospace text-uppercase" rows="5" 
                                                 placeholder="Scan/Ketik IMEI disini...&#10;8642390500... (Min 15 digit)&#10;8642390501..."></textarea>
-                                            <div class="form-text small text-muted mt-1"><i class="fas fa-info-circle"></i> Pisahkan dengan Enter (Baris baru). Min 15 digit.</div>
+                                            <div class="form-text small text-muted mt-1"><i class="fas fa-info-circle"></i> Pisahkan dengan Enter (Baris baru). Min 15 digit per IMEI.</div>
                                             @error('imei_list') <div class="text-danger small mt-1 fw-bold">{{ $message }}</div> @enderror
                                         </div>
                                     </div>
@@ -116,7 +115,7 @@
 
                                 <div class="col-12">
                                     <label class="form-label fw-bold small text-secondary">Catatan (Opsional)</label>
-                                    <input type="text" wire:model="description" class="form-control rounded-3" placeholder="Contoh: Ex iBox, Fullset, Battery Health 90%...">
+                                    <input type="text" wire:model="description" class="form-control rounded-3" placeholder="Contoh: Ex iBox, Fullset...">
                                 </div>
                             
                             {{-- --- BAGIAN 3: NON-IMEI --- --}}
@@ -135,6 +134,28 @@
                                     <input type="text" wire:model="description" class="form-control rounded-3" placeholder="Keterangan tambahan...">
                                 </div>
                             @endif
+
+                            {{-- --- BAGIAN 4: HARGA (SEMUA TIPE) --- --}}
+                            <div class="col-12"><hr class="my-3 border-light"></div>
+                            <div class="col-12"><h6 class="fw-bold text-primary mb-3">Informasi Harga</h6></div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-bold small text-secondary">Harga Modal (Rp) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">Rp</span>
+                                    <input type="number" wire:model="cost_price" class="form-control border-start-0 ps-0" placeholder="0">
+                                </div>
+                                @error('cost_price') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-bold small text-secondary">Harga Jual / SRP (Rp) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">Rp</span>
+                                    <input type="number" wire:model="srp_price" class="form-control border-start-0 ps-0" placeholder="0">
+                                </div>
+                                @error('srp_price') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                            </div>
 
                         </div>
 

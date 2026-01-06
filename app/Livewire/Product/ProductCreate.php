@@ -27,8 +27,10 @@ class ProductCreate extends Component
     public $condition = 'Baru'; 
     public $description; 
     
-    // Stok
+    // Stok & Harga
     public $stock = 0;
+    public $cost_price = 0;
+    public $srp_price = 0;
     
     // Khusus IMEI
     public $imei_list; 
@@ -39,7 +41,7 @@ class ProductCreate extends Component
     public function updatedFormType()
     {
         $this->resetValidation();
-        $this->reset(['name', 'ram', 'storage', 'color', 'description', 'imei_list', 'stock']);
+        $this->reset(['name', 'ram', 'storage', 'color', 'description', 'imei_list', 'stock', 'cost_price', 'srp_price']);
         
         // Auto select category
         if($this->form_type == 'jasa') {
@@ -64,20 +66,7 @@ class ProductCreate extends Component
         }
     }
 
-    // Hitung stok real-time saat ngetik IMEI
-    public function updatedImeiList()
-    {
-        if ($this->form_type == 'imei' && !empty($this->imei_list)) {
-            // Filter baris kosong dan hitung jumlahnya
-            $lines = array_filter(array_map('trim', explode("\n", $this->imei_list)));
-            $this->stock = count($lines);
-        } else {
-            // Jika tipe imei tapi kosong, stok 0
-            if($this->form_type == 'imei') {
-                $this->stock = 0;
-            }
-        }
-    }
+    // FUNGSI updatedImeiList() DIHAPUS AGAR TIDAK ADA KALKULASI REALTIME YANG MENGGANGGU
 
     public function save()
     {
@@ -85,6 +74,8 @@ class ProductCreate extends Component
         $rules = [
             'name' => 'required|min:3',
             'category_id' => 'required',
+            'cost_price' => 'required|numeric|min:0',
+            'srp_price' => 'required|numeric|min:0',
         ];
 
         if ($this->form_type == 'imei') {
@@ -108,16 +99,17 @@ class ProductCreate extends Component
         // 2. Validasi Khusus IMEI (Panjang Karakter & Duplikat di Input)
         $validImeis = [];
         if ($this->form_type == 'imei') {
+            // Pisahkan baris per baris
             $lines = explode("\n", $this->imei_list);
             $duplicates = [];
             
             foreach ($lines as $line) {
                 $cleanImei = trim($line);
-                if (empty($cleanImei)) continue;
+                if (empty($cleanImei)) continue; // Skip baris kosong
 
                 // Cek Panjang IMEI (Minimal 15)
                 if (strlen($cleanImei) < 15) {
-                    $this->addError('imei_list', "IMEI '$cleanImei' kurang dari 15 digit.");
+                    $this->addError('imei_list', "IMEI '$cleanImei' tidak valid (kurang dari 15 digit).");
                     return;
                 }
 
@@ -139,7 +131,7 @@ class ProductCreate extends Component
                 return;
             }
             
-            // Set Stok Akhir berdasarkan jumlah IMEI valid
+            // Set Stok Akhir berdasarkan jumlah valid IMEI untuk disimpan ke DB
             $this->stock = count($validImeis);
         }
 
@@ -175,12 +167,18 @@ class ProductCreate extends Component
                 ],
                 [
                     'stock' => 0, 
-                    'cost_price' => 0,
-                    'srp_price' => 0,
+                    'cost_price' => $this->cost_price,
+                    'srp_price' => $this->srp_price,
                 ]
             );
 
-            // 5. Simpan Data Stok / IMEI
+            // Update harga untuk memastikan data terbaru
+            $variant->update([
+                'cost_price' => $this->cost_price,
+                'srp_price' => $this->srp_price,
+            ]);
+
+            // 5. Jika IMEI, Simpan ke tabel product_imeis & update stok
             if ($this->form_type == 'imei') {
                 foreach ($validImeis as $imei) {
                     ProductImei::create([
@@ -192,14 +190,13 @@ class ProductCreate extends Component
                 // Tambahkan stok ke varian yang sudah ada (increment)
                 $variant->increment('stock', count($validImeis));
             } else {
-                // Jika non-imei, tambahkan stok langsung
+                // Jika non-imei/jasa, tambahkan stok manual
                 $variant->increment('stock', $this->stock);
             }
 
             DB::commit();
 
-            session()->flash('success', 'Produk berhasil ditambahkan.');
-            // REVISI: Redirect ke INDEX, bukan edit.
+            session()->flash('success', 'Produk berhasil disimpan.');
             return redirect()->route('product.index');
 
         } catch (\Exception $e) {
