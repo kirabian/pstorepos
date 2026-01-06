@@ -1,26 +1,26 @@
 <div class="container-fluid">
     
-    {{-- Dependencies: SweetAlert2 & TomSelect (Untuk Multi Select keren) --}}
+    {{-- DEPENDENCIES --}}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+    
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 
     <style>
         .modal-backdrop { z-index: 1055 !important; }
         .modal { z-index: 1060 !important; }
         
-        /* Badge RAM Styling */
+        /* Fix TomSelect Dropdown agar muncul di atas modal */
+        .ts-dropdown { z-index: 1070 !important; }
+        
+        /* Style Badge RAM di Tabel */
         .badge-ram {
-            font-size: 0.75rem;
-            font-weight: 500;
-            background-color: #eef2ff; /* Warna biru muda lembut */
+            background-color: #eef2ff;
             color: #4f46e5;
             border: 1px solid #c7d2fe;
+            font-weight: 500;
         }
-
-        /* TomSelect Custom Fixes */
-        .ts-control { border-radius: 0.5rem !important; padding: 0.6rem !important; }
-        .ts-dropdown { z-index: 1070 !important; } /* Agar muncul di atas modal */
     </style>
 
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
@@ -63,9 +63,7 @@
                             <tr>
                                 <td class="px-4 fw-bold text-muted">{{ $tipes->firstItem() + $index }}</td>
                                 
-                                <td>
-                                    <span class="fw-bold text-dark">{{ $tipe->nama }}</span>
-                                </td>
+                                <td><span class="fw-bold text-dark">{{ $tipe->nama }}</span></td>
 
                                 <td>
                                     <span class="badge bg-dark text-white rounded-pill px-3 fw-normal">
@@ -78,7 +76,7 @@
                                         @if(!empty($tipe->ram_storage))
                                             @foreach($tipe->ram_storage as $ram)
                                                 <span class="badge badge-ram rounded-2 px-2 py-1">
-                                                    {{ $ram }} GB
+                                                    {{ $ram }}
                                                 </span>
                                             @endforeach
                                         @else
@@ -160,15 +158,22 @@
                         <div class="mb-4">
                             <label class="form-label fw-bold small text-uppercase text-secondary">Varian RAM & Penyimpanan <span class="text-danger">*</span></label>
                             
+                            {{-- 
+                                PENTING: Gunakan wire:ignore agar Livewire tidak mereset elemen ini saat render ulang.
+                                Hapus wire:model dari <select> agar tidak bentrok.
+                            --}}
                             <div wire:ignore>
-                                <select id="ram-select" multiple placeholder="Pilih Varian (Bisa lebih dari satu)..." autocomplete="off">
+                                <select id="ram-select" multiple autocomplete="off" placeholder="Pilih atau ketik varian baru...">
                                     @foreach($ramOptions as $opt)
                                         <option value="{{ $opt }}">{{ $opt }}</option>
                                     @endforeach
                                 </select>
                             </div>
-                            @error('ram_storage') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
-                            <div class="form-text small">Klik kolom untuk memilih varian.</div>
+                            
+                            @error('ram_storage') 
+                                <div class="text-danger small mt-1 d-block">{{ $message }}</div> 
+                            @enderror
+                            <div class="form-text small text-muted">Ketik lalu tekan enter untuk menambah opsi baru (misal: 24/1TB).</div>
                         </div>
 
                         <div class="d-grid gap-2">
@@ -187,62 +192,70 @@
 
 </div>
 
-{{-- SCRIPT: Menghubungkan TomSelect dengan Livewire --}}
+{{-- SCRIPT HANDLER --}}
 @script
 <script>
-    let tomSelectInstance;
+    let tomSelectInstance = null;
 
-    // Inisialisasi TomSelect saat halaman dimuat
-    const initTomSelect = () => {
+    // Fungsi Inisialisasi TomSelect
+    function initTomSelect() {
         const el = document.getElementById('ram-select');
-        if (el) {
+        
+        // Cek jika elemen ada dan belum diinisialisasi
+        if (el && !tomSelectInstance) {
             tomSelectInstance = new TomSelect(el, {
-                plugins: ['remove_button'], // Ada tombol X kecil untuk hapus
-                create: true, // User bisa ketik manual jika opsi tidak ada (misal: 20/1TB)
-                onItemAdd: function() {
-                    // Update property Livewire saat item dipilih
-                    @this.set('ram_storage', this.getValue());
+                plugins: ['remove_button', 'dropdown_input'], // Fitur Hapus & Input
+                create: true, // User bisa ngetik manual
+                maxItems: null, // Unlimited items (Bisa pilih banyak)
+                persist: false,
+                sortField: {
+                    field: "text",
+                    direction: "asc"
                 },
-                onItemRemove: function() {
-                    // Update property Livewire saat item dihapus
-                    @this.set('ram_storage', this.getValue());
+                
+                // EVENT PENTING: Kirim data ke Livewire setiap ada perubahan
+                onChange: function(values) {
+                    // Update properti $ram_storage di Backend
+                    @this.set('ram_storage', values);
                 }
             });
         }
-    };
+    }
 
+    // Jalankan inisialisasi pertama kali
     initTomSelect();
 
-    // Event: Saat tombol Edit ditekan, isi TomSelect dengan data dari database
+    // Event 1: Saat tombol Edit diklik (Isi Data ke TomSelect)
     Livewire.on('set-select-values', (data) => {
         if (tomSelectInstance) {
-            tomSelectInstance.clear(true); // Bersihkan dulu (silent mode)
-            // Tambahkan opsi jika belum ada (untuk kasus create:true)
-            data.values.forEach(val => {
-                tomSelectInstance.addOption({value: val, text: val});
-                tomSelectInstance.addItem(val, true); // Select item (silent mode)
-            });
+            tomSelectInstance.clear(true); // Hapus data lama (silent)
+            
+            // Masukkan data baru dari database
+            if (data.values && Array.isArray(data.values)) {
+                data.values.forEach(val => {
+                    tomSelectInstance.addOption({value: val, text: val}); // Tambah opsi jika blm ada
+                    tomSelectInstance.addItem(val, true); // Pilih item (silent)
+                });
+            }
         }
     });
 
-    // Event: Saat Modal ditutup/Reset, kosongkan TomSelect
+    // Event 2: Saat Reset/Batal/Close Modal (Kosongkan TomSelect)
     Livewire.on('reset-select', () => {
         if (tomSelectInstance) {
             tomSelectInstance.clear();
         }
     });
 
-    // Event: Tutup Modal Bootstrap
+    // Event 3: Tutup Modal
     Livewire.on('close-modal', () => {
         const modalEl = document.getElementById('tipeModal');
         const modal = bootstrap.Modal.getInstance(modalEl);
         if (modal) modal.hide();
         document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-        document.body.classList.remove('modal-open');
-        document.body.style.overflow = '';
     });
 
-    // Event: Notifikasi SweetAlert
+    // Event 4: Notifikasi Swal
     Livewire.on('swal', (data) => {
         const eventData = data[0];
         Swal.mixin({
