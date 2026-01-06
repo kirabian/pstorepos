@@ -10,22 +10,18 @@ use Livewire\Attributes\Rule;
 class MerkIndex extends Component
 {
     use WithPagination;
-
-    // Supaya pagination menggunakan style Bootstrap
     protected $paginationTheme = 'bootstrap';
 
     public $search = '';
     public $merkId;
     public $isEdit = false;
 
-    // Validasi Langsung (Livewire 3)
     #[Rule('required|min:2|unique:merks,nama')]
     public $nama;
 
     #[Rule('nullable|string')]
     public $deskripsi;
 
-    // Reset Form
     public function resetInputFields()
     {
         $this->nama = '';
@@ -35,10 +31,9 @@ class MerkIndex extends Component
         $this->resetErrorBag();
     }
 
-    // Fungsi Create / Store
     public function store()
     {
-        // Custom validasi untuk Edit agar unique ignore ID sendiri
+        // Validasi Custom untuk Edit
         $rules = [
             'nama' => 'required|min:2|unique:merks,nama,' . $this->merkId,
             'deskripsi' => 'nullable|string'
@@ -51,14 +46,18 @@ class MerkIndex extends Component
             'deskripsi' => $this->deskripsi
         ]);
 
-        // Kirim event browser untuk tutup modal dan notifikasi
         $this->dispatch('close-modal');
-        $this->dispatch('alert', type: 'success', message: $this->merkId ? 'Merk berhasil diperbarui!' : 'Merk berhasil ditambahkan!');
+        
+        // PENTING: Kirim event SweetAlert
+        $this->dispatch('swal', [
+            'title' => $this->merkId ? 'Berhasil Diperbarui!' : 'Berhasil Ditambahkan!',
+            'text' => 'Data merk telah disimpan ke sistem.',
+            'icon' => 'success'
+        ]);
         
         $this->resetInputFields();
     }
 
-    // Fungsi Edit (Ambil Data)
     public function edit($id)
     {
         $merk = Merk::findOrFail($id);
@@ -66,20 +65,23 @@ class MerkIndex extends Component
         $this->nama = $merk->nama;
         $this->deskripsi = $merk->deskripsi;
         $this->isEdit = true;
-
-        $this->dispatch('open-modal');
+        // Buka modal dari backend tidak perlu jika sudah pakai data-bs-toggle di tombol
     }
 
-    // Fungsi Delete
     public function delete($id)
     {
         Merk::find($id)->delete();
-        $this->dispatch('alert', type: 'success', message: 'Merk berhasil dihapus!');
+        
+        // PENTING: Kirim event SweetAlert Hapus
+        $this->dispatch('swal', [
+            'title' => 'Dihapus!',
+            'text' => 'Data merk berhasil dihapus.',
+            'icon' => 'success'
+        ]);
     }
 
     public function render()
     {
-        // Search Logic
         $merks = Merk::query()
             ->where('nama', 'like', '%' . $this->search . '%')
             ->orWhere('deskripsi', 'like', '%' . $this->search . '%')
