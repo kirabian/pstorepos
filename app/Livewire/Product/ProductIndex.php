@@ -16,43 +16,52 @@ class ProductIndex extends Component
     use WithFileUploads;
 
     public $file_import;
+    public $previewData = []; // Menampung data pratinjau
 
-    public function importFile()
+    // Fungsi ini otomatis jalan saat file dipilih
+    public function updatedFileImport()
     {
         $this->validate([
-            'file_import' => 'required|mimes:csv,xls,xlsx|max:10240', // Max 10MB
+            'file_import' => 'required|mimes:csv,xls,xlsx|max:10240',
         ]);
 
         $path = $this->file_import->getRealPath();
-        
-        try {
-            // Load file menggunakan PhpSpreadsheet agar bisa baca XLSX & CSV
-            $spreadsheet = IOFactory::load($path);
-            $data = $spreadsheet->getActiveSheet()->toArray();
+        $spreadsheet = IOFactory::load($path);
+        $data = $spreadsheet->getActiveSheet()->toArray();
 
-            DB::beginTransaction();
-            
-            // Ambil atau buat kategori default
+        // Ambil data (skip header baris pertama)
+        $this->previewData = [];
+        foreach ($data as $index => $row) {
+            if ($index === 0 || empty($row[0])) continue;
+            $this->previewData[] = [
+                'brand' => strtoupper(trim($row[0])),
+                'name'  => trim($row[1]),
+            ];
+        }
+    }
+
+    public function cancelImport()
+    {
+        $this->reset(['file_import', 'previewData']);
+    }
+
+    public function processImport()
+    {
+        if (empty($this->previewData)) return;
+
+        DB::beginTransaction();
+        try {
             $defaultCat = Category::firstOrCreate(['name' => 'Handphone']);
 
-            foreach ($data as $index => $row) {
-                // Skip header (Baris 1) dan pastikan kolom Merek & Tipe tidak kosong
-                if ($index === 0 || empty($row[0]) || empty($row[1])) continue; 
-
-                $brandName = strtoupper(trim($row[0]));
-                $productName = trim($row[1]);
-
-                // 1. Cari atau Buat Brand
-                $brand = Brand::firstOrCreate(['name' => $brandName]);
-
-                // 2. Cari atau Buat Produk
+            foreach ($this->previewData as $item) {
+                $brand = Brand::firstOrCreate(['name' => $item['brand']]);
+                
                 $product = Product::firstOrCreate([
-                    'name' => $productName,
+                    'name' => $item['name'],
                     'brand_id' => $brand->id,
                     'category_id' => $defaultCat->id
                 ]);
 
-                // 3. Buat Varian Default jika belum ada
                 ProductVariant::firstOrCreate([
                     'product_id' => $product->id,
                     'attribute_name' => 'Original',
@@ -64,14 +73,12 @@ class ProductIndex extends Component
             }
 
             DB::commit();
-            session()->flash('success', 'Berhasil mengimport ' . (count($data) - 1) . ' data produk.');
-            
+            session()->flash('success', count($this->previewData) . ' Data berhasil dimasukkan ke sistem.');
+            $this->reset(['file_import', 'previewData']);
         } catch (\Exception $e) {
             DB::rollBack();
-            session()->flash('error', 'Gagal memproses file: ' . $e->getMessage());
+            session()->flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
-
-        $this->reset('file_import');
     }
 
     public function deleteProduct($id)
