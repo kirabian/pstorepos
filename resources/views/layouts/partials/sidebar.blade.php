@@ -1,7 +1,7 @@
 <nav id="sidebar" class="bg-black text-white d-flex flex-column shadow-lg"
-    style="min-width: 280px; max-width: 280px; min-height: 100vh; position: sticky; top: 0; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1050;">
+    style="min-width: 280px; max-width: 280px; min-height: 100vh; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1050;">
 
-    <div class="p-4 pt-5 flex-grow-1 overflow-hidden">
+    <div class="p-4 pt-5 flex-grow-1 overflow-hidden overflow-y-auto">
         <div class="d-flex align-items-center mb-5 sidebar-logo-container px-2">
             <img src="{{ asset('images/logo-pstore.png') }}" alt="PSTORE Navigation Logo" width="140" height="35"
                 class="sidebar-logo-img invert-logo" style="height: 35px; width: auto;">
@@ -89,7 +89,7 @@
         </ul>
     </div>
 
-    <div class="p-3 mb-3">
+    <div class="p-3 mb-3 mt-auto">
         <div
             class="bg-white bg-opacity-10 rounded-4 p-3 border border-white border-opacity-10 user-card overflow-hidden">
             <div class="d-flex align-items-center mb-3 user-info-wrapper">
@@ -138,51 +138,71 @@
         color: white !important;
     }
 
-    #sidebar.minimized {
-        min-width: 95px !important;
-        max-width: 95px !important;
+    /* DESKTOP: Minimized State */
+    @media (min-width: 992px) {
+        #sidebar {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+        }
+
+        #sidebar.minimized {
+            min-width: 95px !important;
+            max-width: 95px !important;
+        }
+
+        #sidebar.minimized .sidebar-text {
+            display: none !important;
+        }
+
+        #sidebar.minimized .sidebar-logo-container {
+            justify-content: center !important;
+            margin-right: 0 !important;
+            padding: 0 !important;
+        }
+
+        #sidebar.minimized .sidebar-logo-img {
+            height: 25px !important;
+            width: auto;
+        }
+
+        #sidebar.minimized .user-info-wrapper {
+            justify-content: center !important;
+        }
+
+        #sidebar.minimized .nav-link {
+            justify-content: center !important;
+        }
+
+        #sidebar.minimized .user-card {
+            padding: 10px !important;
+        }
+
+        #sidebar.minimized .logout-btn {
+            border: none !important;
+            background: transparent !important;
+        }
+        
+        #sidebar.minimized .logout-btn span {
+             display: none;
+        }
     }
 
-    #sidebar.minimized .sidebar-text {
-        display: none !important;
-    }
-
-    #sidebar.minimized .sidebar-logo-container {
-        justify-content: center !important;
-        margin-right: 0 !important;
-        padding: 0 !important;
-    }
-
-    #sidebar.minimized .sidebar-logo-img {
-        height: 25px !important;
-        width: auto;
-    }
-
-    #sidebar.minimized .user-info-wrapper {
-        justify-content: center !important;
-    }
-
-    #sidebar.minimized .nav-link {
-        justify-content: center !important;
-    }
-
-    #sidebar.minimized .user-card {
-        padding: 10px !important;
-    }
-
-    #sidebar.minimized .logout-btn {
-        border: none !important;
-        background: transparent !important;
-    }
-
-    @media (max-width: 992px) {
+    /* MOBILE: Off-Canvas Logic */
+    @media (max-width: 991.98px) {
         #sidebar {
             position: fixed !important;
             left: 0;
             top: 0;
-            transform: translateX(-100%);
+            bottom: 0;
+            transform: translateX(-100%); /* Sembunyi ke kiri */
             z-index: 1050;
-            transition: 0.4s;
+            width: 280px; /* Lebar tetap di mobile */
+        }
+        
+        #sidebar.show-mobile {
+            transform: translateX(0); /* Muncul */
+            box-shadow: 5px 0 15px rgba(0,0,0,0.3);
         }
     }
 </style>

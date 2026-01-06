@@ -32,7 +32,7 @@
             background-color: var(--core-white);
             color: var(--core-black);
             margin: 0;
-            overflow-x: hidden;
+            overflow-x: hidden; /* Mencegah scroll horizontal di HP */
             font-display: swap;
         }
 
@@ -40,6 +40,7 @@
             display: flex;
             width: 100%;
             min-height: 100vh;
+            position: relative;
         }
 
         #content {
@@ -48,30 +49,32 @@
             flex-direction: column;
             background-color: var(--core-white);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            min-width: 0;
+            min-width: 0; /* Mencegah flex item overflow */
         }
 
+        /* Overlay untuk Mobile */
         #sidebar-overlay {
             display: none;
             position: fixed;
+            top: 0;
+            left: 0;
             width: 100vw;
             height: 100vh;
             background: rgba(0, 0, 0, 0.5);
-            z-index: 1045;
+            z-index: 1045; /* Di bawah Sidebar (1050) tapi di atas Navbar (1040) */
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
         }
 
-        @media (max-width: 992px) {
-            #sidebar.show-mobile {
-                transform: translateX(0);
-            }
-
-            #sidebar-overlay.show {
-                display: block;
-            }
+        #sidebar-overlay.show {
+            display: block;
+            opacity: 1;
         }
 
+        /* Scrollbar Customization */
         ::-webkit-scrollbar {
             width: 5px;
+            height: 5px;
         }
 
         ::-webkit-scrollbar-track {
@@ -107,6 +110,7 @@
 
 <body>
     <div id="sidebar-overlay"></div>
+
     <div id="wrapper">
         @auth
             @include('layouts.partials.sidebar')
@@ -115,11 +119,13 @@
 
         <div id="content">
             @auth @include('layouts.partials.navbar') @endauth
+            
             <main class="{{ Auth::check() ? 'p-3 p-md-5' : '' }} flex-grow-1 animate__animated animate__fadeIn">
                 <div class="{{ Auth::check() ? 'container-fluid' : '' }}">
                     {{ $slot }}
                 </div>
             </main>
+            
             @auth @include('layouts.partials.footer') @endauth
         </div>
     </div>
@@ -128,7 +134,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Sidebar Toggle Logic
+            // Sidebar Toggle Logic Responsive
             const toggleBtn = document.getElementById('sidebarToggle'),
                 sidebar = document.getElementById('sidebar'),
                 overlay = document.getElementById('sidebar-overlay');
@@ -136,15 +142,20 @@
             if (toggleBtn && sidebar) {
                 toggleBtn.addEventListener('click', (e) => {
                     e.preventDefault();
-                    if (window.innerWidth > 992) {
+                    e.stopPropagation(); // Mencegah bubbling
+
+                    if (window.innerWidth >= 992) {
+                        // Logic Desktop (Minimize)
                         sidebar.classList.toggle('minimized');
                     } else {
+                        // Logic Mobile (Off-Canvas)
                         sidebar.classList.toggle('show-mobile');
-                        overlay.classList.toggle('show');
+                        if (overlay) overlay.classList.toggle('show');
                     }
                 });
             }
 
+            // Tutup sidebar saat overlay diklik (Mobile Only)
             if (overlay) {
                 overlay.addEventListener('click', () => {
                     if (sidebar) sidebar.classList.remove('show-mobile');
@@ -152,13 +163,20 @@
                 });
             }
 
+            // Tutup sidebar saat resize dari Mobile ke Desktop untuk reset state
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 992) {
+                    if (sidebar) sidebar.classList.remove('show-mobile');
+                    if (overlay) overlay.classList.remove('show');
+                }
+            });
+
             @auth
             let idleTimer;
             let isCurrentlyOffline = false;
             const statusDelay = 10000; // 10 Detik
 
             function resetIdleTimer() {
-                // JIKA SEBELUMNYA OFFLINE, KIRIM SINYAL ONLINE SEKARANG
                 if (isCurrentlyOffline) {
                     console.log('User kembali aktif, mengirim sinyal online...');
                     Livewire.dispatch('setUserOnline');
@@ -174,16 +192,14 @@
                 }, statusDelay);
             }
 
-            // Jalankan timer pertama kali
             resetIdleTimer();
 
-            // Pantau semua jenis aktivitas fisik
             ['mousemove', 'mousedown', 'keypress', 'touchstart', 'scroll', 'click'].forEach(evt =>
                 window.addEventListener(evt, resetIdleTimer, {
                     passive: true
                 })
             );
-        @endauth
+            @endauth
         });
 
         document.addEventListener('livewire:init', () => {
