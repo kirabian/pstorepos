@@ -11,10 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // di migration products
         Schema::create('products', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('category_id')->constrained();
-            $table->foreignId('brand_id')->constrained();
+            $table->foreignId('category_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('brand_id')->constrained()->onDelete('cascade'); // Ganti ke foreignUuid
             $table->string('name');
             $table->text('description')->nullable();
             $table->timestamps();

@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // di migration brands
         Schema::create('brands', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary(); // Ganti menjadi UUID
             $table->string('name');
             $table->timestamps();
         });
