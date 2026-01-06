@@ -52,6 +52,12 @@
             min-width: 0; /* Mencegah flex item overflow */
         }
 
+        /* Logic agar konten tidak tertutup Navbar yang Fixed/Melayang */
+        main {
+            margin-top: 80px; /* Memberi ruang untuk navbar */
+            transition: margin-top 0.3s ease;
+        }
+
         /* Overlay untuk Mobile */
         #sidebar-overlay {
             display: none;
@@ -134,7 +140,22 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Sidebar Toggle Logic Responsive
+            // --- LOGIC NAVBAR SCROLL (ISLAND EFFECT) ---
+            const navbar = document.getElementById('main-navbar');
+            
+            if(navbar) {
+                window.addEventListener('scroll', function() {
+                    if (window.scrollY > 10) { 
+                        // Jika scroll lebih dari 10px, ubah jadi mode "Island" (kecil & melayang)
+                        navbar.classList.add('scrolled');
+                    } else {
+                        // Jika kembali ke atas, reset ke mode lebar penuh
+                        navbar.classList.remove('scrolled');
+                    }
+                });
+            }
+
+            // --- Sidebar Toggle Logic Responsive ---
             const toggleBtn = document.getElementById('sidebarToggle'),
                 sidebar = document.getElementById('sidebar'),
                 overlay = document.getElementById('sidebar-overlay');
