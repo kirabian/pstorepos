@@ -9,32 +9,51 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Livewire\WithPagination; // Penting untuk mencegah lag
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Illuminate\Support\Str;
 
 class ProductIndex extends Component
 {
     use WithFileUploads;
+    use WithPagination; // Menggunakan trait Pagination
+
+    protected $paginationTheme = 'bootstrap'; // Tema pagination
 
     public $file_import;
     public $previewData = [];
-    public $products = [];
+    public $search = ''; // Variabel pencarian
 
-    public function mount()
+    // Reset pagination jika search berubah
+    public function updatedSearch()
     {
-        $this->loadProducts();
+        $this->resetPage();
     }
 
-    public function loadProducts()
+    // Fungsi Render Utama (Dioptimalkan)
+    public function render()
     {
-        try {
-            $this->products = Product::with(['brand', 'category', 'variants'])
-                ->latest()
-                ->get();
-        } catch (\Exception $e) {
-            Log::error('Load Products Error: ' . $e->getMessage());
-            $this->products = [];
+        // Query Produk
+        $query = Product::with(['brand', 'category', 'variants'])
+            ->select('products.*') // Pastikan select table products agar id tidak ambigu
+            ->join('brands', 'products.brand_id', '=', 'brands.id'); // Join untuk sorting by brand name
+
+        // Filter Pencarian
+        if (!empty($this->search)) {
+            $query->where(function($q) {
+                $q->where('products.name', 'like', '%' . $this->search . '%')
+                  ->orWhere('brands.name', 'like', '%' . $this->search . '%');
+            });
         }
+
+        // Sorting: Nama Brand (A-Z) -> Nama Produk (A-Z)
+        $products = $query->orderBy('brands.name', 'asc')
+                          ->orderBy('products.name', 'asc')
+                          ->paginate(20); // Load 20 data per halaman (Mencegah Lag)
+
+        return view('livewire.product.product-index', [
+            'products' => $products,
+        ]);
     }
 
     public function updatedFileImport()
@@ -55,7 +74,8 @@ class ProductIndex extends Component
                     continue; // Skip header
                 }
 
-                // Pastikan row memiliki cukup kolom
+                // Pastikan row memiliki cukup kolom (Sesuaikan index dengan file excel Anda)
+                // Asumsi: [0]=UUID, [1]=NamaMerk, [2]=..., [3]=NamaTipe
                 if (isset($row[0], $row[1], $row[3])) {
                     $brandUuid = trim($row[0] ?? '');
                     $namaMerk = trim($row[1] ?? '');
@@ -69,13 +89,15 @@ class ProductIndex extends Component
                     $namaMerk = $this->cleanText($namaMerk);
                     $namaTipe = $this->cleanText($namaTipe);
 
-                    // Cari brand
+                    // Cari brand untuk cek duplikat
                     $brand = $this->findBrand($brandUuid, $namaMerk);
 
-                    // Cek duplikat produk
+                    // Cek duplikat produk di database
                     $isDuplicate = false;
                     $existingProductName = null;
+                    
                     if ($brand) {
+                        // Cek apakah produk dengan nama ini sudah ada di brand ini
                         $existingProduct = Product::where('brand_id', $brand->id)
                             ->where('name', $namaTipe)
                             ->first();
@@ -86,13 +108,21 @@ class ProductIndex extends Component
                         }
                     }
 
+                    // Cek duplikat di dalam file import itu sendiri (biar gak double entry di 1 file)
+                    foreach ($this->previewData as $prevItem) {
+                        if ($prevItem['brand_name'] == $namaMerk && $prevItem['product_name'] == $namaTipe) {
+                            $isDuplicate = true;
+                            $existingProductName = "Duplikat di dalam file Excel";
+                            break;
+                        }
+                    }
+
                     $this->previewData[] = [
                         'brand_uuid' => $brandUuid,
                         'brand_id' => $brand ? $brand->id : null,
                         'brand_name' => $namaMerk,
                         'brand_system_name' => $brand ? $brand->name : null,
                         'product_name' => $namaTipe,
-                        'is_valid' => true,
                         'is_duplicate' => $isDuplicate,
                         'existing_product' => $existingProductName,
                         'ram_storage' => $row[4] ?? '',
@@ -104,8 +134,7 @@ class ProductIndex extends Component
             $duplicateCount = count(array_filter($this->previewData, fn ($item) => $item['is_duplicate']));
 
             if ($totalData > 0) {
-                session()->flash('info', "✅ {$totalData} data berhasil dibaca. " .
-                    ($duplicateCount > 0 ? "{$duplicateCount} data duplikat." : 'Semua data siap diimport.'));
+                session()->flash('info', "✅ {$totalData} data terbaca. {$duplicateCount} data terdeteksi duplikat dan akan dilewati.");
             }
 
         } catch (\Exception $e) {
@@ -119,29 +148,17 @@ class ProductIndex extends Component
         try {
             // Cari dengan UUID exact match
             $brand = Brand::where('uuid', $uuid)->first();
-            if ($brand) {
-                return $brand;
-            }
-
-            // Cari dengan UUID case-insensitive
-            $brand = Brand::where(DB::raw('BINARY uuid'), $uuid)
-                        ->orWhere(DB::raw('LOWER(uuid)'), strtolower($uuid))
-                        ->first();
-            if ($brand) {
-                return $brand;
-            }
+            if ($brand) return $brand;
 
             // Cari dengan nama brand
             if (!empty($namaMerk)) {
                 $brand = Brand::where('name', 'like', '%' . $namaMerk . '%')
-                    ->orWhere(DB::raw('LOWER(name)'), 'like', '%' . strtolower($namaMerk) . '%')
                     ->first();
                 return $brand;
             }
 
             return null;
         } catch (\Exception $e) {
-            Log::error('Find Brand Error: ' . $e->getMessage());
             return null;
         }
     }
@@ -149,8 +166,7 @@ class ProductIndex extends Component
     private function cleanText($text)
     {
         $text = preg_replace('/[™"\']/', '', $text);
-        $text = trim($text);
-        return $text;
+        return trim($text);
     }
 
     public function cancelImport()
@@ -168,17 +184,8 @@ class ProductIndex extends Component
 
         DB::beginTransaction();
         try {
-            // Enable query logging untuk debug
-            DB::enableQueryLog();
-
             // 1. Cari atau buat kategori Handphone
-            $category = Category::where('name', 'Handphone')->first();
-            if (!$category) {
-                $category = Category::create([
-                    'name' => 'Handphone',
-                ]);
-                Log::info('Kategori Handphone dibuat: ' . $category->id);
-            }
+            $category = Category::firstOrCreate(['name' => 'Handphone']);
             $categoryId = $category->id;
 
             $importedCount = 0;
@@ -186,7 +193,7 @@ class ProductIndex extends Component
             $createdBrands = 0;
 
             foreach ($this->previewData as $item) {
-                // Skip jika duplikat
+                // SKIP jika statusnya duplikat
                 if ($item['is_duplicate']) {
                     $skippedCount++;
                     continue;
@@ -196,14 +203,14 @@ class ProductIndex extends Component
                 $brand = $this->findOrCreateBrand($item);
                 
                 if (!$brand) {
-                    Log::warning('Brand tidak ditemukan/dibuat untuk: ' . $item['brand_uuid']);
                     $skippedCount++;
                     continue;
                 }
 
-                $createdBrands += ($item['brand_id'] ? 0 : 1);
+                // Hitung jika brand baru (hanya estimasi logic sederhana)
+                if (!$item['brand_id']) $createdBrands++;
 
-                // Insert Produk
+                // Insert Produk Baru
                 $product = Product::create([
                     'brand_id' => $brand->id,
                     'name' => $item['product_name'],
@@ -224,75 +231,53 @@ class ProductIndex extends Component
 
             DB::commit();
 
-            // Log queries untuk debug
-            $queries = DB::getQueryLog();
-            Log::info('Import queries: ' . json_encode($queries));
-
-            // Refresh data produk
-            $this->loadProducts();
+            // Reset UI
+            $this->reset(['file_import', 'previewData']);
+            $this->resetPage(); // Kembali ke halaman 1
 
             // Pesan sukses
-            $message = '✅ <strong>Import Berhasil!</strong><br>';
-            $message .= "📦 <strong>{$importedCount}</strong> produk baru ditambahkan<br>";
-
-            if ($createdBrands > 0) {
-                $message .= "🏷️ <strong>{$createdBrands}</strong> brand baru dibuat<br>";
-            }
-
-            if ($skippedCount > 0) {
-                $message .= "⏭️ <strong>{$skippedCount}</strong> data dilewati<br>";
-            }
+            $message = "✅ <strong>Import Selesai!</strong><br>";
+            $message .= "📥 Masuk: {$importedCount} produk<br>";
+            if ($skippedCount > 0) $message .= "⏭️ Skip (Duplikat): {$skippedCount} data<br>";
 
             session()->flash('success', $message);
-            $this->reset(['file_import', 'previewData']);
 
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Process Import Error: ' . $e->getMessage());
-            Log::error('Stack Trace: ' . $e->getTraceAsString());
-            
-            session()->flash('error', '❌ Gagal Simpan: ' . $e->getMessage() . 
-                ' (Lihat log untuk detail)');
-        } finally {
-            DB::disableQueryLog();
+            session()->flash('error', '❌ Gagal Simpan: ' . $e->getMessage());
         }
     }
 
     private function findOrCreateBrand($item)
     {
         try {
-            // Cari brand yang sudah ada
-            $brand = Brand::where('uuid', $item['brand_uuid'])->first();
+            $uuid = $item['brand_uuid'];
             
+            // Coba cari by UUID
+            $brand = Brand::where('uuid', $uuid)->first();
+            
+            // Jika tidak ada UUID, cari by Name
             if (!$brand) {
-                // Coba case-insensitive
-                $brand = Brand::where(DB::raw('LOWER(uuid)'), strtolower($item['brand_uuid']))->first();
-                
-                // Jika masih tidak ketemu, CREATE baru
-                if (!$brand) {
-                    // Format UUID
-                    $uuid = $this->formatUuid($item['brand_uuid']);
-                    
-                    // Cek dulu apakah UUID sudah ada
-                    $existingBrand = Brand::where('uuid', $uuid)->first();
-                    if ($existingBrand) {
-                        return $existingBrand;
-                    }
-                    
-                    // Buat brand baru
-                    $brand = Brand::create([
-                        'uuid' => $uuid,
-                        'name' => $item['brand_name']
-                    ]);
-                    
-                    Log::info('Brand baru dibuat: ' . $brand->id . ' - ' . $brand->name . ' - ' . $brand->uuid);
+                $brand = Brand::where('name', $item['brand_name'])->first();
+            }
+
+            // Jika masih tidak ada, Buat Baru
+            if (!$brand) {
+                $cleanUuid = $this->formatUuid($uuid);
+                // Cek lagi collision UUID
+                if (Brand::where('uuid', $cleanUuid)->exists()) {
+                    $cleanUuid = Str::uuid();
                 }
+
+                $brand = Brand::create([
+                    'uuid' => $cleanUuid,
+                    'name' => $item['brand_name']
+                ]);
             }
             
             return $brand;
-            
         } catch (\Exception $e) {
-            Log::error('Find or Create Brand Error: ' . $e->getMessage());
             return null;
         }
     }
@@ -300,17 +285,10 @@ class ProductIndex extends Component
     private function formatUuid($uuid)
     {
         $uuid = trim($uuid);
-        $uuid = strtoupper($uuid);
-        $uuid = str_replace(['"', "'", ' ', '™', '`'], '', $uuid);
-        
-        // Validasi format UUID
         $uuidPattern = '/^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i';
-        
         if (preg_match($uuidPattern, $uuid)) {
-            return $uuid;
+            return strtoupper($uuid);
         }
-        
-        // Jika tidak valid, generate baru
         return Str::uuid()->toString();
     }
 
@@ -318,25 +296,51 @@ class ProductIndex extends Component
     {
         try {
             $product = Product::find($id);
-            
             if ($product) {
-                $productName = $product->name;
                 $product->delete();
-                $this->loadProducts();
-                session()->flash('success', "✅ Produk '{$productName}' berhasil dihapus.");
-            } else {
-                session()->flash('error', '❌ Produk tidak ditemukan.');
+                session()->flash('success', "✅ Produk berhasil dihapus.");
             }
         } catch (\Exception $e) {
-            Log::error('Delete Product Error: ' . $e->getMessage());
             session()->flash('error', '❌ Gagal menghapus produk.');
         }
     }
 
-    public function render()
+    // FUNGSI BARU: HAPUS SEMUA DATA
+    public function deleteAll()
     {
-        return view('livewire.product.product-index', [
-            'products' => $this->products,
-        ]);
+        DB::beginTransaction();
+        try {
+            // Hapus semua produk (Cascade ke variant biasanya otomatis via DB, 
+            // tapi kita bisa gunakan model delete agar event fired)
+            
+            // Menggunakan query builder delete untuk performa cepat jika data ribuan
+            // Hati-hati: Pastikan foreign key di database diset ON DELETE CASCADE untuk variants
+            // Jika tidak, harus loop delete atau delete variants dulu
+            
+            // Cara aman via Eloquent (mungkin lambat jika data 10rb+)
+            // Product::query()->delete(); 
+
+            // Cara Cepat (Asumsi Foreign Key Cascade sudah diset di migration)
+            DB::table('products')->delete(); 
+            // Atau truncate jika ingin reset ID: Product::truncate(); (Hati-hati foreign key constraint)
+
+            DB::commit();
+            
+            $this->resetPage();
+            session()->flash('success', "✅ SEMUA DATA PRODUK BERHASIL DIHAPUS BERSIH.");
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Delete All Error: ' . $e->getMessage());
+            // Jika gagal (biasanya karena FK constraint), coba manual
+            try {
+                $ids = Product::pluck('id');
+                Product::destroy($ids);
+                DB::commit();
+                session()->flash('success', "✅ Semua data berhasil dihapus (Metode 2).");
+            } catch (\Exception $ex) {
+                session()->flash('error', '❌ Gagal menghapus semua data: ' . $ex->getMessage());
+            }
+        }
     }
 }
