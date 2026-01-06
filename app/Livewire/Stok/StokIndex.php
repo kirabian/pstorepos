@@ -5,8 +5,8 @@ namespace App\Livewire\Stok;
 use App\Models\Stok;
 use App\Models\Merk;
 use App\Models\Tipe;
-use App\Models\StokHistory; // Tambahkan Model History
-use Illuminate\Support\Facades\Auth; // Tambahkan Facade Auth
+use App\Models\StokHistory; 
+use Illuminate\Support\Facades\Auth; 
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Rule;
@@ -42,12 +42,11 @@ class StokIndex extends Component
     #[Rule('required|numeric')]
     public $harga_jual = 0;
 
-    // --- DATA LISTS (Untuk Dropdown Dinamis) ---
+    // --- DATA LISTS ---
     public $tipeOptions = []; 
     public $ramOptions = [];  
 
     // --- LOGIKA DEPENDENT DROPDOWN ---
-    
     public function updatedMerkId($value)
     {
         $this->tipeOptions = Tipe::where('merk_id', $value)->get();
@@ -71,10 +70,8 @@ class StokIndex extends Component
     public function updatedHargaModal($value)
     {
         $modal = (int) $value;
-
-        // Margin 10%
         if($modal > 0) {
-            $margin = $modal * 0.1; 
+            $margin = $modal * 0.1; // 10% Profit
             $this->harga_jual = $modal + $margin;
         } else {
             $this->harga_jual = 0;
@@ -99,9 +96,11 @@ class StokIndex extends Component
         $this->resetErrorBag();
     }
 
+    // ==========================================
+    // UPDATE DI BAGIAN INI (STORE)
+    // ==========================================
     public function store()
     {
-        // 1. Validasi Input
         $this->validate([
             'merk_id' => 'required',
             'tipe_id' => 'required',
@@ -111,7 +110,7 @@ class StokIndex extends Component
             'harga_jual' => 'required|numeric',
         ]);
 
-        // 2. Simpan / Update Data Stok Utama
+        // 1. Simpan Data Stok
         Stok::updateOrCreate(['id' => $this->stokId], [
             'merk_id' => $this->merk_id,
             'tipe_id' => $this->tipe_id,
@@ -122,23 +121,29 @@ class StokIndex extends Component
             'harga_jual' => $this->harga_jual,
         ]);
 
-        // ==========================================
-        // 3. REKAM JEJAK KE HISTORY (LACAK IMEI)
-        // ==========================================
+        // 2. LOGIKA HISTORY (LACAK IMEI) DENGAN NAMA CABANG
+        $user = Auth::user();
+        
+        // Ambil nama cabang dari relasi user (jika null, default ke 'Pusat' atau '-')
+        // Asumsi kolom di tabel cabangs adalah 'nama'
+        $namaCabang = $user->cabang->nama ?? 'Pusat'; 
+
         StokHistory::create([
             'imei' => $this->imei,
             'status' => $this->stokId ? 'Update Data' : 'Stok Masuk',
+            
+            // Disini kita masukkan nama cabangnya ke dalam teks keterangan
             'keterangan' => $this->stokId 
-                ? 'Data unit diperbarui oleh admin.' 
-                : 'Stok baru ditambahkan ke sistem.',
-            'user_id' => Auth::id() ?? 1, // Menggunakan ID user yang login
+                ? "Data unit diperbarui di cabang $namaCabang." 
+                : "Stok baru ditambahkan melalui cabang $namaCabang.",
+                
+            'user_id' => $user->id,
         ]);
-        // ==========================================
 
         $this->dispatch('close-modal');
         $this->dispatch('swal', [
             'title' => 'Berhasil!',
-            'text' => 'Data stok unit berhasil disimpan & tercatat di history.',
+            'text' => 'Data stok unit berhasil disimpan.',
             'icon' => 'success'
         ]);
         
@@ -168,7 +173,6 @@ class StokIndex extends Component
 
     public function delete($id)
     {
-        // Opsional: Bisa tambah history 'Stok Dihapus' di sini sebelum delete jika mau
         Stok::find($id)->delete();
         $this->dispatch('swal', ['title' => 'Dihapus!', 'text' => 'Unit berhasil dihapus.', 'icon' => 'success']);
     }
