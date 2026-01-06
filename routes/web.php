@@ -11,6 +11,7 @@ use App\Livewire\Distributor\DistributorIndex;
 use App\Livewire\Gudang\GudangCreate;
 use App\Livewire\Gudang\GudangEdit;
 use App\Livewire\Gudang\GudangIndex;
+use App\Livewire\Merk\MerkIndex;
 use App\Livewire\User\UserCreate;
 use App\Livewire\User\UserEdit;
 use App\Livewire\User\UserIndex;
@@ -81,6 +82,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/gudang', GudangIndex::class)->name('gudang.index');
         Route::get('/gudang/create', GudangCreate::class)->name('gudang.create');
         Route::get('/gudang/{id}/edit', GudangEdit::class)->name('gudang.edit');
+
+        Route::get('/merk', MerkIndex::class)->name('merk.index');
 
     });
 });
