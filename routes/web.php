@@ -12,6 +12,7 @@ use App\Livewire\Gudang\GudangCreate;
 use App\Livewire\Gudang\GudangEdit;
 use App\Livewire\Gudang\GudangIndex;
 use App\Livewire\Product\ProductCreate;
+use App\Livewire\Product\ProductEdit; // <--- TAMBAHKAN INI
 use App\Livewire\Product\ProductIndex;
 use App\Livewire\User\UserCreate;
 use App\Livewire\User\UserEdit;
@@ -38,6 +39,7 @@ Route::post('/logout', function () {
 
     return redirect('/login');
 })->name('logout');
+
 /*
 |--------------------------------------------------------------------------
 | Area Terproteksi (Login Required)
@@ -56,6 +58,7 @@ Route::middleware('auth')->group(function () {
         // Route untuk Produk, Brand, Jenis, Stok, Harga
         Route::get('/products', ProductIndex::class)->name('product.index');
         Route::get('/products/create', ProductCreate::class)->name('product.create');
+        Route::get('/products/{id}/edit', ProductEdit::class)->name('product.edit'); // <--- TAMBAHKAN ROUTE INI
 
         // Jika nanti ingin buat halaman terpisah:
         // Route::get('/categories', CategoryIndex::class)->name('category.index');

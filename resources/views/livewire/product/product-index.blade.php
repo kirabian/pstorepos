@@ -267,12 +267,18 @@
                                 </td>
 
                                 <td class="pe-4 text-center">
-                                    <button class="btn btn-sm btn-outline-danger border-0 rounded-3" 
-                                            onclick="return confirm('Hapus produk {{ $p->name }}?')" 
-                                            wire:click="deleteProduct({{ $p->id }})"
-                                            title="Hapus">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <a href="{{ route('product.edit', $p->id) }}" class="btn btn-sm btn-outline-primary border-0 rounded-3" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+
+                                        <button class="btn btn-sm btn-outline-danger border-0 rounded-3" 
+                                                onclick="return confirm('Hapus produk {{ $p->name }}?')" 
+                                                wire:click="deleteProduct({{ $p->id }})"
+                                                title="Hapus">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
