@@ -16,27 +16,35 @@ class ProductIndex extends Component
     use WithFileUploads;
 
     public $file_import;
-    public $previewData = []; // Menampung data pratinjau
+    public $previewData = [];
 
-    // Fungsi ini otomatis jalan saat file dipilih
+    // Otomatis jalan saat file dipilih
     public function updatedFileImport()
     {
         $this->validate([
             'file_import' => 'required|mimes:csv,xls,xlsx|max:10240',
         ]);
 
-        $path = $this->file_import->getRealPath();
-        $spreadsheet = IOFactory::load($path);
-        $data = $spreadsheet->getActiveSheet()->toArray();
+        try {
+            $path = $this->file_import->getRealPath();
+            $spreadsheet = IOFactory::load($path);
+            $data = $spreadsheet->getActiveSheet()->toArray();
 
-        // Ambil data (skip header baris pertama)
-        $this->previewData = [];
-        foreach ($data as $index => $row) {
-            if ($index === 0 || empty($row[0])) continue;
-            $this->previewData[] = [
-                'brand' => strtoupper(trim($row[0])),
-                'name'  => trim($row[1]),
-            ];
+            $this->previewData = [];
+            foreach ($data as $index => $row) {
+                // Baris 0 biasanya header, kita skip
+                if ($index === 0) continue;
+                
+                // Pastikan kolom A (Merek) dan B (Tipe) tidak kosong
+                if (!empty($row[0]) && !empty($row[1])) {
+                    $this->previewData[] = [
+                        'brand' => strtoupper(trim($row[0])),
+                        'name'  => trim($row[1]),
+                    ];
+                }
+            }
+        } catch (\Exception $e) {
+            session()->flash('error', 'Gagal membaca file: ' . $e->getMessage());
         }
     }
 
@@ -62,6 +70,7 @@ class ProductIndex extends Component
                     'category_id' => $defaultCat->id
                 ]);
 
+                // Tambahkan varian default agar muncul di list stok
                 ProductVariant::firstOrCreate([
                     'product_id' => $product->id,
                     'attribute_name' => 'Original',
@@ -73,11 +82,11 @@ class ProductIndex extends Component
             }
 
             DB::commit();
-            session()->flash('success', count($this->previewData) . ' Data berhasil dimasukkan ke sistem.');
+            session()->flash('success', count($this->previewData) . ' Produk berhasil diimport.');
             $this->reset(['file_import', 'previewData']);
         } catch (\Exception $e) {
             DB::rollBack();
-            session()->flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
+            session()->flash('error', 'Terjadi kesalahan saat menyimpan: ' . $e->getMessage());
         }
     }
 
