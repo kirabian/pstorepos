@@ -1,279 +1,123 @@
-<div class="container-fluid py-3 py-md-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold mb-0 text-dark"><i class="fas fa-box-open me-2 text-primary"></i>Manajemen Produk</h4>
-            <p class="text-muted small mb-0">Kelola data produk, stok, dan harga.</p>
+            <h4 class="fw-bold mb-0">📦 Manajemen Produk</h4>
+            <p class="text-muted small">Kelola data produk, stok, dan harga.</p>
         </div>
-        
-        <div class="d-flex flex-column flex-md-row gap-2">
-            @if($products->total() > 0)
-            <button wire:click="deleteAll" 
-                    onclick="return confirm('⚠️ BAHAYA!\n\nSemua data produk akan dihapus permanent.\nLanjutkan?')"
-                    class="btn btn-outline-danger btn-sm rounded-3 w-100 w-md-auto">
-                <i class="fas fa-trash-alt me-2"></i>Reset Data
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-danger btn-sm rounded-3">
+                <i class="fas fa-trash me-1"></i> Hapus Semua
             </button>
-            @endif
+            <button class="btn btn-outline-success btn-sm rounded-3">
+                <i class="fas fa-file-excel me-1"></i> Import
+            </button>
+            <a href="{{ route('product.create') }}" class="btn btn-dark btn-sm rounded-3">
+                <i class="fas fa-plus me-1"></i> Tambah Manual
+            </a>
+        </div>
+    </div>
 
-            <div class="d-flex gap-2">
-                <div class="position-relative w-100 w-md-auto">
-                    <input type="file" wire:model="file_import" id="fileImport" class="d-none" accept=".csv, .xlsx, .xls">
-                    <label for="fileImport" class="btn btn-success btn-sm w-100 rounded-3 shadow-sm" style="cursor: pointer;">
-                        <span wire:loading.remove wire:target="file_import">
-                            <i class="fas fa-file-excel me-2"></i>Import Excel
-                        </span>
-                        <span wire:loading wire:target="file_import">
-                            <i class="fas fa-spinner fa-spin me-2"></i>Loading...
-                        </span>
-                    </label>
-                </div>
-                
-                <a href="{{ route('product.create') }}" class="btn btn-dark btn-sm w-100 w-md-auto rounded-3 shadow-sm">
-                    <i class="fas fa-plus me-2"></i>Tambah Baru
-                </a>
+    {{-- Search Bar --}}
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-2">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-0"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" wire:model.live="search" class="form-control border-0" placeholder="Cari Brand atau Produk...">
             </div>
         </div>
     </div>
 
-    {{-- Flash Messages --}}
-    @if (session()->has('success'))
-        <div class="alert alert-success border-0 shadow-sm mb-3 small rounded-3 fade show">
-            <i class="fas fa-check-circle me-2"></i> {!! session('success') !!}
+    {{-- Table List --}}
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-header bg-white py-3">
+            <h6 class="mb-0 fw-bold">Daftar Produk ({{ $products->total() }})</h6>
         </div>
-    @endif
-    @if (session()->has('error'))
-        <div class="alert alert-danger border-0 shadow-sm mb-3 small rounded-3 fade show">
-            <i class="fas fa-times-circle me-2"></i> {{ session('error') }}
-        </div>
-    @endif
-
-    {{-- AREA PREVIEW IMPORT --}}
-    @if(!empty($previewData))
-    <div class="card border-0 shadow-lg mb-4 rounded-4 overflow-hidden">
-        <div class="card-header bg-primary text-white py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-bold"><i class="fas fa-file-import me-2"></i>Preview Import</h6>
-                <button wire:click="cancelImport" class="btn btn-sm btn-light text-primary rounded-pill px-3">Batal</button>
-            </div>
-        </div>
-        <div class="card-body p-0">
-            <div class="alert alert-light mb-0 border-bottom rounded-0 small">
-                <strong>Status:</strong> 
-                ✅ {{ count($previewData) - count(array_filter($previewData, fn($item) => $item['is_duplicate'])) }} Baru | 
-                ⚠️ {{ count(array_filter($previewData, fn($item) => $item['is_duplicate'])) }} Duplikat (Skip)
-            </div>
-            <div class="table-responsive" style="max-height: 300px;">
-                <table class="table table-sm table-striped mb-0 small">
-                    <thead class="sticky-top bg-light">
-                        <tr>
-                            <th class="ps-3">Brand</th>
-                            <th>Produk</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($previewData as $item)
-                        <tr>
-                            <td class="ps-3">{{ $item['brand_name'] }}</td>
-                            <td>{{ $item['product_name'] }}</td>
-                            <td>
-                                @if($item['is_duplicate']) <span class="badge bg-warning text-dark">Skip</span>
-                                @else <span class="badge bg-success">Ready</span> @endif
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="bg-light text-secondary small text-uppercase">
+                    <tr>
+                        <th class="ps-4" width="20%">Merek / Brand</th>
+                        <th width="25%">Nama Tipe / Produk</th>
+                        <th width="30%">Varian & Stok</th>
+                        <th width="15%">Modal / SRP</th>
+                        <th class="text-end pe-4" width="10%">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($products as $p)
+                        <tr class="border-bottom">
+                            <td class="ps-4 align-top py-3">
+                                <span class="badge bg-dark rounded-pill mb-1">{{ $p->brand->name }}</span>
+                                <div class="small text-muted"><i class="fas fa-folder me-1"></i> {{ $p->category }}</div>
+                            </td>
+                            <td class="align-top py-3">
+                                <div class="fw-bold text-dark fs-6">{{ $p->name }}</div>
+                                <div class="small text-muted">ID: #{{ $p->id }}</div>
+                            </td>
+                            <td class="py-3">
+                                @foreach($p->variants as $v)
+                                    <div class="card bg-light border-0 mb-2 rounded-3">
+                                        <div class="card-body p-2 d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="fw-bold text-dark" style="font-size: 0.85rem;">
+                                                    <i class="fas fa-mobile-alt me-1 text-secondary"></i> {{ $v->full_name }}
+                                                </div>
+                                                
+                                                {{-- Dropdown IMEI --}}
+                                                @if($v->imeis->count() > 0)
+                                                <div class="dropdown mt-1">
+                                                    <a class="text-decoration-none small text-primary bg-white border px-2 py-0 rounded-pill" href="#" role="button" data-bs-toggle="dropdown">
+                                                        <i class="fas fa-barcode me-1"></i> Lihat {{ $v->imeis->count() }} IMEI
+                                                    </a>
+                                                    <ul class="dropdown-menu shadow-sm border-0 p-2" style="max-height: 200px; overflow-y: auto;">
+                                                        @foreach($v->imeis as $imei)
+                                                            <li class="dropdown-item small py-1 d-flex justify-content-between">
+                                                                <span class="font-monospace">{{ $imei->imei }}</span>
+                                                                <span class="badge bg-success-subtle text-success" style="font-size: 0.6em;">Ready</span>
+                                                            </li>
+                                                        @endforeach
+                                                    </ul>
+                                                </div>
+                                                @endif
+                                            </div>
+                                            <div class="text-end">
+                                                @if($v->stock > 0)
+                                                    <span class="badge bg-success-subtle text-success rounded-pill">{{ $v->stock }} Unit</span>
+                                                @else
+                                                    <span class="badge bg-danger-subtle text-danger rounded-pill">Habis</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </td>
+                            <td class="align-top py-3">
+                                @foreach($p->variants as $v)
+                                    <div class="mb-3 small">
+                                        <div class="text-muted">Rp {{ number_format($v->cost_price, 0, ',', '.') }}</div>
+                                        <div class="fw-bold text-primary">Rp {{ number_format($v->srp_price, 0, ',', '.') }}</div>
+                                    </div>
+                                @endforeach
+                            </td>
+                            <td class="text-end pe-4 align-top py-3">
+                                <button class="btn btn-sm btn-light text-danger" wire:click="deleteProduct({{ $p->id }})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             </td>
                         </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            <div class="p-3 d-grid">
-                <button wire:click="processImport" class="btn btn-primary shadow-sm rounded-3">
-                    <i class="fas fa-save me-2"></i>Proses Import Sekarang
-                </button>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    {{-- FILTER BRAND --}}
-    @if($availableBrands->count() > 0)
-    <div class="mb-4">
-        <div class="d-flex overflow-auto pb-2 gap-2" style="scrollbar-width: none;">
-            <button wire:click="setBrandFilter(null)" 
-                    class="btn btn-sm rounded-pill px-3 border text-nowrap {{ $selectedBrandId === null ? 'btn-dark' : 'bg-white text-secondary' }}">
-                Semua
-            </button>
-            @foreach($availableBrands as $brand)
-                <button wire:click="setBrandFilter({{ $brand->id }})" 
-                        class="btn btn-sm rounded-pill px-3 border text-nowrap d-flex align-items-center gap-2 {{ $selectedBrandId === $brand->id ? 'btn-primary' : 'bg-white text-secondary' }}">
-                    {{ $brand->name }}
-                    <span class="badge bg-secondary bg-opacity-25 text-dark rounded-circle" style="font-size: 0.6rem;">{{ $brand->products_count }}</span>
-                </button>
-            @endforeach
-        </div>
-    </div>
-    @endif
-
-    {{-- DAFTAR PRODUK --}}
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-        <div class="card-header bg-white py-3 border-bottom">
-            <div class="row g-2 align-items-center">
-                <div class="col-12 col-md-6">
-                    <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" wire:model.live.debounce.300ms="search" class="form-control border-start-0 ps-0 bg-light" placeholder="Cari tipe produk...">
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 text-md-end">
-                    <span class="text-muted small">Total: <strong>{{ $products->total() }}</strong> Produk</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="card-body p-0">
-            @if($products->count() > 0)
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light text-secondary small text-uppercase">
+                    @empty
                         <tr>
-                            <th class="ps-4 py-3">Produk Info</th>
-                            <th class="py-3">Varian & Stok</th>
-                            <th class="py-3 text-end pe-4">Aksi</th>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="fas fa-box-open fa-3x mb-3 opacity-25"></i>
+                                <p>Belum ada data produk.</p>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($products as $p)
-                            <tr class="border-bottom">
-                                <td class="ps-4 py-3" style="min-width: 250px;">
-                                    <div class="d-flex flex-column gap-1">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="badge bg-dark w-auto align-self-start" style="font-size: 0.7rem;">
-                                                {{ $p->brand->name ?? 'Jasa' }}
-                                            </span>
-                                            
-                                            @php
-                                                $catName = strtolower($p->category->name ?? '');
-                                            @endphp
-                                            @if(str_contains($catName, 'handphone') || str_contains($catName, 'hp'))
-                                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10" style="font-size: 0.65rem;">
-                                                    <i class="fas fa-mobile-alt me-1"></i> IMEI
-                                                </span>
-                                            @elseif(str_contains($catName, 'jasa'))
-                                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-10" style="font-size: 0.65rem;">
-                                                    <i class="fas fa-tools me-1"></i> Jasa
-                                                </span>
-                                            @else
-                                                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-10" style="font-size: 0.65rem;">
-                                                    <i class="fas fa-headphones me-1"></i> Non-IMEI
-                                                </span>
-                                            @endif
-                                        </div>
-
-                                        <span class="fw-bold text-dark fs-6">{{ $p->name }}</span>
-                                        <small class="text-muted d-flex align-items-center">
-                                            <i class="fas fa-folder me-1 text-secondary opacity-50"></i> {{ $p->category->name ?? '-' }}
-                                        </small>
-                                    </div>
-                                </td>
-                                <td style="min-width: 250px;">
-                                    @foreach($p->variants as $v)
-                                        <div class="py-2 small border-bottom border-light last-no-border">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <div class="text-secondary d-flex align-items-center">
-                                                    <i class="fas fa-circle me-2 text-secondary opacity-25" style="font-size: 0.4rem;"></i>
-                                                    {{ $v->attribute_name }}
-                                                </div>
-                                                <div class="text-end ps-3">
-                                                    @if($v->stock > 0)
-                                                        <span class="badge bg-success-subtle text-success border border-success border-opacity-25 rounded-pill px-2">
-                                                            {{ $v->stock }} Unit
-                                                        </span>
-                                                    @else
-                                                        <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25 rounded-pill px-2">
-                                                            Habis
-                                                        </span>
-                                                    @endif
-                                                    <div class="text-primary fw-bold mt-1" style="font-size: 0.75rem;">
-                                                        Rp {{ number_format($v->srp_price, 0, ',', '.') }}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {{-- FITUR LIHAT IMEI (Hanya muncul jika ada IMEI) --}}
-                                            @if($v->imeis->isNotEmpty())
-                                                <div class="mt-2 ms-3">
-                                                    <a class="text-decoration-none small fw-bold text-secondary bg-light border px-2 py-1 rounded" 
-                                                       data-bs-toggle="collapse" 
-                                                       href="#imeiList{{ $v->id }}" 
-                                                       role="button" 
-                                                       aria-expanded="false">
-                                                        <i class="fas fa-barcode me-1 text-primary"></i> 
-                                                        Lihat {{ $v->imeis->count() }} IMEI 
-                                                        <i class="fas fa-chevron-down ms-1 opacity-50" style="font-size: 0.7em;"></i>
-                                                    </a>
-                                                    <div class="collapse mt-2" id="imeiList{{ $v->id }}">
-                                                        <div class="bg-white p-2 rounded border shadow-sm" style="max-height: 150px; overflow-y: auto;">
-                                                            <table class="table table-borderless table-sm mb-0 small">
-                                                                @foreach($v->imeis as $imei)
-                                                                    <tr>
-                                                                        <td class="font-monospace text-dark py-0">{{ $imei->imei }}</td>
-                                                                        <td class="text-end py-0">
-                                                                            <span class="badge bg-secondary bg-opacity-25 text-dark" style="font-size: 0.6em;">{{ $imei->status }}</span>
-                                                                        </td>
-                                                                    </tr>
-                                                                @endforeach
-                                                            </table>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            @endif
-                                        </div>
-                                    @endforeach
-                                </td>
-                                <td class="text-end pe-4 align-top pt-3">
-                                    <div class="btn-group shadow-sm">
-                                        <a href="{{ route('product.edit', $p->id) }}" class="btn btn-sm btn-white border text-primary" title="Edit Stok & Harga">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <button wire:click="deleteProduct({{ $p->id }})" 
-                                                onclick="return confirm('Yakin hapus {{ $p->name }}?')"
-                                                class="btn btn-sm btn-white border text-danger" title="Hapus">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            @else
-                <div class="text-center py-5">
-                    <div class="mb-3">
-                        <span class="bg-light rounded-circle p-4 d-inline-block">
-                            <i class="fas fa-search fa-2x text-secondary opacity-50"></i>
-                        </span>
-                    </div>
-                    <h6 class="text-dark fw-bold">Data tidak ditemukan</h6>
-                    <p class="text-muted small">Coba kata kunci lain atau tambah produk baru.</p>
-                </div>
-            @endif
+                    @endforelse
+                </tbody>
+            </table>
         </div>
-        
-        @if($products->hasPages())
-        <div class="card-footer bg-white border-top py-3">
-            {{ $products->links(data: ['scrollTo' => false]) }}
+        <div class="p-3">
+            {{ $products->links() }}
         </div>
-        @endif
     </div>
-    
-    <style>
-        .last-no-border:last-child { border-bottom: none !important; }
-        .btn-white { background-color: #fff; }
-        .btn-white:hover { background-color: #f8f9fa; }
-        
-        /* Mobile adjustment */
-        @media (max-width: 576px) {
-            .pagination { justify-content: center; font-size: 0.8rem; }
-            .badge { font-weight: 500; }
-        }
-    </style>
 </div>
