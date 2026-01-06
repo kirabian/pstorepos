@@ -32,13 +32,15 @@ class ProductCreate extends Component
     public $stock = 0;
     
     // Khusus IMEI
-    public $imei_list; // Textarea isi IMEI
+    public $imei_list; 
+
+    // LIST UNTUK DROPDOWN TYPE
+    public $existing_types = [];
 
     public function updatedFormType()
     {
-        // Reset validasi saat ganti tab
         $this->resetValidation();
-        // Set default category berdasarkan tipe (opsional, sesuaikan ID di DB Anda)
+        // Set default category
         if($this->form_type == 'jasa') {
             $cat = Category::where('name', 'like', '%Jasa%')->first();
             $this->category_id = $cat ? $cat->id : null;
@@ -51,14 +53,27 @@ class ProductCreate extends Component
         }
     }
 
-    // Hitung stok otomatis dari jumlah baris IMEI
+    // SAAT BRAND DIPILIH, AMBIL DAFTAR TIPE PRODUK YANG SUDAH ADA
+    public function updatedBrandId($value)
+    {
+        if(!empty($value)) {
+            $this->existing_types = Product::where('brand_id', $value)
+                ->select('name')
+                ->distinct()
+                ->orderBy('name', 'asc')
+                ->pluck('name')
+                ->toArray();
+        } else {
+            $this->existing_types = [];
+        }
+    }
+
     public function updatedImeiList()
     {
         if ($this->form_type == 'imei' && !empty($this->imei_list)) {
             $lines = array_filter(explode("\n", $this->imei_list));
             $this->stock = count($lines);
         } else {
-            // Jika dihapus semua, stok 0
             if ($this->form_type == 'imei') {
                 $this->stock = 0;
             }
@@ -67,7 +82,7 @@ class ProductCreate extends Component
 
     public function save()
     {
-        // 1. Validasi Berdasarkan Tipe Form
+        // 1. Validasi
         if ($this->form_type == 'jasa') {
             $this->validate([
                 'name' => 'required|min:3',
@@ -96,21 +111,16 @@ class ProductCreate extends Component
                 'condition' => 'required',
                 'cost_price' => 'required|numeric',
                 'srp_price' => 'required|numeric',
-                // imei_list opsional, kalau kosong berarti stok 0 tapi produk terbuat
             ]);
         }
 
         DB::beginTransaction();
         try {
             // 2. Buat / Cari Produk Master
-            // Cek apakah produk dengan nama ini sudah ada di brand ini?
-            // Jika user ingin menambah varian ke produk yg sudah ada, logicnya bisa di sini.
-            // Untuk simple create, kita buat produk baru atau pakai yg ada.
-            
             $product = Product::firstOrCreate(
                 [
                     'name' => $this->name,
-                    'brand_id' => ($this->form_type == 'jasa') ? null : $this->brand_id, // Jasa mungkin tidak butuh brand
+                    'brand_id' => ($this->form_type == 'jasa') ? null : $this->brand_id,
                 ],
                 [
                     'category_id' => $this->category_id,
@@ -120,7 +130,7 @@ class ProductCreate extends Component
                 ]
             );
 
-            // 3. Buat Nama Varian (Attribute Name)
+            // 3. Buat Nama Varian
             if ($this->form_type == 'imei') {
                 $attributeName = "{$this->ram}/{$this->storage} {$this->color} ({$this->condition})";
             } elseif ($this->form_type == 'non-imei') {
@@ -130,29 +140,13 @@ class ProductCreate extends Component
             }
 
             // 4. Simpan Varian
-            $variant = ProductVariant::create([
+            ProductVariant::create([
                 'product_id' => $product->id,
                 'attribute_name' => $attributeName,
                 'stock' => $this->stock,
                 'cost_price' => $this->cost_price,
                 'srp_price' => $this->srp_price,
             ]);
-
-            // 5. Jika ada IMEI, simpan ke tabel IMEI (Asumsi ada tabel product_imeis atau stocks)
-            // Di sini saya hanya simulasi logikanya karena skema tabel IMEI belum diberikan di prompt sebelumnya.
-            // Anda bisa menambahkan logic insert ke tabel IMEI di sini.
-            /*
-            if ($this->form_type == 'imei' && !empty($this->imei_list)) {
-                $imeis = array_filter(explode("\n", $this->imei_list));
-                foreach($imeis as $imei) {
-                     Stock::create([
-                        'product_variant_id' => $variant->id,
-                        'imei' => trim($imei),
-                        'status' => 'ready'
-                     ]);
-                }
-            }
-            */
 
             DB::commit();
 

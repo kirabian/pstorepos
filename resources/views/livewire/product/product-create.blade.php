@@ -88,9 +88,32 @@
 
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold small text-muted">Tipe / Nama Produk <span class="text-danger">*</span></label>
-                                    <input type="text" wire:model="name" class="form-control rounded-3" placeholder="Contoh: iPhone 15 Pro Max">
+                                    
+                                    <div class="position-relative">
+                                        <input type="text" 
+                                               wire:model="name" 
+                                               class="form-control rounded-3" 
+                                               list="product-list" 
+                                               placeholder="Pilih atau Ketik Baru..."
+                                               autocomplete="off">
+                                        
+                                        <datalist id="product-list">
+                                            @foreach($existing_types as $type)
+                                                <option value="{{ $type }}">
+                                            @endforeach
+                                        </datalist>
+                                    </div>
+
                                     @if($brand_id)
-                                        <div class="form-text small"><i class="fas fa-info-circle me-1"></i> Masukkan nama tipe sesuai brand terpilih.</div>
+                                        @if(count($existing_types) > 0)
+                                            <div class="form-text small text-success">
+                                                <i class="fas fa-check-circle me-1"></i> {{ count($existing_types) }} tipe ditemukan untuk brand ini.
+                                            </div>
+                                        @else
+                                            <div class="form-text small text-muted">
+                                                <i class="fas fa-info-circle me-1"></i> Belum ada data tipe untuk brand ini. Silakan ketik baru.
+                                            </div>
+                                        @endif
                                     @endif
                                     @error('name') <span class="text-danger small">{{ $message }}</span> @enderror
                                 </div>
@@ -111,11 +134,14 @@
                                         <label class="form-label fw-bold small text-muted">RAM <span class="text-danger">*</span></label>
                                         <select wire:model="ram" class="form-select rounded-3">
                                             <option value="">Pilih RAM</option>
+                                            <option value="2GB">2GB</option>
+                                            <option value="3GB">3GB</option>
                                             <option value="4GB">4GB</option>
                                             <option value="6GB">6GB</option>
                                             <option value="8GB">8GB</option>
                                             <option value="12GB">12GB</option>
                                             <option value="16GB">16GB</option>
+                                            <option value="24GB">24GB</option>
                                         </select>
                                         @error('ram') <span class="text-danger small">{{ $message }}</span> @enderror
                                     </div>
@@ -123,6 +149,7 @@
                                         <label class="form-label fw-bold small text-muted">Internal / Storage <span class="text-danger">*</span></label>
                                         <select wire:model="storage" class="form-select rounded-3">
                                             <option value="">Pilih Storage</option>
+                                            <option value="32GB">32GB</option>
                                             <option value="64GB">64GB</option>
                                             <option value="128GB">128GB</option>
                                             <option value="256GB">256GB</option>

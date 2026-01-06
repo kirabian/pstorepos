@@ -12,7 +12,7 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-bold small text-muted">Merek / Brand</label>
-                                <select wire:model="brand_id" class="form-select rounded-3">
+                                <select wire:model.live="brand_id" class="form-select rounded-3">
                                     <option value="">Tanpa Brand (Jasa)</option>
                                     @foreach($brands as $br)
                                         <option value="{{$br->id}}">{{$br->name}}</option>
@@ -22,7 +22,19 @@
 
                             <div class="col-md-6">
                                 <label class="form-label fw-bold small text-muted">Nama Produk <span class="text-danger">*</span></label>
-                                <input type="text" wire:model="name" class="form-control rounded-3">
+                                <div class="position-relative">
+                                    <input type="text" 
+                                           wire:model="name" 
+                                           class="form-control rounded-3" 
+                                           list="product-list-edit" 
+                                           placeholder="Nama Produk...">
+                                    
+                                    <datalist id="product-list-edit">
+                                        @foreach($existing_types as $type)
+                                            <option value="{{ $type }}">
+                                        @endforeach
+                                    </datalist>
+                                </div>
                             </div>
 
                             <div class="col-md-12">

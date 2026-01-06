@@ -12,18 +12,20 @@ use Illuminate\Support\Facades\DB;
 class ProductEdit extends Component
 {
     public $product_id;
-    public $variant_id; // Jika ingin edit spesifik varian
+    public $variant_id;
     
     // Data Form
     public $name;
     public $brand_id;
     public $category_id;
     
-    // Data Varian (Kita ambil varian pertama atau yang diedit)
-    public $attribute_name; // Nama varian full
+    // Data Varian
+    public $attribute_name;
     public $stock;
     public $cost_price;
     public $srp_price;
+
+    public $existing_types = [];
 
     public function mount($id)
     {
@@ -34,8 +36,9 @@ class ProductEdit extends Component
         $this->brand_id = $product->brand_id;
         $this->category_id = $product->category_id;
 
-        // Ambil varian pertama untuk diedit (Sederhana)
-        // Jika produk punya banyak varian, idealnya ada list varian di bawah form edit
+        // Load existing types untuk brand ini saat pertama load
+        $this->loadExistingTypes($this->brand_id);
+
         $variant = $product->variants->first();
         
         if($variant) {
@@ -44,6 +47,25 @@ class ProductEdit extends Component
             $this->stock = $variant->stock;
             $this->cost_price = $variant->cost_price;
             $this->srp_price = $variant->srp_price;
+        }
+    }
+
+    public function updatedBrandId($value)
+    {
+        $this->loadExistingTypes($value);
+    }
+
+    public function loadExistingTypes($brandId)
+    {
+        if(!empty($brandId)) {
+            $this->existing_types = Product::where('brand_id', $brandId)
+                ->select('name')
+                ->distinct()
+                ->orderBy('name', 'asc')
+                ->pluck('name')
+                ->toArray();
+        } else {
+            $this->existing_types = [];
         }
     }
 
@@ -62,15 +84,15 @@ class ProductEdit extends Component
             $product = Product::findOrFail($this->product_id);
             $product->update([
                 'name' => $this->name,
-                'brand_id' => $this->brand_id, // Bisa null jika jasa
+                'brand_id' => $this->brand_id,
                 'category_id' => $this->category_id,
             ]);
 
             if ($this->variant_id) {
                 $variant = ProductVariant::findOrFail($this->variant_id);
                 $variant->update([
-                    'attribute_name' => $this->attribute_name, // User bisa ubah nama varian manual
-                    'stock' => $this->stock, // Edit stok manual (opname sederhana)
+                    'attribute_name' => $this->attribute_name,
+                    'stock' => $this->stock,
                     'cost_price' => $this->cost_price,
                     'srp_price' => $this->srp_price,
                 ]);
