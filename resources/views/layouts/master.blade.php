@@ -23,7 +23,7 @@
         :root {
             --core-black: #09090b;
             --core-white: #ffffff;
-            /* Perbaikan: Menambahkan warna background abu-abu premium agar kontras */
+            /* Background Abu-abu Premium agar Navbar Putih terlihat Jelas */
             --core-bg: #f2f4f7;
             --core-gray-light: #f8f9fa;
             --core-gray-border: #eee;
@@ -31,11 +31,10 @@
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            /* Menggunakan background abu-abu, bukan putih polos */
             background-color: var(--core-bg);
             color: var(--core-black);
             margin: 0;
-            overflow-x: hidden; /* Mencegah scroll horizontal di HP */
+            overflow-x: hidden;
             font-display: swap;
         }
 
@@ -50,16 +49,17 @@
             width: 100%;
             display: flex;
             flex-direction: column;
-            /* Background content mengikuti body agar konsisten */
             background-color: var(--core-bg);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            min-width: 0; /* Mencegah flex item overflow */
+            min-width: 0;
+            position: relative;
         }
 
-        /* Logic agar konten tidak tertutup Navbar yang Fixed/Melayang */
+        /* Logic Konten */
         main {
-            margin-top: 80px; /* Memberi ruang untuk navbar */
-            transition: margin-top 0.3s ease;
+            /* Hapus margin-top besar karena kita pakai sticky, bukan fixed */
+            padding-top: 1rem; 
+            transition: all 0.3s ease;
         }
 
         /* Overlay untuk Mobile */
@@ -71,7 +71,7 @@
             width: 100vw;
             height: 100vh;
             background: rgba(0, 0, 0, 0.5);
-            z-index: 1045; /* Di bawah Sidebar (1050) tapi di atas Navbar (1040) */
+            z-index: 1045;
             opacity: 0;
             transition: opacity 0.3s ease-in-out;
         }
@@ -148,23 +148,20 @@
             const navbar = document.getElementById('main-navbar');
             
             if(navbar) {
-                // Check initial scroll position
                 if (window.scrollY > 10) {
                     navbar.classList.add('scrolled');
                 }
 
                 window.addEventListener('scroll', function() {
                     if (window.scrollY > 10) { 
-                        // Jika scroll lebih dari 10px, ubah jadi mode "Island" (kecil & melayang)
                         navbar.classList.add('scrolled');
                     } else {
-                        // Jika kembali ke atas, reset ke mode lebar penuh
                         navbar.classList.remove('scrolled');
                     }
                 });
             }
 
-            // --- Sidebar Toggle Logic Responsive ---
+            // --- Sidebar Toggle Logic ---
             const toggleBtn = document.getElementById('sidebarToggle'),
                 sidebar = document.getElementById('sidebar'),
                 overlay = document.getElementById('sidebar-overlay');
@@ -172,20 +169,19 @@
             if (toggleBtn && sidebar) {
                 toggleBtn.addEventListener('click', (e) => {
                     e.preventDefault();
-                    e.stopPropagation(); // Mencegah bubbling
+                    e.stopPropagation(); 
 
                     if (window.innerWidth >= 992) {
-                        // Logic Desktop (Minimize)
+                        // Desktop: Minimize Sidebar
                         sidebar.classList.toggle('minimized');
                     } else {
-                        // Logic Mobile (Off-Canvas)
+                        // Mobile: Show Off-Canvas
                         sidebar.classList.toggle('show-mobile');
                         if (overlay) overlay.classList.toggle('show');
                     }
                 });
             }
 
-            // Tutup sidebar saat overlay diklik (Mobile Only)
             if (overlay) {
                 overlay.addEventListener('click', () => {
                     if (sidebar) sidebar.classList.remove('show-mobile');
@@ -193,7 +189,6 @@
                 });
             }
 
-            // Tutup sidebar saat resize dari Mobile ke Desktop untuk reset state
             window.addEventListener('resize', () => {
                 if (window.innerWidth >= 992) {
                     if (sidebar) sidebar.classList.remove('show-mobile');
@@ -204,7 +199,7 @@
             @auth
             let idleTimer;
             let isCurrentlyOffline = false;
-            const statusDelay = 10000; // 10 Detik
+            const statusDelay = 10000; 
 
             function resetIdleTimer() {
                 if (isCurrentlyOffline) {

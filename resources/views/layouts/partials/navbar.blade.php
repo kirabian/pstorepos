@@ -1,10 +1,10 @@
-<nav id="main-navbar" class="navbar navbar-expand-lg fixed-top transition-all">
+<nav id="main-navbar" class="navbar navbar-expand-lg transition-all">
     <div class="container-fluid px-0">
         <div class="d-flex align-items-center w-100">
-            <button class="btn btn-white border-0 shadow-none me-3 rounded-circle d-flex align-items-center justify-content-center" 
+            <button class="btn bg-white border shadow-sm me-3 rounded-circle d-flex align-items-center justify-content-center" 
                 id="sidebarToggle" 
                 aria-label="Toggle Sidebar"
-                style="width: 40px; height: 40px; background-color: rgba(248, 249, 250, 0.5);">
+                style="width: 40px; height: 40px; min-width: 40px; z-index: 1055;">
                 <i class="fas fa-bars-staggered text-dark"></i>
             </button>
             
@@ -39,54 +39,56 @@
 </nav>
 
 <style>
-    /* Base Navbar Style */
+    /* PERBAIKAN UTAMA:
+       Gunakan 'sticky' agar navbar tetap di dalam flow content (sebelah kanan sidebar),
+       bukan 'fixed' yang membuatnya menimpa seluruh layar.
+    */
     #main-navbar {
-        background: rgba(255, 255, 255, 0.8); /* Mulai dengan agak transparan */
+        position: sticky;
+        top: 0;
+        background: rgba(255, 255, 255, 0.8);
         backdrop-filter: blur(8px);
         border-bottom: 1px solid rgba(0,0,0,0.05);
         padding: 0.75rem 1.0rem;
         z-index: 1040;
         width: 100%;
-        top: 0;
-        left: 0;
-        right: 0;
-        /* Transisi Halus untuk semua properti */
-        transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1); 
+        transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); 
     }
 
-    /* Style Saat Discroll (Floating Island Effect) */
+    /* Style Saat Discroll (Island Effect - Web Version) */
     #main-navbar.scrolled {
-        width: 92%; /* Mengecil jadi 92% layar */
-        top: 20px; /* Jarak dari atas (melayang) */
-        left: 50%; /* Posisi tengah */
-        transform: translateX(-50%); /* Trik centering absolute/fixed */
+        width: 95%; /* Tidak full width, memberi efek mengambang */
+        top: 15px; /* Jarak dari atas */
+        margin: 0 auto; /* Posisi tengah relatif terhadap content */
         
-        border-radius: 50px; /* Membuat sudut membulat seperti kapsul */
-        /* Border halus agar terlihat seperti kaca 3D */
+        border-radius: 50px;
         border: 1px solid rgba(255, 255, 255, 0.6);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
         
-        /* Efek Kaca Lebih Kuat */
-        background: rgba(255, 255, 255, 0.85) !important; 
+        background: rgba(255, 255, 255, 0.9) !important; 
         backdrop-filter: blur(20px) saturate(180%);
         -webkit-backdrop-filter: blur(20px) saturate(180%);
         
-        /* Shadow Premium (Lebih Soft & Deep) */
         box-shadow: 
-            0 10px 15px -3px rgba(0, 0, 0, 0.05),
-            0 4px 6px -2px rgba(0, 0, 0, 0.025),
-            0 0 0 1px rgba(0, 0, 0, 0.03); /* Outline halus */
+            0 10px 25px -5px rgba(0, 0, 0, 0.05),
+            0 8px 10px -6px rgba(0, 0, 0, 0.01);
             
-        padding: 0.6rem 1.8rem; /* Padding sedikit mengecil tapi lebih lebar di samping */
+        padding: 0.6rem 1.5rem;
     }
 
     /* Responsive untuk Mobile */
     @media (max-width: 991.98px) {
+        #main-navbar {
+            position: fixed; /* Di HP boleh fixed karena sidebar offcanvas */
+            top: 0;
+            left: 0;
+            right: 0;
+        }
+        
         #main-navbar.scrolled {
-            width: 95%; /* Di HP jangan terlalu kecil, 95% cukup */
+            width: 92%;
             top: 15px;
             padding: 0.5rem 1rem;
-            border-radius: 25px; /* Radius lebih kecil di mobile */
+            border-radius: 25px;
         }
     }
 </style>
