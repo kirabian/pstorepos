@@ -90,7 +90,7 @@
         </ul>
     </div>
 
-    <div class="p-3 mt-2 border-top border-white border-opacity-10 bg-white bg-opacity-5">
+    <div class="p-3 mt-2 border-top border-white border-opacity-10" style="background: rgba(255, 255, 255, 0.05);">
         <div class="d-flex align-items-center user-card rounded-4 p-2">
             <div class="position-relative flex-shrink-0">
                 <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->nama_lengkap) }}&background=fff&color=000&bold=true"
@@ -100,7 +100,7 @@
             <div class="ms-3 overflow-hidden user-info transition-all">
                 <p class="mb-0 fw-bold text-white text-truncate" style="font-size: 0.9rem;">{{ explode(' ', Auth::user()->nama_lengkap)[0] }}</p>
                 <form method="POST" action="{{ route('logout') }}"> @csrf
-                    <button type="submit" class="btn btn-link p-0 text-secondary text-decoration-none" style="font-size: 0.75rem;">
+                    <button type="submit" class="btn btn-link p-0 text-secondary text-decoration-none hover-text-white" style="font-size: 0.75rem;">
                         <i class="fas fa-sign-out-alt me-1"></i> Log Out
                     </button>
                 </form>
@@ -144,6 +144,10 @@
         margin-right: 12px;
         font-size: 1.1rem;
         transition: margin 0.3s;
+    }
+
+    .hover-text-white:hover {
+        color: #fff !important;
     }
 
     /* Minimized State */
