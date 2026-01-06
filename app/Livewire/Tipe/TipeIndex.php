@@ -17,39 +17,43 @@ class TipeIndex extends Component
     public $tipeId;
     public $isEdit = false;
 
+    // --- FORM PROPERTIES ---
     #[Rule('required|exists:merks,id')]
     public $merk_id;
 
     #[Rule('required|min:2')]
     public $nama;
 
-    // Tambahkan Validasi Jenis
     #[Rule('required|in:imei,non_imei,jasa')]
-    public $jenis = 'imei'; // Default select
+    public $jenis = 'imei'; 
 
-    #[Rule('required|array|min:1')]
+    // Untuk HP (Array dari TomSelect)
     public $ram_storage = []; 
 
-    // Opsi Varian digabung (HP + Aksesoris)
+    // Untuk Non-IMEI/Jasa (String Manual)
+    public $variasi_manual = ''; 
+
+    // Opsi RAM Predefined (Khusus HP)
     public $ramOptions = [
-        // --- HP / TABLET (IMEI) ---
         '2/32', '3/32', '4/64', '4/128', '6/128', '8/128', '8/256', 
-        '12/256', '12/512', '16/512', '1TB', 
-        
-        // --- AKSESORIS / PART (NON-IMEI / JASA) ---
-        'Original', 'OEM', 'Grade A', 
-        'Black', 'White', 'Blue', 'Red', // Warna (jika tipe casing)
-        '1 Meter', '2 Meter', // Panjang kabel
-        'LCD Only', 'Fullset', // Tipe part
-        'Jasa Only' // Untuk murni jasa
+        '12/256', '12/512', '16/512', '1TB'
     ];
+
+    // Reset saat ganti jenis agar form bersih
+    public function updatedJenis()
+    {
+        $this->ram_storage = [];
+        $this->variasi_manual = '';
+        $this->dispatch('reset-select');
+    }
 
     public function resetInputFields()
     {
         $this->merk_id = '';
         $this->nama = '';
-        $this->jenis = 'imei'; // Reset ke default
+        $this->jenis = 'imei';
         $this->ram_storage = [];
+        $this->variasi_manual = '';
         $this->tipeId = null;
         $this->isEdit = false;
         $this->resetErrorBag();
@@ -58,13 +62,35 @@ class TipeIndex extends Component
 
     public function store()
     {
-        $this->validate();
+        // 1. Validasi Umum
+        $this->validate([
+            'merk_id' => 'required',
+            'nama' => 'required|min:2',
+            'jenis' => 'required',
+        ]);
 
+        // 2. Validasi Khusus & Data Processing
+        $final_variasi = [];
+
+        if ($this->jenis == 'imei') {
+            // Jika HP, Wajib pilih RAM dari Dropdown
+            $this->validate(['ram_storage' => 'required|array|min:1']);
+            $final_variasi = $this->ram_storage;
+        } else {
+            // Jika Jasa/Aksesoris, Wajib isi teks manual
+            $this->validate(['variasi_manual' => 'required|string|min:1']);
+            
+            // Pecah string koma menjadi array. Contoh: "Merah, Biru" -> ["Merah", "Biru"]
+            $pecah = explode(',', $this->variasi_manual);
+            $final_variasi = array_map('trim', $pecah); // Hapus spasi berlebih
+        }
+
+        // 3. Simpan ke Database
         Tipe::updateOrCreate(['id' => $this->tipeId], [
             'merk_id' => $this->merk_id,
             'nama' => $this->nama,
-            'jenis' => $this->jenis, // Simpan jenis
-            'ram_storage' => $this->ram_storage
+            'jenis' => $this->jenis,
+            'ram_storage' => $final_variasi // Disimpan sebagai JSON
         ]);
 
         $this->dispatch('close-modal');
@@ -83,10 +109,21 @@ class TipeIndex extends Component
         $this->tipeId = $id;
         $this->merk_id = $tipe->merk_id;
         $this->nama = $tipe->nama;
-        $this->jenis = $tipe->jenis; // Load jenis
-        $this->ram_storage = $tipe->ram_storage ?? []; 
+        $this->jenis = $tipe->jenis;
+        
+        // Load Data Varian
+        $dataVarian = $tipe->ram_storage ?? [];
+
+        if ($this->jenis == 'imei') {
+            $this->ram_storage = $dataVarian;
+            // Trigger JS TomSelect
+            $this->dispatch('set-select-values', values: $this->ram_storage);
+        } else {
+            // Jika Jasa/Non-IMEI, gabungkan array jadi string koma
+            $this->variasi_manual = implode(', ', $dataVarian);
+        }
+
         $this->isEdit = true;
-        $this->dispatch('set-select-values', values: $this->ram_storage);
     }
 
     public function delete($id)
