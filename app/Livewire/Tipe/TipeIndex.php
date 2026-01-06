@@ -25,26 +25,26 @@ class TipeIndex extends Component
     public $nama;
 
     #[Rule('required|in:imei,non_imei,jasa')]
-    public $jenis = 'imei'; 
+    public $jenis = 'imei'; // Default
 
-    // Untuk HP (Array dari TomSelect)
+    // Property HP (Array)
     public $ram_storage = []; 
 
-    // Untuk Non-IMEI/Jasa (String Manual)
+    // Property Aksesoris/Jasa (String Manual)
     public $variasi_manual = ''; 
 
-    // Opsi RAM Predefined (Khusus HP)
+    // Opsi RAM Predefined
     public $ramOptions = [
         '2/32', '3/32', '4/64', '4/128', '6/128', '8/128', '8/256', 
         '12/256', '12/512', '16/512', '1TB'
     ];
 
-    // Reset saat ganti jenis agar form bersih
+    // PENTING: Reset input saat jenis berubah
     public function updatedJenis()
     {
         $this->ram_storage = [];
         $this->variasi_manual = '';
-        $this->dispatch('reset-select');
+        $this->dispatch('reset-select'); // Reset JS TomSelect
     }
 
     public function resetInputFields()
@@ -62,35 +62,31 @@ class TipeIndex extends Component
 
     public function store()
     {
-        // 1. Validasi Umum
         $this->validate([
             'merk_id' => 'required',
             'nama' => 'required|min:2',
             'jenis' => 'required',
         ]);
 
-        // 2. Validasi Khusus & Data Processing
         $final_variasi = [];
 
         if ($this->jenis == 'imei') {
-            // Jika HP, Wajib pilih RAM dari Dropdown
+            // Validasi HP: Wajib Array
             $this->validate(['ram_storage' => 'required|array|min:1']);
             $final_variasi = $this->ram_storage;
         } else {
-            // Jika Jasa/Aksesoris, Wajib isi teks manual
+            // Validasi Lainnya: Wajib Text
             $this->validate(['variasi_manual' => 'required|string|min:1']);
-            
-            // Pecah string koma menjadi array. Contoh: "Merah, Biru" -> ["Merah", "Biru"]
+            // Pecah string koma jadi array
             $pecah = explode(',', $this->variasi_manual);
-            $final_variasi = array_map('trim', $pecah); // Hapus spasi berlebih
+            $final_variasi = array_map('trim', $pecah);
         }
 
-        // 3. Simpan ke Database
         Tipe::updateOrCreate(['id' => $this->tipeId], [
             'merk_id' => $this->merk_id,
             'nama' => $this->nama,
             'jenis' => $this->jenis,
-            'ram_storage' => $final_variasi // Disimpan sebagai JSON
+            'ram_storage' => $final_variasi // Simpan JSON
         ]);
 
         $this->dispatch('close-modal');
@@ -111,15 +107,13 @@ class TipeIndex extends Component
         $this->nama = $tipe->nama;
         $this->jenis = $tipe->jenis;
         
-        // Load Data Varian
         $dataVarian = $tipe->ram_storage ?? [];
 
         if ($this->jenis == 'imei') {
             $this->ram_storage = $dataVarian;
-            // Trigger JS TomSelect
             $this->dispatch('set-select-values', values: $this->ram_storage);
         } else {
-            // Jika Jasa/Non-IMEI, gabungkan array jadi string koma
+            // Gabung array jadi string untuk input text
             $this->variasi_manual = implode(', ', $dataVarian);
         }
 

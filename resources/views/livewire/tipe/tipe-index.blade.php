@@ -11,6 +11,8 @@
         .ts-dropdown, .ts-control { z-index: 1070 !important; }
         
         .badge-ram { background-color: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; font-weight: 500; font-size: 0.75rem; }
+        
+        /* Badge Jenis */
         .badge-jenis-imei { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
         .badge-jenis-non { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
         .badge-jenis-jasa { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
@@ -18,8 +20,9 @@
         .search-container { width: 100%; }
         @media (min-width: 768px) { .search-container { width: 300px; } }
         
+        /* Radio Button Style */
         .btn-check:checked + .btn-outline-custom { background-color: #212529; color: white; border-color: #212529; }
-        .btn-outline-custom { border: 1px solid #dee2e6; color: #6c757d; }
+        .btn-outline-custom { border: 1px solid #dee2e6; color: #6c757d; transition: all 0.2s; }
         .btn-outline-custom:hover { background-color: #f8f9fa; }
     </style>
 
@@ -117,22 +120,19 @@
                                 <div class="col-4">
                                     <input type="radio" class="btn-check" name="jenis" id="opt_imei" value="imei" wire:model.live="jenis">
                                     <label class="btn btn-outline-custom w-100 py-2 rounded-3 text-center" for="opt_imei">
-                                        <i class="fas fa-mobile-alt d-block mb-1 fs-5"></i>
-                                        <span class="small fw-bold">HP/Unit</span>
+                                        <i class="fas fa-mobile-alt d-block mb-1 fs-5"></i> <span class="small fw-bold">HP/Unit</span>
                                     </label>
                                 </div>
                                 <div class="col-4">
                                     <input type="radio" class="btn-check" name="jenis" id="opt_non" value="non_imei" wire:model.live="jenis">
                                     <label class="btn btn-outline-custom w-100 py-2 rounded-3 text-center" for="opt_non">
-                                        <i class="fas fa-box-open d-block mb-1 fs-5"></i>
-                                        <span class="small fw-bold">Aksesoris</span>
+                                        <i class="fas fa-box-open d-block mb-1 fs-5"></i> <span class="small fw-bold">Aksesoris</span>
                                     </label>
                                 </div>
                                 <div class="col-4">
                                     <input type="radio" class="btn-check" name="jenis" id="opt_jasa" value="jasa" wire:model.live="jenis">
                                     <label class="btn btn-outline-custom w-100 py-2 rounded-3 text-center" for="opt_jasa">
-                                        <i class="fas fa-tools d-block mb-1 fs-5"></i>
-                                        <span class="small fw-bold">Jasa</span>
+                                        <i class="fas fa-tools d-block mb-1 fs-5"></i> <span class="small fw-bold">Jasa</span>
                                     </label>
                                 </div>
                             </div>
@@ -156,54 +156,57 @@
                             @error('nama') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        @if($jenis == 'imei')
-                            {{-- TAMPILAN KHUSUS HP (TOM SELECT) --}}
-                            <div class="mb-4" wire:ignore 
-                                 x-data="{
-                                    tomSelectInstance: null,
-                                    options: @js($ramOptions),
-                                    initSelect() {
-                                        if(this.tomSelectInstance) this.tomSelectInstance.destroy();
-                                        this.tomSelectInstance = new TomSelect(this.$refs.selectInput, {
-                                            plugins: ['remove_button', 'dropdown_input'], create: true, maxItems: null,
-                                            valueField: 'value', labelField: 'value', searchField: 'value',
-                                            options: this.options.map(o => ({value: o})),
-                                            items: @entangle('ram_storage').live,
-                                            onChange: (value) => { @this.set('ram_storage', value); }
-                                        });
-                                    }
-                                 }"
-                                 x-init="initSelect()"
-                                 @set-select-values.window="
-                                     if(tomSelectInstance) {
-                                         tomSelectInstance.clear(true);
-                                         $event.detail.values.forEach(v => {
-                                             tomSelectInstance.addOption({value: v, text: v});
-                                             tomSelectInstance.addItem(v, true);
-                                         });
-                                     }
-                                 "
-                                 @reset-select.window="if(tomSelectInstance) tomSelectInstance.clear()"
-                            >
-                                <label class="form-label fw-bold small text-uppercase text-secondary">Varian RAM/ROM <span class="text-danger">*</span></label>
-                                <select x-ref="selectInput" multiple placeholder="Pilih RAM..." autocomplete="off"></select>
-                                @error('ram_storage') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                        @if($jenis === 'imei')
+                            <div class="mb-4" wire:key="input-section-imei">
+                                <div wire:ignore 
+                                     x-data="{
+                                        tomSelectInstance: null,
+                                        options: @js($ramOptions),
+                                        initSelect() {
+                                            if(this.tomSelectInstance) this.tomSelectInstance.destroy();
+                                            this.tomSelectInstance = new TomSelect(this.$refs.selectInput, {
+                                                plugins: ['remove_button', 'dropdown_input'], create: true, maxItems: null,
+                                                valueField: 'value', labelField: 'value', searchField: 'value',
+                                                options: this.options.map(o => ({value: o})),
+                                                items: @entangle('ram_storage').live,
+                                                onChange: (value) => { @this.set('ram_storage', value); }
+                                            });
+                                        }
+                                     }"
+                                     x-init="initSelect()"
+                                     @set-select-values.window="
+                                         if(tomSelectInstance) {
+                                             tomSelectInstance.clear(true);
+                                             $event.detail.values.forEach(v => {
+                                                 tomSelectInstance.addOption({value: v, text: v});
+                                                 tomSelectInstance.addItem(v, true);
+                                             });
+                                         }
+                                     "
+                                     @reset-select.window="if(tomSelectInstance) tomSelectInstance.clear()"
+                                >
+                                    <label class="form-label fw-bold small text-uppercase text-secondary">Varian RAM/ROM <span class="text-danger">*</span></label>
+                                    <select x-ref="selectInput" multiple placeholder="Pilih RAM..." autocomplete="off"></select>
+                                </div>
+                                @error('ram_storage') <div class="text-danger small mt-1 d-block">{{ $message }}</div> @enderror
                             </div>
 
                         @else
-                            {{-- TAMPILAN KHUSUS AKSESORIS / JASA (INPUT TEXT BIASA) --}}
-                            <div class="mb-4">
+                            <div class="mb-4" wire:key="input-section-manual">
                                 <label class="form-label fw-bold small text-uppercase text-secondary">
-                                    {{ $jenis == 'non_imei' ? 'Varian (Warna/Tipe)' : 'Keterangan Jasa' }} <span class="text-danger">*</span>
+                                    {{ $jenis === 'non_imei' ? 'Varian Warna / Tipe' : 'Detail Jasa' }} <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control rounded-3 py-2 @error('variasi_manual') is-invalid @enderror" 
+                                
+                                <input type="text" 
+                                       class="form-control rounded-3 py-2 @error('variasi_manual') is-invalid @enderror" 
                                        wire:model="variasi_manual" 
-                                       placeholder="{{ $jenis == 'non_imei' ? 'Contoh: Merah, Putih, Hitam (Pisahkan koma)' : 'Contoh: LCD Original, LCD KW' }}">
+                                       placeholder="{{ $jenis === 'non_imei' ? 'Contoh: Hitam, Putih, Gold (Pisahkan koma)' : 'Contoh: Ganti LCD Original' }}">
+                                
                                 <div class="form-text small text-muted">
-                                    @if($jenis == 'non_imei')
-                                        Jika lebih dari satu warna/tipe, pisahkan dengan koma (,).
+                                    @if($jenis === 'non_imei')
+                                        Pisahkan dengan koma jika lebih dari satu (misal: Merah, Biru).
                                     @else
-                                        Masukkan detail jenis jasa yang tersedia.
+                                        Tuliskan detail jasa yang ditawarkan.
                                     @endif
                                 </div>
                                 @error('variasi_manual') <div class="invalid-feedback">{{ $message }}</div> @enderror
