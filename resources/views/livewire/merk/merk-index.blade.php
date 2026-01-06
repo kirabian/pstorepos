@@ -1,18 +1,9 @@
 <div class="container-fluid">
     
-    {{-- 
-        FIX Z-INDEX: 
-        Sidebar Anda memiliki z-index 1050. 
-        Kita harus memaksa Modal (1060) dan Backdrop (1055) 
-        agar berada di atas sidebar supaya bisa diklik.
-    --}}
+    {{-- CSS Jaga-jaga agar modal tetap paling depan --}}
     <style>
-        .modal-backdrop {
-            z-index: 1055 !important;
-        }
-        .modal {
-            z-index: 1060 !important;
-        }
+        .modal-backdrop { z-index: 1055 !important; }
+        .modal { z-index: 1060 !important; }
     </style>
 
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -31,7 +22,6 @@
 
     <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body p-4">
-            
             <div class="mb-3 d-flex justify-content-end">
                 <div class="input-group w-25">
                     <span class="input-group-text bg-white border-end-0 rounded-start-3"><i class="fas fa-search text-muted"></i></span>
@@ -70,12 +60,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center py-5 text-muted">
-                                    <div class="d-flex flex-column align-items-center">
-                                        <i class="fas fa-folder-open fs-1 mb-3 opacity-25"></i>
-                                        <span>Belum ada data merk ditemukan.</span>
-                                    </div>
-                                </td>
+                                <td colspan="6" class="text-center py-5 text-muted">Belum ada data merk.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -88,6 +73,12 @@
         </div>
     </div>
 
+    {{-- 
+        SOLUSI UTAMA: @teleport('body') 
+        Ini akan memindahkan Modal keluar dari Layout, langsung ke body HTML.
+        Sehingga tidak akan tertutup background atau sidebar lagi.
+    --}}
+    @teleport('body')
     <div wire:ignore.self class="modal fade" id="merkModal" tabindex="-1" aria-labelledby="merkModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content rounded-4 border-0 shadow-lg">
@@ -100,7 +91,6 @@
                 
                 <div class="modal-body pt-4">
                     <form wire:submit.prevent="store">
-                        
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-uppercase text-secondary">Nama Merk <span class="text-danger">*</span></label>
                             <input type="text" class="form-control rounded-3 py-2 @error('nama') is-invalid @enderror" 
@@ -137,24 +127,19 @@
             </div>
         </div>
     </div>
+    @endteleport
 
 </div>
 
 @script
 <script>
     Livewire.on('close-modal', () => {
-        // Menutup modal menggunakan instance Bootstrap 5
         const modalEl = document.getElementById('merkModal');
         const modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) {
-            modal.hide();
-        }
+        if (modal) { modal.hide(); }
         
-        // Memaksa penghapusan backdrop jika tertinggal (bug umum bootstrap)
-        const backdrop = document.querySelector('.modal-backdrop');
-        if (backdrop) {
-            backdrop.remove();
-        }
+        // Hapus manual backdrop jika tersisa
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
         document.body.classList.remove('modal-open');
         document.body.style.overflow = '';
     });
