@@ -1,70 +1,83 @@
 <?php
+
 namespace App\Livewire\Product;
 
 use Livewire\Component;
-use Livewire\WithFileUploads; // Tambahkan ini
+use Livewire\WithFileUploads;
 use App\Models\Product;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\ProductVariant;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ProductIndex extends Component
 {
     use WithFileUploads;
 
-    public $file_csv;
+    public $file_import;
 
-    public function importCsv()
+    public function importFile()
     {
         $this->validate([
-            'file_csv' => 'required|mimes:csv,txt|max:2048',
+            'file_import' => 'required|mimes:csv,xls,xlsx|max:10240', // Max 10MB
         ]);
 
-        $path = $this->file_csv->getRealPath();
-        $data = array_map('str_getcsv', file($path));
+        $path = $this->file_import->getRealPath();
         
-        // Ambil header jika ada, atau mulai dari baris pertama
-        // Asumsi CSV: Kolom 0 = Merek, Kolom 1 = Tipe/Model
-        
-        DB::beginTransaction();
         try {
-            // Default Category (Misal: Handphone)
+            // Load file menggunakan PhpSpreadsheet agar bisa baca XLSX & CSV
+            $spreadsheet = IOFactory::load($path);
+            $data = $spreadsheet->getActiveSheet()->toArray();
+
+            DB::beginTransaction();
+            
+            // Ambil atau buat kategori default
             $defaultCat = Category::firstOrCreate(['name' => 'Handphone']);
 
             foreach ($data as $index => $row) {
-                if ($index === 0) continue; // Lewati header
+                // Skip header (Baris 1) dan pastikan kolom Merek & Tipe tidak kosong
+                if ($index === 0 || empty($row[0]) || empty($row[1])) continue; 
 
                 $brandName = strtoupper(trim($row[0]));
                 $productName = trim($row[1]);
 
-                if (!empty($brandName) && !empty($productName)) {
-                    $brand = Brand::firstOrCreate(['name' => $brandName]);
+                // 1. Cari atau Buat Brand
+                $brand = Brand::firstOrCreate(['name' => $brandName]);
 
-                    $product = Product::firstOrCreate([
-                        'name' => $productName,
-                        'brand_id' => $brand->id,
-                        'category_id' => $defaultCat->id
-                    ]);
+                // 2. Cari atau Buat Produk
+                $product = Product::firstOrCreate([
+                    'name' => $productName,
+                    'brand_id' => $brand->id,
+                    'category_id' => $defaultCat->id
+                ]);
 
-                    // Buat varian kosong/default agar muncul di stok
-                    ProductVariant::firstOrCreate([
-                        'product_id' => $product->id,
-                        'attribute_name' => 'Default',
-                        'stock' => 0,
-                        'cost_price' => 0,
-                        'srp_price' => 0
-                    ]);
-                }
+                // 3. Buat Varian Default jika belum ada
+                ProductVariant::firstOrCreate([
+                    'product_id' => $product->id,
+                    'attribute_name' => 'Original',
+                ], [
+                    'stock' => 0,
+                    'cost_price' => 0,
+                    'srp_price' => 0
+                ]);
             }
+
             DB::commit();
-            session()->flash('success', 'Data berhasil diimport!');
+            session()->flash('success', 'Berhasil mengimport ' . (count($data) - 1) . ' data produk.');
+            
         } catch (\Exception $e) {
             DB::rollBack();
-            session()->flash('error', 'Gagal import: ' . $e->getMessage());
+            session()->flash('error', 'Gagal memproses file: ' . $e->getMessage());
         }
 
-        $this->reset('file_csv');
+        $this->reset('file_import');
+    }
+
+    public function deleteProduct($id)
+    {
+        Product::find($id)->delete();
+        session()->flash('success', 'Produk berhasil dihapus.');
     }
 
     public function render()
