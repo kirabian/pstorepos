@@ -11,6 +11,7 @@ use App\Livewire\Distributor\DistributorIndex;
 use App\Livewire\Gudang\GudangCreate;
 use App\Livewire\Gudang\GudangEdit;
 use App\Livewire\Gudang\GudangIndex;
+use App\Livewire\Lacak\LacakImei;
 use App\Livewire\Merk\MerkIndex;
 use App\Livewire\Stok\StokIndex;
 use App\Livewire\Tipe\TipeIndex;
@@ -88,6 +89,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/merk', MerkIndex::class)->name('merk.index');
         Route::get('/tipe', TipeIndex::class)->name('tipe.index');
         Route::get('/stok', StokIndex::class)->name('stok.index');
+        Route::get('/lacak-imei', LacakImei::class)->name('lacak.imei');
 
     });
 });

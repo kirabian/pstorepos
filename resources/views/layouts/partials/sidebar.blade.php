@@ -70,6 +70,14 @@
                 </li>
             @endif
 
+            <li class="mb-2">
+                <a href="{{ route('lacak.imei') }}"
+                    class="nav-link p-3 rounded-4 d-flex align-items-center {{ request()->routeIs('lacak.imei') ? 'bg-white text-black fw-bold shadow' : 'text-secondary' }}">
+                    <i class="fas fa-barcode fs-5 flex-shrink-0" style="width: 24px;"></i>
+                    <span class="ms-3 sidebar-text text-nowrap">Lacak IMEI</span>
+                </a>
+            </li>
+
             <li class="mt-4 mb-2 small text-uppercase text-muted fw-bold px-3 sidebar-text text-nowrap"
                 style="font-size: 0.65rem; letter-spacing: 1px;">Preference</li>
             <li>

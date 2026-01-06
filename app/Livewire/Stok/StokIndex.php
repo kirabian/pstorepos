@@ -5,6 +5,8 @@ namespace App\Livewire\Stok;
 use App\Models\Stok;
 use App\Models\Merk;
 use App\Models\Tipe;
+use App\Models\StokHistory; // Tambahkan Model History
+use Illuminate\Support\Facades\Auth; // Tambahkan Facade Auth
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Rule;
@@ -41,44 +43,38 @@ class StokIndex extends Component
     public $harga_jual = 0;
 
     // --- DATA LISTS (Untuk Dropdown Dinamis) ---
-    public $tipeOptions = []; // Menampung Tipe berdasarkan Merk yg dipilih
-    public $ramOptions = [];  // Menampung RAM berdasarkan Tipe yg dipilih
+    public $tipeOptions = []; 
+    public $ramOptions = [];  
 
     // --- LOGIKA DEPENDENT DROPDOWN ---
     
-    // 1. Saat Merk dipilih, cari Tipe-nya
     public function updatedMerkId($value)
     {
         $this->tipeOptions = Tipe::where('merk_id', $value)->get();
-        $this->tipe_id = ''; // Reset Tipe
-        $this->ram_storage = ''; // Reset RAM
+        $this->tipe_id = ''; 
+        $this->ram_storage = ''; 
         $this->ramOptions = []; 
     }
 
-    // 2. Saat Tipe dipilih, ambil JSON RAM dari database
     public function updatedTipeId($value)
     {
         if(!empty($value)) {
             $tipe = Tipe::find($value);
-            // Ambil kolom ram_storage (JSON) dari tabel Tipes
             $this->ramOptions = $tipe->ram_storage ?? []; 
         } else {
             $this->ramOptions = [];
         }
-        $this->ram_storage = ''; // Reset pilihan RAM
+        $this->ram_storage = ''; 
     }
 
     // --- LOGIKA RUMUS OTOMATIS ---
-    // Setiap kali harga modal diketik, hitung harga jual
     public function updatedHargaModal($value)
     {
-        // Pastikan value angka
         $modal = (int) $value;
 
-        // RUMUS: Misal Margin 10% (Ganti 0.1 dengan persentase yg diinginkan)
-        // Atau bisa ganti rumus flat: $modal + 200000;
+        // Margin 10%
         if($modal > 0) {
-            $margin = $modal * 0.1; // 10% Profit
+            $margin = $modal * 0.1; 
             $this->harga_jual = $modal + $margin;
         } else {
             $this->harga_jual = 0;
@@ -105,7 +101,7 @@ class StokIndex extends Component
 
     public function store()
     {
-        // Custom validasi untuk edit (ignore unique IMEI milik sendiri)
+        // 1. Validasi Input
         $this->validate([
             'merk_id' => 'required',
             'tipe_id' => 'required',
@@ -115,6 +111,7 @@ class StokIndex extends Component
             'harga_jual' => 'required|numeric',
         ]);
 
+        // 2. Simpan / Update Data Stok Utama
         Stok::updateOrCreate(['id' => $this->stokId], [
             'merk_id' => $this->merk_id,
             'tipe_id' => $this->tipe_id,
@@ -125,10 +122,23 @@ class StokIndex extends Component
             'harga_jual' => $this->harga_jual,
         ]);
 
+        // ==========================================
+        // 3. REKAM JEJAK KE HISTORY (LACAK IMEI)
+        // ==========================================
+        StokHistory::create([
+            'imei' => $this->imei,
+            'status' => $this->stokId ? 'Update Data' : 'Stok Masuk',
+            'keterangan' => $this->stokId 
+                ? 'Data unit diperbarui oleh admin.' 
+                : 'Stok baru ditambahkan ke sistem.',
+            'user_id' => Auth::id() ?? 1, // Menggunakan ID user yang login
+        ]);
+        // ==========================================
+
         $this->dispatch('close-modal');
         $this->dispatch('swal', [
             'title' => 'Berhasil!',
-            'text' => 'Data stok unit berhasil disimpan.',
+            'text' => 'Data stok unit berhasil disimpan & tercatat di history.',
             'icon' => 'success'
         ]);
         
@@ -141,11 +151,9 @@ class StokIndex extends Component
         $this->stokId = $id;
         $this->merk_id = $stok->merk_id;
         
-        // Load Tipe Options manual karena ini mode edit
         $this->tipeOptions = Tipe::where('merk_id', $stok->merk_id)->get();
         $this->tipe_id = $stok->tipe_id;
 
-        // Load RAM Options manual
         $tipe = Tipe::find($stok->tipe_id);
         $this->ramOptions = $tipe->ram_storage ?? [];
         $this->ram_storage = $stok->ram_storage;
@@ -160,13 +168,13 @@ class StokIndex extends Component
 
     public function delete($id)
     {
+        // Opsional: Bisa tambah history 'Stok Dihapus' di sini sebelum delete jika mau
         Stok::find($id)->delete();
         $this->dispatch('swal', ['title' => 'Dihapus!', 'text' => 'Unit berhasil dihapus.', 'icon' => 'success']);
     }
 
     public function render()
     {
-        // Ambil data stok dengan relasinya
         $stoks = Stok::with(['merk', 'tipe'])
             ->where('imei', 'like', '%' . $this->search . '%')
             ->orWhereHas('merk', fn($q) => $q->where('nama', 'like', '%'.$this->search.'%'))
@@ -174,7 +182,6 @@ class StokIndex extends Component
             ->latest()
             ->paginate(10);
 
-        // Dropdown Merk (Level 1)
         $merks = Merk::orderBy('nama', 'asc')->get();
 
         return view('livewire.stok.stok-index', [
