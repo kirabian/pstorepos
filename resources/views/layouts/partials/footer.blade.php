@@ -1,23 +1,31 @@
-<footer class="mt-auto py-4 bg-transparent">
-    <div class="container-fluid px-4">
-        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between border-top pt-4">
-            
-            <div class="text-center text-md-start mb-2 mb-md-0">
+<footer class="mt-auto py-4 bg-white border-top">
+    <div class="container-fluid px-5">
+        <div class="row align-items-center justify-content-between">
+            <div class="col-12 col-md-6 text-center text-md-start">
                 <p class="mb-0 text-muted small">
-                    &copy; {{ date('Y') }} <span class="fw-bold text-dark">CORE Dashboard</span>.
+                    &copy; 2026 <span class="fw-bold text-dark">CORE</span> Admin. All rights reserved.
                 </p>
             </div>
-
-            <div class="text-center">
+            <div class="col-12 col-md-6 text-center text-md-end mt-2 mt-md-0">
                 <ul class="list-inline mb-0">
                     <li class="list-inline-item me-3">
-                        <a href="#" class="text-decoration-none text-muted small fw-bold">Support</a>
+                        <a href="#" class="text-decoration-none text-muted small hover-dark">Support</a>
+                    </li>
+                    <li class="list-inline-item me-3">
+                        <a href="#" class="text-decoration-none text-muted small hover-dark">Privacy Policy</a>
                     </li>
                     <li class="list-inline-item">
-                        <span class="badge bg-white text-secondary border rounded-pill">v1.0.4</span>
+                        <a href="#" class="text-decoration-none text-muted small hover-dark">v1.0.4</a>
                     </li>
                 </ul>
             </div>
         </div>
     </div>
 </footer>
+
+<style>
+    .hover-dark:hover {
+        color: #000 !important;
+        transition: 0.3s;
+    }
+</style>
