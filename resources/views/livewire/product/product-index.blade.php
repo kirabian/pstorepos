@@ -18,8 +18,8 @@
     </div>
 
     @if (session()->has('success'))
-        <div class="alert alert-success border-0 shadow-sm mb-4 small d-flex align-items-center">
-            <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
+        <div class="alert alert-success border-0 shadow-sm mb-4 small">
+            {!! session('success') !!}
         </div>
     @endif
     @if (session()->has('warning'))
@@ -44,9 +44,9 @@
             <div>
                 <h6 class="mb-0 fw-bold"><i class="fas fa-tasks me-2 text-primary"></i> Pratinjau Import</h6>
                 <small class="text-muted">
-                    Total: {{ count($previewData) }} data | 
-                    Valid: {{ count(array_filter($previewData, fn($item) => $item['is_valid'])) }} | 
-                    Invalid: {{ count(array_filter($previewData, fn($item) => !$item['is_valid'])) }}
+                    📊 Total: {{ count($previewData) }} data | 
+                    ✅ Siap: {{ count($previewData) - count(array_filter($previewData, fn($item) => $item['is_duplicate'])) }} | 
+                    ⚠️ Duplikat: {{ count(array_filter($previewData, fn($item) => $item['is_duplicate'])) }}
                 </small>
             </div>
             <div>
@@ -74,7 +74,13 @@
                         <td class="ps-4 py-2">
                             <div class="fw-bold text-dark">{{ $item['brand_name'] }}</div>
                             @if($item['brand_system_name'] && $item['brand_system_name'] !== $item['brand_name'])
-                                <small class="text-muted">Sistem: {{ $item['brand_system_name'] }}</small>
+                                <small class="text-success">
+                                    <i class="fas fa-database me-1"></i> Sistem: {{ $item['brand_system_name'] }}
+                                </small>
+                            @elseif(!$item['brand_system_name'])
+                                <small class="text-info">
+                                    <i class="fas fa-plus-circle me-1"></i> Brand baru akan dibuat
+                                </small>
                             @endif
                         </td>
                         <td class="py-2">
@@ -89,17 +95,13 @@
                             {{ $item['ram_storage'] ?: '-' }}
                         </td>
                         <td class="py-2 text-center">
-                            @if($item['is_valid'] && !$item['is_duplicate'])
+                            @if(!$item['is_duplicate'])
                                 <span class="badge bg-success-subtle text-success px-2 border border-success border-opacity-25 rounded-pill">
-                                    <i class="fas fa-check me-1"></i> Valid
-                                </span>
-                            @elseif($item['is_duplicate'])
-                                <span class="badge bg-warning-subtle text-warning px-2 border border-warning border-opacity-25 rounded-pill">
-                                    <i class="fas fa-copy me-1"></i> Duplikat
+                                    <i class="fas fa-check me-1"></i> Siap Import
                                 </span>
                             @else
-                                <span class="badge bg-danger-subtle text-danger px-2 border border-danger border-opacity-25 rounded-pill">
-                                    <i class="fas fa-times me-1"></i> ID Salah
+                                <span class="badge bg-warning-subtle text-warning px-2 border border-warning border-opacity-25 rounded-pill">
+                                    <i class="fas fa-copy me-1"></i> Duplikat
                                 </span>
                             @endif
                         </td>
@@ -114,13 +116,16 @@
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="card-header bg-white py-3 border-bottom">
             <div class="d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-bold"><i class="fas fa-boxes me-2"></i> Daftar Produk</h6>
-                <div class="text-muted small">
-                    Total: {{ $products->count() }} produk
+                <h6 class="mb-0 fw-bold"><i class="fas fa-boxes me-2"></i> Daftar Produk ({{ $products->count() }})</h6>
+                <div>
+                    <button wire:click="loadProducts" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
                 </div>
             </div>
         </div>
         <div class="card-body p-0">
+            @if($products->count() > 0)
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">
@@ -134,7 +139,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($products as $p)
+                        @foreach($products as $p)
                             <tr class="border-bottom">
                                 <td class="ps-4">
                                     <div class="fw-bold text-dark">{{ $p->name }}</div>
@@ -197,20 +202,38 @@
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center py-5 text-secondary">
-                                    <div class="py-4">
-                                        <i class="fas fa-box-open fa-2x mb-3 text-muted"></i>
-                                        <p class="mb-0">Belum ada data produk.</p>
-                                        <small class="text-muted">Mulai dengan import data atau tambah manual.</small>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
+            @else
+            <div class="text-center py-5 text-secondary">
+                <div class="py-4">
+                    <i class="fas fa-box-open fa-3x mb-3 text-muted opacity-50"></i>
+                    <h6 class="mb-2">Belum ada data produk</h6>
+                    <p class="small text-muted mb-4">Mulai dengan import data Excel atau tambah produk manual</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <label for="fileImport" class="btn btn-success btn-sm">
+                            <i class="fas fa-file-excel me-1"></i> Import Excel
+                        </label>
+                        <a href="{{ route('product.create') }}" class="btn btn-dark btn-sm">
+                            <i class="fas fa-plus me-1"></i> Tambah Manual
+                        </a>
+                    </div>
+                </div>
+            </div>
+            @endif
         </div>
     </div>
 </div>
+
+<script>
+    // Auto-refresh saat ada flash message
+    document.addEventListener('livewire:initialized', () => {
+        @this.on('refresh', (event) => {
+            setTimeout(() => {
+                @this.loadProducts();
+            }, 500);
+        });
+    });
+</script>

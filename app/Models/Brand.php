@@ -1,21 +1,20 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-class Brand extends Model {
+class Brand extends Model
+{
     use HasUuids;
     
+    protected $fillable = ['uuid', 'name'];
+    
     protected $guarded = [];
-    
-    // Tentukan kolom UUID
-    public function uniqueIds()
+
+    public function products()
     {
-        return ['uuid'];
-    }
-    
-    public function products() { 
-        return $this->hasMany(Product::class, 'brand_id'); 
+        return $this->hasMany(Product::class);
     }
 }
