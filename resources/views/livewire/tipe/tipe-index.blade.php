@@ -1,18 +1,18 @@
 <div class="container-fluid">
     
-    {{-- DEPENDENCIES --}}
+    {{-- 1. DEPENDENCIES (Wajib ada di sini) --}}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-    
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 
     <style>
         .modal-backdrop { z-index: 1055 !important; }
         .modal { z-index: 1060 !important; }
         
-        /* Fix TomSelect Dropdown agar muncul di atas modal */
-        .ts-dropdown { z-index: 1070 !important; }
+        /* PENTING: Agar dropdown muncul di atas modal */
+        .ts-dropdown, .ts-control { 
+            z-index: 1070 !important; 
+        }
         
         /* Style Badge RAM di Tabel */
         .badge-ram {
@@ -62,64 +62,47 @@
                         @forelse($tipes as $index => $tipe)
                             <tr>
                                 <td class="px-4 fw-bold text-muted">{{ $tipes->firstItem() + $index }}</td>
-                                
                                 <td><span class="fw-bold text-dark">{{ $tipe->nama }}</span></td>
-
                                 <td>
                                     <span class="badge bg-dark text-white rounded-pill px-3 fw-normal">
                                         {{ $tipe->merk->nama ?? 'Merk Dihapus' }}
                                     </span>
                                 </td>
-
                                 <td>
                                     <div class="d-flex flex-wrap gap-1">
                                         @if(!empty($tipe->ram_storage))
                                             @foreach($tipe->ram_storage as $ram)
-                                                <span class="badge badge-ram rounded-2 px-2 py-1">
-                                                    {{ $ram }}
-                                                </span>
+                                                <span class="badge badge-ram rounded-2 px-2 py-1">{{ $ram }}</span>
                                             @endforeach
                                         @else
                                             <span class="text-muted small">-</span>
                                         @endif
                                     </div>
                                 </td>
-
-                                <td class="small text-secondary">
-                                    {{ $tipe->updated_at->format('d/m/Y H:i') }}
-                                </td>
-                                
+                                <td class="small text-secondary">{{ $tipe->updated_at->format('d/m/Y H:i') }}</td>
                                 <td class="px-4 text-end">
                                     <div class="d-flex justify-content-end gap-2">
                                         <button wire:click="edit({{ $tipe->id }})" 
-                                                data-bs-toggle="modal" data-bs-target="#tipeModal"
-                                                class="btn btn-sm btn-light border rounded-circle text-primary" title="Edit">
+                                                class="btn btn-sm btn-light border rounded-circle text-primary" 
+                                                data-bs-toggle="modal" data-bs-target="#tipeModal">
                                             <i class="fas fa-pencil-alt"></i>
                                         </button>
-                                        
                                         <button wire:confirm="Hapus Tipe {{ $tipe->nama }}?" 
                                                 wire:click="delete({{ $tipe->id }})" 
-                                                class="btn btn-sm btn-light border rounded-circle text-danger hover-danger" title="Hapus">
+                                                class="btn btn-sm btn-light border rounded-circle text-danger hover-danger">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </div>
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="6" class="text-center py-5 opacity-50">
-                                    <i class="fas fa-mobile-alt fa-3x mb-3 text-secondary"></i>
-                                    <h6 class="fw-bold text-secondary">Belum ada data Tipe</h6>
-                                </td>
-                            </tr>
+                            <tr><td colspan="6" class="text-center py-5 text-muted">Belum ada data Tipe</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
 
-            <div class="p-4 border-top">
-                {{ $tipes->links() }}
-            </div>
+            <div class="p-4 border-top">{{ $tipes->links() }}</div>
         </div>
     </div>
 
@@ -155,26 +138,59 @@
                             @error('nama') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
-                        <div class="mb-4">
+                        <div class="mb-4"
+                             wire:ignore
+                             x-data="{
+                                tomSelectInstance: null,
+                                options: [
+                                    @foreach($ramOptions as $opt) '{{ $opt }}', @endforeach
+                                ],
+                                initSelect() {
+                                    // Hancurkan instance lama jika ada (untuk mencegah duplikasi)
+                                    if(this.tomSelectInstance) this.tomSelectInstance.destroy();
+
+                                    this.tomSelectInstance = new TomSelect(this.$refs.selectInput, {
+                                        plugins: ['remove_button', 'dropdown_input'],
+                                        create: true, // Bisa ketik manual
+                                        maxItems: null,
+                                        valueField: 'value',
+                                        labelField: 'text',
+                                        searchField: 'text',
+                                        options: this.options.map(o => ({value: o, text: o})),
+                                        items: @entangle('ram_storage').live, // Sinkronisasi awal
+                                        onChange: (value) => {
+                                            // Update data ke Livewire saat user memilih
+                                            @this.set('ram_storage', value);
+                                        }
+                                    });
+                                }
+                             }"
+                             x-init="initSelect()"
+                             {{-- Re-init saat ada event khusus dari Livewire (misal Edit) --}}
+                             @set-select-values.window="
+                                 if(tomSelectInstance) {
+                                     tomSelectInstance.clear(true);
+                                     $event.detail.values.forEach(v => {
+                                         tomSelectInstance.addOption({value: v, text: v});
+                                         tomSelectInstance.addItem(v, true);
+                                     });
+                                 }
+                             "
+                             @reset-select.window="if(tomSelectInstance) tomSelectInstance.clear()"
+                        >
                             <label class="form-label fw-bold small text-uppercase text-secondary">Varian RAM & Penyimpanan <span class="text-danger">*</span></label>
                             
-                            {{-- 
-                                PENTING: Gunakan wire:ignore agar Livewire tidak mereset elemen ini saat render ulang.
-                                Hapus wire:model dari <select> agar tidak bentrok.
-                            --}}
-                            <div wire:ignore>
-                                <select id="ram-select" multiple autocomplete="off" placeholder="Pilih atau ketik varian baru...">
-                                    @foreach($ramOptions as $opt)
-                                        <option value="{{ $opt }}">{{ $opt }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
+                            <select x-ref="selectInput" multiple placeholder="Pilih atau ketik varian..." autocomplete="off"></select>
                             
-                            @error('ram_storage') 
-                                <div class="text-danger small mt-1 d-block">{{ $message }}</div> 
-                            @enderror
-                            <div class="form-text small text-muted">Ketik lalu tekan enter untuk menambah opsi baru (misal: 24/1TB).</div>
+                            <div class="form-text small text-muted mt-1">
+                                Ketik lalu tekan enter untuk menambah opsi baru (misal: 24/1TB).
+                            </div>
                         </div>
+                        
+                        {{-- Error Message Manual karena wire:ignore di atas --}}
+                        @error('ram_storage') 
+                            <div class="text-danger small mt-n3 mb-3 d-block">{{ $message }}</div> 
+                        @enderror
 
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-dark rounded-3 py-2 fw-bold">
@@ -192,62 +208,10 @@
 
 </div>
 
-{{-- SCRIPT HANDLER --}}
+{{-- SCRIPT GLOBAL HANDLER --}}
 @script
 <script>
-    let tomSelectInstance = null;
-
-    // Fungsi Inisialisasi TomSelect
-    function initTomSelect() {
-        const el = document.getElementById('ram-select');
-        
-        // Cek jika elemen ada dan belum diinisialisasi
-        if (el && !tomSelectInstance) {
-            tomSelectInstance = new TomSelect(el, {
-                plugins: ['remove_button', 'dropdown_input'], // Fitur Hapus & Input
-                create: true, // User bisa ngetik manual
-                maxItems: null, // Unlimited items (Bisa pilih banyak)
-                persist: false,
-                sortField: {
-                    field: "text",
-                    direction: "asc"
-                },
-                
-                // EVENT PENTING: Kirim data ke Livewire setiap ada perubahan
-                onChange: function(values) {
-                    // Update properti $ram_storage di Backend
-                    @this.set('ram_storage', values);
-                }
-            });
-        }
-    }
-
-    // Jalankan inisialisasi pertama kali
-    initTomSelect();
-
-    // Event 1: Saat tombol Edit diklik (Isi Data ke TomSelect)
-    Livewire.on('set-select-values', (data) => {
-        if (tomSelectInstance) {
-            tomSelectInstance.clear(true); // Hapus data lama (silent)
-            
-            // Masukkan data baru dari database
-            if (data.values && Array.isArray(data.values)) {
-                data.values.forEach(val => {
-                    tomSelectInstance.addOption({value: val, text: val}); // Tambah opsi jika blm ada
-                    tomSelectInstance.addItem(val, true); // Pilih item (silent)
-                });
-            }
-        }
-    });
-
-    // Event 2: Saat Reset/Batal/Close Modal (Kosongkan TomSelect)
-    Livewire.on('reset-select', () => {
-        if (tomSelectInstance) {
-            tomSelectInstance.clear();
-        }
-    });
-
-    // Event 3: Tutup Modal
+    // 1. Handle Tutup Modal
     Livewire.on('close-modal', () => {
         const modalEl = document.getElementById('tipeModal');
         const modal = bootstrap.Modal.getInstance(modalEl);
@@ -255,7 +219,7 @@
         document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
     });
 
-    // Event 4: Notifikasi Swal
+    // 2. Handle SweetAlert
     Livewire.on('swal', (data) => {
         const eventData = data[0];
         Swal.mixin({
