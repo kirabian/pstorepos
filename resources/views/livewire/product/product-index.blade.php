@@ -27,21 +27,19 @@
     @if(!empty($previewData))
     <div class="card border-0 shadow-lg mb-5 rounded-4 border-top border-4 border-primary">
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0">
-            <h6 class="mb-0 fw-bold"><i class="fas fa-tasks me-2 text-primary"></i> Pratinjau Import (Nama Tipe & ID Brand)</h6>
+            <h6 class="mb-0 fw-bold"><i class="fas fa-tasks me-2 text-primary"></i> Pratinjau Import</h6>
             <div>
                 <button wire:click="cancelImport" class="btn btn-sm btn-light border me-1 px-3 rounded-3">Batal</button>
-                <button wire:click="processImport" class="btn btn-sm btn-primary fw-bold px-4 shadow-sm rounded-3">
-                    Simpan Sekarang
-                </button>
+                <button wire:click="processImport" class="btn btn-sm btn-primary fw-bold px-4 shadow-sm rounded-3">Simpan Sekarang</button>
             </div>
         </div>
         <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
             <table class="table table-sm table-hover mb-0">
                 <thead class="bg-light sticky-top">
                     <tr class="small text-uppercase">
-                        <th class="ps-4 py-2">ID Merek (Excel)</th>
+                        <th class="ps-4 py-2">ID Merek</th>
                         <th class="py-2">Merek Sistem</th>
-                        <th class="py-2">Nama Tipe (Produk)</th>
+                        <th class="py-2">Nama Tipe</th>
                         <th class="py-2 text-center">Status</th>
                     </tr>
                 </thead>
@@ -49,15 +47,13 @@
                     @foreach($previewData as $item)
                     <tr>
                         <td class="ps-4 py-2 small text-muted font-monospace">{{ $item['brand_id'] }}</td>
-                        <td class="py-2 small fw-bold {{ !$item['is_valid'] ? 'text-danger' : 'text-dark' }}">
-                            {{ $item['brand_name'] }}
-                        </td>
+                        <td class="py-2 small fw-bold {{ !$item['is_valid'] ? 'text-danger' : 'text-dark' }}">{{ $item['brand_name'] }}</td>
                         <td class="py-2 small text-primary fw-bold">{{ $item['product_name'] }}</td>
                         <td class="py-2 text-center small">
                             @if($item['is_valid'])
-                                <span class="badge bg-success-subtle text-success px-2 border border-success border-opacity-25 rounded-pill">Siap Simpan</span>
+                                <span class="badge bg-success-subtle text-success px-2 border border-success border-opacity-25 rounded-pill">Valid</span>
                             @else
-                                <span class="badge bg-danger-subtle text-danger px-2 border border-danger border-opacity-25 rounded-pill">ID Tidak Terdaftar</span>
+                                <span class="badge bg-danger-subtle text-danger px-2 border border-danger border-opacity-25 rounded-pill">ID Salah</span>
                             @endif
                         </td>
                     </tr>
@@ -87,7 +83,7 @@
                             <tr class="border-bottom">
                                 <td class="ps-4">
                                     <div class="fw-bold text-dark">{{ $p->name }}</div>
-                                    <small class="text-muted" style="font-size: 0.65rem;">ID SKU: #{{ $p->id }}</small>
+                                    <small class="text-muted" style="font-size: 0.65rem;">ID: #{{ $p->id }}</small>
                                 </td>
                                 <td>
                                     <span class="badge rounded-pill bg-light text-dark border px-2 mb-1" style="font-size: 0.7rem;">{{ $p->brand->name ?? 'N/A' }}</span><br>
@@ -112,18 +108,13 @@
                                     @endforeach
                                 </td>
                                 <td class="pe-4 text-center">
-                                    <button class="btn btn-sm btn-outline-danger border-0 rounded-3" onclick="confirm('Hapus produk?') || event.stopImmediatePropagation()" wire:click="deleteProduct({{ $p->id }})">
+                                    <button class="btn btn-sm btn-outline-danger border-0 rounded-3" onclick="confirm('Hapus?') || event.stopImmediatePropagation()" wire:click="deleteProduct({{ $p->id }})">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
                             </tr>
                         @empty
-                            <tr>
-                                <td colspan="6" class="text-center py-5 text-secondary">
-                                    <i class="fas fa-box-open d-block mb-2 fs-2 opacity-50"></i>
-                                    Belum ada data produk tersedia.
-                                </td>
-                            </tr>
+                            <tr><td colspan="6" class="text-center py-5 text-secondary">Belum ada data.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

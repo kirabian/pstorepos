@@ -18,10 +18,6 @@ class ProductIndex extends Component
     public $file_import;
     public $previewData = [];
 
-    /**
-     * Otomatis jalan saat file dipilih.
-     * Membaca Excel: Kolom 0 (ID Merek), Kolom 1 (Nama Tipe/Produk)
-     */
     public function updatedFileImport()
     {
         $this->validate([
@@ -35,15 +31,12 @@ class ProductIndex extends Component
 
             $this->previewData = [];
             foreach ($data as $index => $row) {
-                // Skip header (Baris 1)
-                if ($index === 0) continue;
+                if ($index === 0) continue; // Skip header
                 
-                // Pastikan kolom A (ID Merek) dan B (Nama Tipe) ada isinya
                 if (!empty($row[0]) && !empty($row[1])) {
                     $brandId = trim($row[0]);
-                    $namaTipe = trim($row[1]); // Ini yang jadi Nama Produk
+                    $namaTipe = trim($row[1]); 
                     
-                    // Cari Nama Brand berdasarkan ID di database
                     $brand = Brand::find($brandId);
                     $brandName = $brand ? $brand->name : 'ID TIDAK DITEMUKAN';
 
@@ -65,30 +58,23 @@ class ProductIndex extends Component
         $this->reset(['file_import', 'previewData']);
     }
 
-    /**
-     * Memproses data dari Preview ke Database
-     */
     public function processImport()
     {
         if (empty($this->previewData)) return;
 
         DB::beginTransaction();
         try {
-            // Pastikan kategori default ada
             $defaultCat = Category::firstOrCreate(['name' => 'Handphone']);
 
             foreach ($this->previewData as $item) {
-                // Jika Brand ID tidak ada di database, lewati
                 if (!$item['is_valid']) continue;
 
-                // Simpan ke tabel Products (nama_tipe masuk ke kolom name)
                 $product = Product::firstOrCreate([
                     'brand_id'    => $item['brand_id'],
                     'name'        => $item['product_name'],
                     'category_id' => $defaultCat->id
                 ]);
 
-                // Buat varian default "Original" dengan stok 0 jika belum ada
                 ProductVariant::firstOrCreate([
                     'product_id'     => $product->id,
                     'attribute_name' => 'Original',
@@ -100,7 +86,7 @@ class ProductIndex extends Component
             }
 
             DB::commit();
-            session()->flash('success', count($this->previewData) . ' Data Tipe Produk Berhasil Disimpan.');
+            session()->flash('success', count($this->previewData) . ' Data Berhasil Disimpan.');
             $this->reset(['file_import', 'previewData']);
         } catch (\Exception $e) {
             DB::rollBack();
