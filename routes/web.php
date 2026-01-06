@@ -11,6 +11,7 @@ use App\Livewire\Distributor\DistributorIndex;
 use App\Livewire\Gudang\GudangCreate;
 use App\Livewire\Gudang\GudangEdit;
 use App\Livewire\Gudang\GudangIndex;
+use App\Livewire\Product\ProductCreate;
 use App\Livewire\Product\ProductIndex;
 use App\Livewire\User\UserCreate;
 use App\Livewire\User\UserEdit;
@@ -54,6 +55,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:manage-produk')->group(function () {
         // Route untuk Produk, Brand, Jenis, Stok, Harga
         Route::get('/products', ProductIndex::class)->name('product.index');
+        Route::get('/products/create', ProductCreate::class)->name('product.create');
 
         // Jika nanti ingin buat halaman terpisah:
         // Route::get('/categories', CategoryIndex::class)->name('category.index');
