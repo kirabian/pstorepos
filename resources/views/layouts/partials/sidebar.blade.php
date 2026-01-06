@@ -61,10 +61,15 @@
                         <span class="ms-3 sidebar-text text-nowrap">Tipe (Models)</span>
                     </a>
                 </li>
+            @endif
+
+            {{-- MENU KHUSUS ADMIN PRODUK --}}
+            @if (Auth::user()->role === 'adminproduk')
                 <li class="mb-2">
                     <a href="{{ route('stok.index') }}"
                         class="nav-link p-3 rounded-4 d-flex align-items-center {{ request()->routeIs('stok.*') ? 'bg-white text-black fw-bold shadow' : 'text-secondary' }}">
-                        <i class="fas fa-mobile-alt fs-5 flex-shrink-0" style="width: 24px;"></i>
+                        {{-- Icon diganti jadi fa-boxes --}}
+                        <i class="fas fa-boxes fs-5 flex-shrink-0" style="width: 24px;"></i>
                         <span class="ms-3 sidebar-text text-nowrap">Stok (Inventory)</span>
                     </a>
                 </li>
