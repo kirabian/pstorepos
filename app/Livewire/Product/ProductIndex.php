@@ -31,7 +31,7 @@ class ProductIndex extends Component
 
             $this->previewData = [];
             foreach ($data as $index => $row) {
-                if ($index === 0) continue; // Skip header
+                if ($index === 0) continue; 
                 
                 if (!empty($row[0]) && !empty($row[1])) {
                     $brandId = trim($row[0]);
@@ -64,33 +64,56 @@ class ProductIndex extends Component
 
         DB::beginTransaction();
         try {
-            $defaultCat = Category::firstOrCreate(['name' => 'Handphone']);
+            // 1. Ambil ID Kategori 'Handphone' menggunakan DB Builder
+            $category = DB::table('categories')->where('name', 'Handphone')->first();
+            if (!$category) {
+                $categoryId = DB::table('categories')->insertGetId([
+                    'name' => 'Handphone',
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            } else {
+                $categoryId = $category->id;
+            }
 
             foreach ($this->previewData as $item) {
                 if (!$item['is_valid']) continue;
 
-                $product = Product::firstOrCreate([
-                    'brand_id'    => $item['brand_id'],
-                    'name'        => $item['product_name'],
-                    'category_id' => $defaultCat->id
-                ]);
+                // 2. Cek apakah produk sudah ada
+                $existingProduct = DB::table('products')
+                    ->where('brand_id', $item['brand_id'])
+                    ->where('name', $item['product_name'])
+                    ->first();
 
-                ProductVariant::firstOrCreate([
-                    'product_id'     => $product->id,
-                    'attribute_name' => 'Original',
-                ], [
-                    'stock'      => 0,
-                    'cost_price' => 0,
-                    'srp_price'  => 0
-                ]);
+                if (!$existingProduct) {
+                    // 3. Insert Produk baru (Pakai DB::table untuk bypass MassAssignment)
+                    $productId = DB::table('products')->insertGetId([
+                        'brand_id'    => $item['brand_id'],
+                        'name'        => $item['product_name'],
+                        'category_id' => $categoryId,
+                        'created_at'  => now(),
+                        'updated_at'  => now()
+                    ]);
+
+                    // 4. Insert Varian default
+                    DB::table('product_variants')->insert([
+                        'product_id'     => $productId,
+                        'attribute_name' => 'Original',
+                        'stock'          => 0,
+                        'cost_price'     => 0,
+                        'srp_price'      => 0,
+                        'created_at'     => now(),
+                        'updated_at'     => now()
+                    ]);
+                }
             }
 
             DB::commit();
-            session()->flash('success', count($this->previewData) . ' Data Berhasil Disimpan.');
+            session()->flash('success', count($this->previewData) . ' Data berhasil diproses.');
             $this->reset(['file_import', 'previewData']);
         } catch (\Exception $e) {
             DB::rollBack();
-            session()->flash('error', 'Terjadi kesalahan database: ' . $e->getMessage());
+            session()->flash('error', 'Gagal Simpan: ' . $e->getMessage());
         }
     }
 
