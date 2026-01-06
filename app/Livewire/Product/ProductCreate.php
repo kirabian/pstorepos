@@ -27,7 +27,7 @@ class ProductCreate extends Component
     public $condition = 'Baru'; 
     public $description; 
     
-    // Stok (Otomatis hitung jika IMEI)
+    // Stok
     public $stock = 0;
     
     // Khusus IMEI
@@ -68,11 +68,14 @@ class ProductCreate extends Component
     public function updatedImeiList()
     {
         if ($this->form_type == 'imei' && !empty($this->imei_list)) {
-            // Filter baris kosong
+            // Filter baris kosong dan hitung jumlahnya
             $lines = array_filter(array_map('trim', explode("\n", $this->imei_list)));
             $this->stock = count($lines);
         } else {
-            $this->stock = 0;
+            // Jika tipe imei tapi kosong, stok 0
+            if($this->form_type == 'imei') {
+                $this->stock = 0;
+            }
         }
     }
 
@@ -136,7 +139,7 @@ class ProductCreate extends Component
                 return;
             }
             
-            // Set Stok Akhir
+            // Set Stok Akhir berdasarkan jumlah IMEI valid
             $this->stock = count($validImeis);
         }
 
@@ -171,13 +174,13 @@ class ProductCreate extends Component
                     'attribute_name' => $attributeName,
                 ],
                 [
-                    'stock' => 0, // Nanti diupdate
+                    'stock' => 0, 
                     'cost_price' => 0,
                     'srp_price' => 0,
                 ]
             );
 
-            // 5. Jika IMEI, Simpan ke tabel product_imeis
+            // 5. Simpan Data Stok / IMEI
             if ($this->form_type == 'imei') {
                 foreach ($validImeis as $imei) {
                     ProductImei::create([
@@ -189,14 +192,15 @@ class ProductCreate extends Component
                 // Tambahkan stok ke varian yang sudah ada (increment)
                 $variant->increment('stock', count($validImeis));
             } else {
-                // Jika non-imei, set stok langsung (replace atau tambah, disini tambah)
+                // Jika non-imei, tambahkan stok langsung
                 $variant->increment('stock', $this->stock);
             }
 
             DB::commit();
 
-            session()->flash('success', 'Produk berhasil ditambahkan. Silakan update harga.');
-            return redirect()->route('product.edit', $product->id);
+            session()->flash('success', 'Produk berhasil ditambahkan.');
+            // REVISI: Redirect ke INDEX, bukan edit.
+            return redirect()->route('product.index');
 
         } catch (\Exception $e) {
             DB::rollBack();

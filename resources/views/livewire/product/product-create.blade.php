@@ -4,7 +4,7 @@
             <div class="card border-0 shadow rounded-4">
                 <div class="card-header bg-white p-4 border-bottom-0">
                     <h5 class="mb-1 fw-bold text-dark">Tambah Produk Baru</h5>
-                    <p class="text-muted small mb-0">Isi data fisik produk. Stok & Harga diinput setelah ini.</p>
+                    <p class="text-muted small mb-0">Isi data fisik produk. Stok akan terisi otomatis dari input.</p>
                 </div>
                 
                 <div class="card-body p-4 pt-0">
@@ -102,13 +102,13 @@
                                 <div class="col-12 mt-4">
                                     <div class="card bg-light border-0 rounded-3">
                                         <div class="card-body">
-                                            <label class="form-label fw-bold small text-secondary d-flex justify-content-between">
+                                            <label class="form-label fw-bold small text-secondary d-flex justify-content-between align-items-center mb-2">
                                                 <span>Input Daftar IMEI</span>
                                                 <span class="badge bg-primary rounded-pill">Total: {{ $stock }} Unit</span>
                                             </label>
                                             <textarea wire:model.live="imei_list" class="form-control font-monospace text-uppercase" rows="5" 
                                                 placeholder="Scan/Ketik IMEI disini...&#10;8642390500... (Min 15 digit)&#10;8642390501..."></textarea>
-                                            <div class="form-text small text-muted"><i class="fas fa-info-circle"></i> Pisahkan dengan Enter (Baris baru). Min 15 digit per IMEI.</div>
+                                            <div class="form-text small text-muted mt-1"><i class="fas fa-info-circle"></i> Pisahkan dengan Enter (Baris baru). Min 15 digit.</div>
                                             @error('imei_list') <div class="text-danger small mt-1 fw-bold">{{ $message }}</div> @enderror
                                         </div>
                                     </div>
@@ -141,7 +141,7 @@
                         {{-- TOMBOL SUBMIT --}}
                         <div class="mt-5 d-grid gap-2">
                             <button type="submit" class="btn btn-dark btn-lg rounded-3 shadow">
-                                Lanjut ke Harga <i class="fas fa-arrow-right ms-2"></i>
+                                <i class="fas fa-save me-2"></i> Simpan Data
                             </button>
                             <a href="{{ route('product.index') }}" class="btn btn-light btn-lg rounded-3 text-muted">Batal</a>
                         </div>
