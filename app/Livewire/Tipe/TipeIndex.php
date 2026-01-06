@@ -11,6 +11,8 @@ use Livewire\Attributes\Rule;
 class TipeIndex extends Component
 {
     use WithPagination;
+    
+    // Gunakan tema pagination bootstrap
     protected $paginationTheme = 'bootstrap';
 
     public $search = '';
@@ -24,15 +26,37 @@ class TipeIndex extends Component
     #[Rule('required|min:2')]
     public $nama;
 
-    // Array untuk Multi-Select RAM
+    // Array untuk Multi-Select RAM (Disimpan sebagai JSON di DB)
     #[Rule('required|array|min:1')]
     public $ram_storage = []; 
 
-    // Opsi Hardcoded untuk Pilihan RAM (Bisa ditambah sesuai kebutuhan)
+    /**
+     * Opsi RAM & Storage Lengkap
+     * Format: RAM/ROM (GB) atau Storage Only
+     * Diurutkan dari spek terendah ke tertinggi sesuai screenshot
+     */
     public $ramOptions = [
-        '2/32', '3/32', '3/64', '4/64', '4/128', 
-        '6/128', '8/128', '8/256', '12/256', '12/512', 
-        '16/512', '16/1TB', 'Laptop'
+        // Entry Level / Old School
+        '1/8', '1/16', '1/32', 
+        '2/16', '2/32', '2/64', 
+        '3/32', '3/64', '3/128', '3/256',
+
+        // Mid Range Common
+        '4/32', '4/64', '4/128', '4/256', '4/512',
+        '6/64', '6/128', '6/256', '6/512',
+
+        // High End / Flagship
+        '8/64', '8/128', '8/256', '8/512', '8/1024',
+        '12/128', '12/256', '12/512', '12/1024',
+
+        // Monster Specs / Gaming Phone
+        '16/128', '16/256', '16/512', '16/1024',
+        '18/128', '18/256', '18/512', '18/1024',
+        '24/512', '24/1024',
+
+        // Storage Only (Tablet/iPad/Laptop Style)
+        '8', '16', '32', '64', '128', '256', 
+        '512', '1024', '2048'
     ];
 
     public function resetInputFields()
@@ -44,7 +68,7 @@ class TipeIndex extends Component
         $this->isEdit = false;
         $this->resetErrorBag();
         
-        // Reset Library JS di frontend (TomSelect)
+        // Reset Library JS di frontend (TomSelect) via Event
         $this->dispatch('reset-select');
     }
 
@@ -55,7 +79,7 @@ class TipeIndex extends Component
         Tipe::updateOrCreate(['id' => $this->tipeId], [
             'merk_id' => $this->merk_id,
             'nama' => $this->nama,
-            'ram_storage' => $this->ram_storage // Simpan array langsung (Model akan casting ke JSON)
+            'ram_storage' => $this->ram_storage // Array otomatis di-cast ke JSON oleh Model
         ]);
 
         $this->dispatch('close-modal');
@@ -74,11 +98,13 @@ class TipeIndex extends Component
         $this->tipeId = $id;
         $this->merk_id = $tipe->merk_id;
         $this->nama = $tipe->nama;
+        
         // Pastikan formatnya array agar terbaca oleh Multi-Select
+        // Jika null, jadikan array kosong
         $this->ram_storage = $tipe->ram_storage ?? []; 
         $this->isEdit = true;
 
-        // Trigger event ke JS untuk isi nilai TomSelect
+        // Trigger event ke JS untuk mengisi nilai TomSelect yang terpilih
         $this->dispatch('set-select-values', values: $this->ram_storage);
     }
 
@@ -95,6 +121,7 @@ class TipeIndex extends Component
     public function render()
     {
         // Ambil data Tipe beserta relasi Merk-nya
+        // Menggunakan pencarian berdasarkan Nama Tipe atau Nama Merk
         $tipes = Tipe::with('merk')
             ->where('nama', 'like', '%' . $this->search . '%')
             ->orWhereHas('merk', function($q) {
@@ -103,7 +130,7 @@ class TipeIndex extends Component
             ->latest()
             ->paginate(10);
 
-        // Ambil semua merk untuk Dropdown
+        // Ambil semua merk untuk Dropdown, urutkan A-Z
         $merks = Merk::orderBy('nama', 'asc')->get();
 
         return view('livewire.tipe.tipe-index', [
