@@ -3,24 +3,25 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class Brand extends Model
 {
-    protected $fillable = ['uuid', 'name'];
-    protected $guarded = [];
+    // GUNAKAN HANYA FILLABLE, jangan ada guarded
+    protected $fillable = ['name', 'uuid'];
     
-    // HAPUS: use HasUuids;
+    // HAPUS guarded
+    // protected $guarded = [];
     
-    // TAMBAHKAN: Boot method untuk auto-generate UUID
+    // Boot method sederhana
     protected static function boot()
     {
         parent::boot();
         
         static::creating(function ($model) {
+            // Pastikan UUID ada
             if (empty($model->uuid)) {
-                $model->uuid = (string) Str::uuid();
+                $model->uuid = Str::uuid()->toString();
             }
         });
     }
@@ -28,12 +29,5 @@ class Brand extends Model
     public function products()
     {
         return $this->hasMany(Product::class);
-    }
-    
-    // Helper untuk cari by UUID
-    public function scopeWhereUuid($query, $uuid)
-    {
-        return $query->where('uuid', $uuid)
-                    ->orWhere(DB::raw('LOWER(uuid)'), strtolower($uuid));
     }
 }
