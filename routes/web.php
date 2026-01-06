@@ -11,6 +11,7 @@ use App\Livewire\Distributor\DistributorIndex;
 use App\Livewire\Gudang\GudangCreate;
 use App\Livewire\Gudang\GudangEdit;
 use App\Livewire\Gudang\GudangIndex;
+use App\Livewire\Product\ProductIndex;
 use App\Livewire\User\UserCreate;
 use App\Livewire\User\UserEdit;
 use App\Livewire\User\UserIndex;
@@ -45,6 +46,19 @@ Route::middleware('auth')->group(function () {
 
     // Semua Role bisa akses Dashboard
     Route::get('/', Dashboard::class)->name('dashboard');
+
+    /* |--------------------------------------------------------------------------
+    | AREA SUPERADMIN & ADMIN PRODUK
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('can:manage-produk')->group(function () {
+        // Route untuk Produk, Brand, Jenis, Stok, Harga
+        Route::get('/products', ProductIndex::class)->name('product.index');
+
+        // Jika nanti ingin buat halaman terpisah:
+        // Route::get('/categories', CategoryIndex::class)->name('category.index');
+        // Route::get('/brands', BrandIndex::class)->name('brand.index');
+    });
 
     /* |--------------------------------------------------------------------------
     | AREA KHUSUS SUPERADMIN

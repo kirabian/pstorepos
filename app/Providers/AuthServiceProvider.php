@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Providers;
+use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 
 // use Illuminate\Support\Facades\Gate;
@@ -27,6 +28,11 @@ class AuthServiceProvider extends ServiceProvider
     // Daftarkan logika pengecekan Superadmin di sini
     Gate::define('superadmin-only', function ($user) {
         return $user->role === 'superadmin';
+    });
+
+    // Gate untuk Superadmin DAN Admin Produk
+    Gate::define('manage-produk', function (User $user) {
+        return in_array($user->role, ['superadmin', 'adminproduk']);
     });
     }
 }
