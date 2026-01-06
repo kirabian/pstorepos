@@ -7,7 +7,6 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Brand;
 use App\Models\ProductVariant;
-use Illuminate\Support\Str;
 
 class ProductCreate extends Component
 {
@@ -16,7 +15,6 @@ class ProductCreate extends Component
 
     public function mount()
     {
-        // Default satu baris varian
         $this->addVariant();
     }
 
@@ -27,8 +25,10 @@ class ProductCreate extends Component
 
     public function removeVariant($index)
     {
-        unset($this->variants[$index]);
-        $this->variants = array_values($this->variants);
+        if (count($this->variants) > 1) {
+            unset($this->variants[$index]);
+            $this->variants = array_values($this->variants);
+        }
     }
 
     public function save()
