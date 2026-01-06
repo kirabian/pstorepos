@@ -35,14 +35,18 @@ class ProductIndex extends Component
                 }
 
                 if (! empty($row[0]) && ! empty($row[1])) {
-                    $brandId = trim($row[0]);
+                    $brandUuid = trim($row[0]);
                     $namaTipe = trim($row[1]);
 
-                    $brand = Brand::find($brandId);
+                    // CARI BRAND BERDASARKAN UUID
+                    $brand = Brand::where('uuid', $brandUuid)->first();
+
                     $brandName = $brand ? $brand->name : 'ID TIDAK DITEMUKAN';
+                    $brandId = $brand ? $brand->id : null;
 
                     $this->previewData[] = [
-                        'brand_id' => $brandId,
+                        'brand_uuid' => $brandUuid,
+                        'brand_id' => $brandId,     // integer ID untuk insert
                         'brand_name' => $brandName,
                         'product_name' => $namaTipe,
                         'is_valid' => $brand ? true : false,
@@ -67,7 +71,7 @@ class ProductIndex extends Component
 
         DB::beginTransaction();
         try {
-            // 1. Ambil ID Kategori 'Handphone'
+            // 1. Cari atau buat kategori Handphone
             $category = DB::table('categories')->where('name', 'Handphone')->first();
             if (! $category) {
                 $categoryId = DB::table('categories')->insertGetId([
@@ -79,38 +83,25 @@ class ProductIndex extends Component
                 $categoryId = $category->id;
             }
 
-            // Buat mapping UUID ke Brand ID
-            $brandMapping = [];
-            $allUuids = array_column($this->previewData, 'brand_id');
-
-            if (! empty($allUuids)) {
-                $brands = DB::table('brands')->whereIn('uuid', $allUuids)->get();
-                foreach ($brands as $brand) {
-                    $brandMapping[$brand->uuid] = $brand->id;
-                }
-            }
-
             foreach ($this->previewData as $item) {
                 if (! $item['is_valid']) {
                     continue;
                 }
 
-                // Cari brand_id integer dari mapping
-                $brandIdInt = $brandMapping[$item['brand_id']] ?? null;
-                if (! $brandIdInt) {
-                    continue; // Skip jika brand tidak ditemukan
-                }
+                // GUNAKAN integer brand_id
+                $brandId = $item['brand_id'];
 
                 // 2. Cek apakah produk sudah ada
                 $existingProduct = DB::table('products')
-                    ->where('brand_id', $brandIdInt)
+                    ->where('brand_id', $brandId)
                     ->where('name', $item['product_name'])
                     ->first();
 
                 if (! $existingProduct) {
                     // 3. Insert Produk baru
                     $productId = DB::table('products')->insertGetId([
-                        'brand_id' => $brandIdInt, // Gunakan integer ID
+                        'brand_id' => $brandId,       // integer
+                        'brand_uuid' => $item['brand_uuid'], // simpan juga UUID untuk referensi
                         'name' => $item['product_name'],
                         'category_id' => $categoryId,
                         'created_at' => now(),
@@ -131,7 +122,7 @@ class ProductIndex extends Component
             }
 
             DB::commit();
-            session()->flash('success', count($this->previewData).' Data berhasil diproses.');
+            session()->flash('success', count($this->previewData).' data berhasil diproses.');
             $this->reset(['file_import', 'previewData']);
         } catch (\Exception $e) {
             DB::rollBack();
