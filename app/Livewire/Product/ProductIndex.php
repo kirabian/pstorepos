@@ -36,28 +36,25 @@ class ProductIndex extends Component
     public function setBrandFilter($brandId)
     {
         $this->selectedBrandId = $brandId;
-        $this->resetPage(); // Reset ke halaman 1 setiap ganti filter
+        $this->resetPage(); 
     }
 
     public function render()
     {
-        // 1. Ambil list Brand yang memiliki produk (untuk ditampilkan sebagai filter)
         $availableBrands = Brand::whereHas('products')
             ->withCount('products')
             ->orderBy('name', 'asc')
             ->get();
 
-        // 2. Query Utama Produk
-        $query = Product::with(['brand', 'category', 'variants'])
+        // UPDATE DISINI: Tambahkan 'variants.imeis' agar data imei ikut terload
+        $query = Product::with(['brand', 'category', 'variants.imeis'])
             ->select('products.*')
             ->join('brands', 'products.brand_id', '=', 'brands.id');
 
-        // Logic Filter Brand (Jika ada brand yang diklik)
         if ($this->selectedBrandId) {
             $query->where('products.brand_id', $this->selectedBrandId);
         }
 
-        // Logic Pencarian (Search text)
         if (!empty($this->search)) {
             $query->where(function($q) {
                 $q->where('products.name', 'like', '%' . $this->search . '%')
@@ -65,14 +62,13 @@ class ProductIndex extends Component
             });
         }
 
-        // Sorting
         $products = $query->orderBy('brands.name', 'asc')
                           ->orderBy('products.name', 'asc')
                           ->paginate(20);
 
         return view('livewire.product.product-index', [
             'products' => $products,
-            'availableBrands' => $availableBrands, // Kirim data brand ke view
+            'availableBrands' => $availableBrands,
         ]);
     }
 

@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Brand;
 use App\Models\ProductVariant;
+use App\Models\ProductImei;
 use Illuminate\Support\Facades\DB;
 
 class ProductCreate extends Component
@@ -17,25 +18,30 @@ class ProductCreate extends Component
     // Data Utama
     public $brand_id;
     public $category_id;
-    public $name; // Tipe / Nama Produk
+    public $name; 
     
     // Data Detail / Varian
     public $ram;
     public $storage;
     public $color;
-    public $condition = 'Baru'; // Baru / Second
-    public $description; // Catatan
+    public $condition = 'Baru'; 
+    public $description; 
     
-    // LIST UNTUK DROPDOWN TYPE
+    // Stok (Otomatis hitung jika IMEI)
+    public $stock = 0;
+    
+    // Khusus IMEI
+    public $imei_list; 
+
+    // Helper Dropdown
     public $existing_types = [];
 
     public function updatedFormType()
     {
         $this->resetValidation();
-        // Reset inputs
-        $this->reset(['name', 'ram', 'storage', 'color', 'description']);
+        $this->reset(['name', 'ram', 'storage', 'color', 'description', 'imei_list', 'stock']);
         
-        // Auto select category based on type
+        // Auto select category
         if($this->form_type == 'jasa') {
             $cat = Category::where('name', 'like', '%Jasa%')->first();
             $this->category_id = $cat ? $cat->id : null;
@@ -52,46 +58,91 @@ class ProductCreate extends Component
     {
         if(!empty($value)) {
             $this->existing_types = Product::where('brand_id', $value)
-                ->select('name')
-                ->distinct()
-                ->orderBy('name', 'asc')
-                ->pluck('name')
-                ->toArray();
+                ->select('name')->distinct()->orderBy('name', 'asc')->pluck('name')->toArray();
         } else {
             $this->existing_types = [];
         }
     }
 
+    // Hitung stok real-time saat ngetik IMEI
+    public function updatedImeiList()
+    {
+        if ($this->form_type == 'imei' && !empty($this->imei_list)) {
+            // Filter baris kosong
+            $lines = array_filter(array_map('trim', explode("\n", $this->imei_list)));
+            $this->stock = count($lines);
+        } else {
+            $this->stock = 0;
+        }
+    }
+
     public function save()
     {
-        // 1. Validasi Minimalis (Tanpa Stok/Harga)
-        if ($this->form_type == 'jasa') {
-            $this->validate([
-                'name' => 'required|min:3',
-                'category_id' => 'required',
-            ]);
-        } elseif ($this->form_type == 'non-imei') {
-            $this->validate([
+        // 1. Validasi
+        $rules = [
+            'name' => 'required|min:3',
+            'category_id' => 'required',
+        ];
+
+        if ($this->form_type == 'imei') {
+            $rules = array_merge($rules, [
                 'brand_id' => 'required',
-                'name' => 'required|min:3',
-                'category_id' => 'required',
-            ]);
-        } else {
-            // Tipe IMEI
-            $this->validate([
-                'brand_id' => 'required',
-                'name' => 'required|min:3',
-                'category_id' => 'required',
                 'ram' => 'required',
                 'storage' => 'required',
                 'color' => 'required',
                 'condition' => 'required',
+                'imei_list' => 'required', // Wajib isi text area
             ]);
+        } elseif ($this->form_type == 'non-imei') {
+            $rules = array_merge($rules, [
+                'brand_id' => 'required',
+                'stock' => 'required|numeric|min:0',
+            ]);
+        }
+
+        $this->validate($rules);
+
+        // 2. Validasi Khusus IMEI (Panjang Karakter & Duplikat di Input)
+        $validImeis = [];
+        if ($this->form_type == 'imei') {
+            $lines = explode("\n", $this->imei_list);
+            $duplicates = [];
+            
+            foreach ($lines as $line) {
+                $cleanImei = trim($line);
+                if (empty($cleanImei)) continue;
+
+                // Cek Panjang IMEI (Minimal 15)
+                if (strlen($cleanImei) < 15) {
+                    $this->addError('imei_list', "IMEI '$cleanImei' kurang dari 15 digit.");
+                    return;
+                }
+
+                // Cek apakah IMEI sudah ada di Database
+                if (ProductImei::where('imei', $cleanImei)->exists()) {
+                    $this->addError('imei_list', "IMEI '$cleanImei' sudah terdaftar di sistem.");
+                    return;
+                }
+
+                if (in_array($cleanImei, $validImeis)) {
+                    $duplicates[] = $cleanImei;
+                } else {
+                    $validImeis[] = $cleanImei;
+                }
+            }
+
+            if (count($duplicates) > 0) {
+                $this->addError('imei_list', 'Ada IMEI duplikat di inputan Anda: ' . implode(', ', $duplicates));
+                return;
+            }
+            
+            // Set Stok Akhir
+            $this->stock = count($validImeis);
         }
 
         DB::beginTransaction();
         try {
-            // 2. Buat / Cari Produk Master
+            // 3. Create Produk
             $product = Product::firstOrCreate(
                 [
                     'name' => $this->name,
@@ -105,7 +156,7 @@ class ProductCreate extends Component
                 ]
             );
 
-            // 3. Tentukan Nama Varian Tunggal
+            // 4. Create Varian
             if ($this->form_type == 'imei') {
                 $attributeName = "{$this->ram}/{$this->storage} {$this->color} ({$this->condition})";
             } elseif ($this->form_type == 'non-imei') {
@@ -114,31 +165,37 @@ class ProductCreate extends Component
                 $attributeName = 'Jasa Layanan';
             }
 
-            // 4. Cek apakah varian ini sudah ada di produk tersebut?
-            // Agar tidak double "Original" dan varian baru
-            $existingVariant = ProductVariant::where('product_id', $product->id)
-                                ->where('attribute_name', $attributeName)
-                                ->first();
-
-            if (!$existingVariant) {
-                // Hanya create jika belum ada
-                ProductVariant::create([
+            $variant = ProductVariant::firstOrCreate(
+                [
                     'product_id' => $product->id,
                     'attribute_name' => $attributeName,
-                    'stock' => 0, // Default 0, edit nanti
+                ],
+                [
+                    'stock' => 0, // Nanti diupdate
                     'cost_price' => 0,
                     'srp_price' => 0,
-                ]);
+                ]
+            );
+
+            // 5. Jika IMEI, Simpan ke tabel product_imeis
+            if ($this->form_type == 'imei') {
+                foreach ($validImeis as $imei) {
+                    ProductImei::create([
+                        'product_variant_id' => $variant->id,
+                        'imei' => $imei,
+                        'status' => 'available'
+                    ]);
+                }
+                // Tambahkan stok ke varian yang sudah ada (increment)
+                $variant->increment('stock', count($validImeis));
+            } else {
+                // Jika non-imei, set stok langsung (replace atau tambah, disini tambah)
+                $variant->increment('stock', $this->stock);
             }
 
-            // Jika produk baru dibuat dan punya varian 'Original' bawaan yang tidak diinginkan (dari observer lain jika ada),
-            // kita bisa hapus varian 'Original' jika namanya beda dengan yang baru kita buat.
-            // (Opsional, tergantung setup DB Anda).
-            
             DB::commit();
 
-            session()->flash('success', 'Produk berhasil dibuat. Silakan update stok & harga.');
-            // Redirect ke halaman EDIT produk tersebut agar user langsung isi stok
+            session()->flash('success', 'Produk berhasil ditambahkan. Silakan update harga.');
             return redirect()->route('product.edit', $product->id);
 
         } catch (\Exception $e) {
