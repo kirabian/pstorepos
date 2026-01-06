@@ -1,4 +1,9 @@
 <div class="container-fluid py-4">
+    {{-- 
+        PERBAIKAN: Tag <div class="container-fluid"> ini adalah ROOT ELEMENT tunggal.
+        Semua konten, termasuk <style>, script, dan modal harus ada di DALAM div ini.
+    --}}
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="fw-bold mb-0">📱 Manajemen Produk</h4>
@@ -309,11 +314,15 @@
             @endif
         </div>
     </div>
-</div>
 
-<style>
-    .hover-shadow:hover {
-        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
-        border-color: #dee2e6 !important;
-    }
-</style>
+    {{-- 
+        STYLE INI SEKARANG ADA DI DALAM ROOT ELEMENT
+        Livewire tidak akan error lagi.
+    --}}
+    <style>
+        .hover-shadow:hover {
+            box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+            border-color: #dee2e6 !important;
+        }
+    </style>
+</div>
