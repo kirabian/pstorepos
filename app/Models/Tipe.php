@@ -11,14 +11,13 @@ class Tipe extends Model
 
     protected $table = 'tipes';
     
-    protected $fillable = ['merk_id', 'nama', 'ram_storage'];
+    // Tambahkan 'jenis' ke fillable
+    protected $fillable = ['merk_id', 'nama', 'jenis', 'ram_storage'];
 
-    // PENTING: Agar JSON di database otomatis jadi Array di PHP
     protected $casts = [
         'ram_storage' => 'array',
     ];
 
-    // Relasi ke Merk (Tipe belongsTo Merk)
     public function merk()
     {
         return $this->belongsTo(Merk::class, 'merk_id');

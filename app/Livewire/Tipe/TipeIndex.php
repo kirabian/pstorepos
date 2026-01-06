@@ -11,64 +11,48 @@ use Livewire\Attributes\Rule;
 class TipeIndex extends Component
 {
     use WithPagination;
-    
-    // Gunakan tema pagination bootstrap
     protected $paginationTheme = 'bootstrap';
 
     public $search = '';
     public $tipeId;
     public $isEdit = false;
 
-    // Form Properties
     #[Rule('required|exists:merks,id')]
     public $merk_id;
 
     #[Rule('required|min:2')]
     public $nama;
 
-    // Array untuk Multi-Select RAM (Disimpan sebagai JSON di DB)
+    // Tambahkan Validasi Jenis
+    #[Rule('required|in:imei,non_imei,jasa')]
+    public $jenis = 'imei'; // Default select
+
     #[Rule('required|array|min:1')]
     public $ram_storage = []; 
 
-    /**
-     * Opsi RAM & Storage Lengkap
-     * Format: RAM/ROM (GB) atau Storage Only
-     * Diurutkan dari spek terendah ke tertinggi sesuai screenshot
-     */
+    // Opsi Varian digabung (HP + Aksesoris)
     public $ramOptions = [
-        // Entry Level / Old School
-        '1/8', '1/16', '1/32', 
-        '2/16', '2/32', '2/64', 
-        '3/32', '3/64', '3/128', '3/256',
-
-        // Mid Range Common
-        '4/32', '4/64', '4/128', '4/256', '4/512',
-        '6/64', '6/128', '6/256', '6/512',
-
-        // High End / Flagship
-        '8/64', '8/128', '8/256', '8/512', '8/1024',
-        '12/128', '12/256', '12/512', '12/1024',
-
-        // Monster Specs / Gaming Phone
-        '16/128', '16/256', '16/512', '16/1024',
-        '18/128', '18/256', '18/512', '18/1024',
-        '24/512', '24/1024',
-
-        // Storage Only (Tablet/iPad/Laptop Style)
-        '8', '16', '32', '64', '128', '256', 
-        '512', '1024', '2048'
+        // --- HP / TABLET (IMEI) ---
+        '2/32', '3/32', '4/64', '4/128', '6/128', '8/128', '8/256', 
+        '12/256', '12/512', '16/512', '1TB', 
+        
+        // --- AKSESORIS / PART (NON-IMEI / JASA) ---
+        'Original', 'OEM', 'Grade A', 
+        'Black', 'White', 'Blue', 'Red', // Warna (jika tipe casing)
+        '1 Meter', '2 Meter', // Panjang kabel
+        'LCD Only', 'Fullset', // Tipe part
+        'Jasa Only' // Untuk murni jasa
     ];
 
     public function resetInputFields()
     {
         $this->merk_id = '';
         $this->nama = '';
-        $this->ram_storage = []; // Reset jadi array kosong
+        $this->jenis = 'imei'; // Reset ke default
+        $this->ram_storage = [];
         $this->tipeId = null;
         $this->isEdit = false;
         $this->resetErrorBag();
-        
-        // Reset Library JS di frontend (TomSelect) via Event
         $this->dispatch('reset-select');
     }
 
@@ -79,13 +63,14 @@ class TipeIndex extends Component
         Tipe::updateOrCreate(['id' => $this->tipeId], [
             'merk_id' => $this->merk_id,
             'nama' => $this->nama,
-            'ram_storage' => $this->ram_storage // Array otomatis di-cast ke JSON oleh Model
+            'jenis' => $this->jenis, // Simpan jenis
+            'ram_storage' => $this->ram_storage
         ]);
 
         $this->dispatch('close-modal');
         $this->dispatch('swal', [
-            'title' => $this->tipeId ? 'Tipe Diperbarui!' : 'Tipe Ditambahkan!',
-            'text' => 'Data tipe handphone berhasil disimpan.',
+            'title' => $this->tipeId ? 'Berhasil Diperbarui!' : 'Berhasil Ditambahkan!',
+            'text' => 'Data tipe telah disimpan.',
             'icon' => 'success'
         ]);
         
@@ -98,30 +83,20 @@ class TipeIndex extends Component
         $this->tipeId = $id;
         $this->merk_id = $tipe->merk_id;
         $this->nama = $tipe->nama;
-        
-        // Pastikan formatnya array agar terbaca oleh Multi-Select
-        // Jika null, jadikan array kosong
+        $this->jenis = $tipe->jenis; // Load jenis
         $this->ram_storage = $tipe->ram_storage ?? []; 
         $this->isEdit = true;
-
-        // Trigger event ke JS untuk mengisi nilai TomSelect yang terpilih
         $this->dispatch('set-select-values', values: $this->ram_storage);
     }
 
     public function delete($id)
     {
         Tipe::find($id)->delete();
-        $this->dispatch('swal', [
-            'title' => 'Dihapus!',
-            'text' => 'Data tipe berhasil dihapus.',
-            'icon' => 'success'
-        ]);
+        $this->dispatch('swal', ['title' => 'Dihapus!', 'text' => 'Data berhasil dihapus.', 'icon' => 'success']);
     }
 
     public function render()
     {
-        // Ambil data Tipe beserta relasi Merk-nya
-        // Menggunakan pencarian berdasarkan Nama Tipe atau Nama Merk
         $tipes = Tipe::with('merk')
             ->where('nama', 'like', '%' . $this->search . '%')
             ->orWhereHas('merk', function($q) {
@@ -130,7 +105,6 @@ class TipeIndex extends Component
             ->latest()
             ->paginate(10);
 
-        // Ambil semua merk untuk Dropdown, urutkan A-Z
         $merks = Merk::orderBy('nama', 'asc')->get();
 
         return view('livewire.tipe.tipe-index', [
