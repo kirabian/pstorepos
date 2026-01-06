@@ -41,8 +41,8 @@
 <style>
     /* Base Navbar Style */
     #main-navbar {
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.8); /* Mulai dengan agak transparan */
+        backdrop-filter: blur(8px);
         border-bottom: 1px solid rgba(0,0,0,0.05);
         padding: 0.75rem 1.0rem;
         z-index: 1040;
@@ -51,10 +51,10 @@
         left: 0;
         right: 0;
         /* Transisi Halus untuk semua properti */
-        transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); 
+        transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1); 
     }
 
-    /* Style Saat Discroll (Floating Glass Effect) */
+    /* Style Saat Discroll (Floating Island Effect) */
     #main-navbar.scrolled {
         width: 92%; /* Mengecil jadi 92% layar */
         top: 20px; /* Jarak dari atas (melayang) */
@@ -62,17 +62,22 @@
         transform: translateX(-50%); /* Trik centering absolute/fixed */
         
         border-radius: 50px; /* Membuat sudut membulat seperti kapsul */
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        border-bottom: 1px solid rgba(0,0,0,0.05);
+        /* Border halus agar terlihat seperti kaca 3D */
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
         
         /* Efek Kaca Lebih Kuat */
-        background: rgba(255, 255, 255, 0.75) !important; 
-        backdrop-filter: blur(15px) saturate(180%);
-        -webkit-backdrop-filter: blur(15px) saturate(180%);
+        background: rgba(255, 255, 255, 0.85) !important; 
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
         
-        /* Shadow agar terlihat mengambang */
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
-        padding: 0.5rem 1.5rem; /* Padding sedikit mengecil */
+        /* Shadow Premium (Lebih Soft & Deep) */
+        box-shadow: 
+            0 10px 15px -3px rgba(0, 0, 0, 0.05),
+            0 4px 6px -2px rgba(0, 0, 0, 0.025),
+            0 0 0 1px rgba(0, 0, 0, 0.03); /* Outline halus */
+            
+        padding: 0.6rem 1.8rem; /* Padding sedikit mengecil tapi lebih lebar di samping */
     }
 
     /* Responsive untuk Mobile */
@@ -81,6 +86,7 @@
             width: 95%; /* Di HP jangan terlalu kecil, 95% cukup */
             top: 15px;
             padding: 0.5rem 1rem;
+            border-radius: 25px; /* Radius lebih kecil di mobile */
         }
     }
 </style>

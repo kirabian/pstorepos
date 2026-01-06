@@ -21,15 +21,18 @@
 
     <style>
         :root {
-            --core-black: #000;
-            --core-white: #fff;
+            --core-black: #09090b;
+            --core-white: #ffffff;
+            /* Perbaikan: Menambahkan warna background abu-abu premium agar kontras */
+            --core-bg: #f2f4f7;
             --core-gray-light: #f8f9fa;
             --core-gray-border: #eee;
         }
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--core-white);
+            /* Menggunakan background abu-abu, bukan putih polos */
+            background-color: var(--core-bg);
             color: var(--core-black);
             margin: 0;
             overflow-x: hidden; /* Mencegah scroll horizontal di HP */
@@ -47,7 +50,8 @@
             width: 100%;
             display: flex;
             flex-direction: column;
-            background-color: var(--core-white);
+            /* Background content mengikuti body agar konsisten */
+            background-color: var(--core-bg);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             min-width: 0; /* Mencegah flex item overflow */
         }
@@ -144,6 +148,11 @@
             const navbar = document.getElementById('main-navbar');
             
             if(navbar) {
+                // Check initial scroll position
+                if (window.scrollY > 10) {
+                    navbar.classList.add('scrolled');
+                }
+
                 window.addEventListener('scroll', function() {
                     if (window.scrollY > 10) { 
                         // Jika scroll lebih dari 10px, ubah jadi mode "Island" (kecil & melayang)
