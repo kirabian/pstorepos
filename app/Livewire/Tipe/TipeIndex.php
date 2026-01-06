@@ -35,8 +35,11 @@ class TipeIndex extends Component
 
     // Opsi RAM Predefined
     public $ramOptions = [
-        '2/32', '3/32', '4/64', '4/128', '6/128', '8/128', '8/256', 
-        '12/256', '12/512', '16/512', '1TB'
+        '1/8', '1/16', '1/32', '2/16', '2/32', '2/64', '3/32', '3/64', '3/128', '3/256',
+        '4/32', '4/64', '4/128', '4/256', '4/512', '6/64', '6/128', '6/256', '6/512',
+        '8/64', '8/128', '8/256', '8/512', '8/1024', '12/128', '12/256', '12/512', '12/1024',
+        '16/128', '16/256', '16/512', '16/1024', '18/128', '18/256', '18/512', '18/1024',
+        '24/512', '24/1024', '8', '16', '32', '64', '128', '256', '512', '2048'
     ];
 
     // PENTING: Reset input saat jenis berubah
@@ -70,16 +73,19 @@ class TipeIndex extends Component
 
         $final_variasi = [];
 
-        if ($this->jenis == 'imei') {
-            // Validasi HP: Wajib Array
-            $this->validate(['ram_storage' => 'required|array|min:1']);
-            $final_variasi = $this->ram_storage;
-        } else {
-            // Validasi Lainnya: Wajib Text
-            $this->validate(['variasi_manual' => 'required|string|min:1']);
-            // Pecah string koma jadi array
-            $pecah = explode(',', $this->variasi_manual);
-            $final_variasi = array_map('trim', $pecah);
+        switch ($this->jenis) {
+            case 'imei':
+                // Validasi HP: Wajib Array
+                $this->validate(['ram_storage' => 'required|array|min:1']);
+                $final_variasi = $this->ram_storage;
+                break;
+            default:
+                // Validasi Lainnya: Wajib Text
+                $this->validate(['variasi_manual' => 'required|string|min:1']);
+                // Pecah string koma jadi array
+                $pecah = explode(',', $this->variasi_manual);
+                $final_variasi = array_map('trim', $pecah);
+                break;
         }
 
         Tipe::updateOrCreate(['id' => $this->tipeId], [
@@ -109,12 +115,15 @@ class TipeIndex extends Component
         
         $dataVarian = $tipe->ram_storage ?? [];
 
-        if ($this->jenis == 'imei') {
-            $this->ram_storage = $dataVarian;
-            $this->dispatch('set-select-values', values: $this->ram_storage);
-        } else {
-            // Gabung array jadi string untuk input text
-            $this->variasi_manual = implode(', ', $dataVarian);
+        switch ($this->jenis) {
+            case 'imei':
+                $this->ram_storage = $dataVarian;
+                $this->dispatch('set-select-values', values: $this->ram_storage);
+                break;
+            default:
+                // Gabung array jadi string untuk input text
+                $this->variasi_manual = implode(', ', $dataVarian);
+                break;
         }
 
         $this->isEdit = true;
@@ -129,9 +138,9 @@ class TipeIndex extends Component
     public function render()
     {
         $tipes = Tipe::with('merk')
-            ->where('nama', 'like', '%' . $this->search . '%')
+            ->where('nama', 'like', "%{$this->search}%")
             ->orWhereHas('merk', function($q) {
-                $q->where('nama', 'like', '%' . $this->search . '%');
+                $q->where('nama', 'like', "%{$this->search}%");
             })
             ->latest()
             ->paginate(10);
@@ -141,6 +150,6 @@ class TipeIndex extends Component
         return view('livewire.tipe.tipe-index', [
             'tipes' => $tipes,
             'merks' => $merks
-        ])->title('Manajemen Tipe');
+        ]);
     }
 }
