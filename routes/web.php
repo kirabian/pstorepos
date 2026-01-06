@@ -88,8 +88,8 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/merk', MerkIndex::class)->name('merk.index');
         Route::get('/tipe', TipeIndex::class)->name('tipe.index');
-        Route::get('/stok', StokIndex::class)->name('stok.index');
-        Route::get('/lacak-imei', LacakImei::class)->name('lacak.imei');
 
     });
+    Route::get('/stok', StokIndex::class)->name('stok.index');
+    Route::get('/lacak-imei', LacakImei::class)->name('lacak.imei');
 });
