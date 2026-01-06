@@ -88,7 +88,7 @@ class ProductIndex extends Component
                     'category_id' => $defaultCat->id
                 ]);
 
-                // Buat varian default "Original" dengan stok 0
+                // Buat varian default "Original" dengan stok 0 jika belum ada
                 ProductVariant::firstOrCreate([
                     'product_id'     => $product->id,
                     'attribute_name' => 'Original',

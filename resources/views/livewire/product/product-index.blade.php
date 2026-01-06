@@ -29,8 +29,8 @@
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0">
             <h6 class="mb-0 fw-bold"><i class="fas fa-tasks me-2 text-primary"></i> Pratinjau Import (Nama Tipe & ID Brand)</h6>
             <div>
-                <button wire:click="cancelImport" class="btn btn-sm btn-light border me-1 px-3">Batal</button>
-                <button wire:click="processImport" class="btn btn-sm btn-primary fw-bold px-4 shadow-sm">
+                <button wire:click="cancelImport" class="btn btn-sm btn-light border me-1 px-3 rounded-3">Batal</button>
+                <button wire:click="processImport" class="btn btn-sm btn-primary fw-bold px-4 shadow-sm rounded-3">
                     Simpan Sekarang
                 </button>
             </div>
@@ -55,9 +55,9 @@
                         <td class="py-2 small text-primary fw-bold">{{ $item['product_name'] }}</td>
                         <td class="py-2 text-center small">
                             @if($item['is_valid'])
-                                <span class="badge bg-success-subtle text-success px-2 border border-success border-opacity-25">Siap Simpan</span>
+                                <span class="badge bg-success-subtle text-success px-2 border border-success border-opacity-25 rounded-pill">Siap Simpan</span>
                             @else
-                                <span class="badge bg-danger-subtle text-danger px-2 border border-danger border-opacity-25">ID Tidak Terdaftar</span>
+                                <span class="badge bg-danger-subtle text-danger px-2 border border-danger border-opacity-25 rounded-pill">ID Tidak Terdaftar</span>
                             @endif
                         </td>
                     </tr>
@@ -90,8 +90,8 @@
                                     <small class="text-muted" style="font-size: 0.65rem;">ID SKU: #{{ $p->id }}</small>
                                 </td>
                                 <td>
-                                    <span class="badge rounded-pill bg-light text-dark border px-2 mb-1">{{ $p->brand->name }}</span><br>
-                                    <small class="text-secondary" style="font-size: 0.75rem;">{{ $p->category->name }}</small>
+                                    <span class="badge rounded-pill bg-light text-dark border px-2 mb-1" style="font-size: 0.7rem;">{{ $p->brand->name ?? 'N/A' }}</span><br>
+                                    <small class="text-secondary" style="font-size: 0.75rem;">{{ $p->category->name ?? 'N/A' }}</small>
                                 </td>
                                 <td>
                                     @foreach($p->variants as $v)
@@ -112,7 +112,7 @@
                                     @endforeach
                                 </td>
                                 <td class="pe-4 text-center">
-                                    <button class="btn btn-sm btn-outline-danger border-0" onclick="confirm('Hapus produk?') || event.stopImmediatePropagation()" wire:click="deleteProduct({{ $p->id }})">
+                                    <button class="btn btn-sm btn-outline-danger border-0 rounded-3" onclick="confirm('Hapus produk?') || event.stopImmediatePropagation()" wire:click="deleteProduct({{ $p->id }})">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
@@ -120,6 +120,7 @@
                         @empty
                             <tr>
                                 <td colspan="6" class="text-center py-5 text-secondary">
+                                    <i class="fas fa-box-open d-block mb-2 fs-2 opacity-50"></i>
                                     Belum ada data produk tersedia.
                                 </td>
                             </tr>
