@@ -14,12 +14,12 @@ class ProductEdit extends Component
     public $product_id;
     public $variant_id;
     
-    // Data Form
+    // Data Form Produk
     public $name;
     public $brand_id;
     public $category_id;
     
-    // Data Varian
+    // Data Varian (Target Edit)
     public $attribute_name;
     public $stock;
     public $cost_price;
@@ -36,9 +36,12 @@ class ProductEdit extends Component
         $this->brand_id = $product->brand_id;
         $this->category_id = $product->category_id;
 
-        // Load existing types untuk brand ini saat pertama load
         $this->loadExistingTypes($this->brand_id);
 
+        // Ambil varian pertama. 
+        // Jika sistem Anda mendukung multi-varian per produk,
+        // logic ini harus diubah jadi list varian. 
+        // Untuk sekarang asumsi 1 produk = 1 varian utama yang diedit.
         $variant = $product->variants->first();
         
         if($variant) {
@@ -59,11 +62,7 @@ class ProductEdit extends Component
     {
         if(!empty($brandId)) {
             $this->existing_types = Product::where('brand_id', $brandId)
-                ->select('name')
-                ->distinct()
-                ->orderBy('name', 'asc')
-                ->pluck('name')
-                ->toArray();
+                ->select('name')->distinct()->orderBy('name', 'asc')->pluck('name')->toArray();
         } else {
             $this->existing_types = [];
         }
@@ -81,6 +80,7 @@ class ProductEdit extends Component
 
         DB::beginTransaction();
         try {
+            // 1. Update Data Induk Produk
             $product = Product::findOrFail($this->product_id);
             $product->update([
                 'name' => $this->name,
@@ -88,10 +88,20 @@ class ProductEdit extends Component
                 'category_id' => $this->category_id,
             ]);
 
+            // 2. Update Data Varian EKSISTING (Jangan Create Baru!)
             if ($this->variant_id) {
                 $variant = ProductVariant::findOrFail($this->variant_id);
                 $variant->update([
                     'attribute_name' => $this->attribute_name,
+                    'stock' => $this->stock, // Update nilai stok langsung
+                    'cost_price' => $this->cost_price,
+                    'srp_price' => $this->srp_price,
+                ]);
+            } else {
+                // Fallback jika entah kenapa varian belum ada
+                ProductVariant::create([
+                    'product_id' => $product->id,
+                    'attribute_name' => 'Original',
                     'stock' => $this->stock,
                     'cost_price' => $this->cost_price,
                     'srp_price' => $this->srp_price,
@@ -99,7 +109,7 @@ class ProductEdit extends Component
             }
 
             DB::commit();
-            session()->flash('success', 'Produk berhasil diperbarui.');
+            session()->flash('success', 'Data produk, stok, dan harga berhasil diperbarui.');
             return redirect()->route('product.index');
 
         } catch (\Exception $e) {

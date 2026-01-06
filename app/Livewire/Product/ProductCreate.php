@@ -26,21 +26,16 @@ class ProductCreate extends Component
     public $condition = 'Baru'; // Baru / Second
     public $description; // Catatan
     
-    // Data Stok & Harga
-    public $cost_price = 0; // Modal
-    public $srp_price = 0;  // Harga Jual
-    public $stock = 0;
-    
-    // Khusus IMEI
-    public $imei_list; 
-
     // LIST UNTUK DROPDOWN TYPE
     public $existing_types = [];
 
     public function updatedFormType()
     {
         $this->resetValidation();
-        // Set default category
+        // Reset inputs
+        $this->reset(['name', 'ram', 'storage', 'color', 'description']);
+        
+        // Auto select category based on type
         if($this->form_type == 'jasa') {
             $cat = Category::where('name', 'like', '%Jasa%')->first();
             $this->category_id = $cat ? $cat->id : null;
@@ -53,7 +48,6 @@ class ProductCreate extends Component
         }
     }
 
-    // SAAT BRAND DIPILIH, AMBIL DAFTAR TIPE PRODUK YANG SUDAH ADA
     public function updatedBrandId($value)
     {
         if(!empty($value)) {
@@ -68,36 +62,19 @@ class ProductCreate extends Component
         }
     }
 
-    public function updatedImeiList()
-    {
-        if ($this->form_type == 'imei' && !empty($this->imei_list)) {
-            $lines = array_filter(explode("\n", $this->imei_list));
-            $this->stock = count($lines);
-        } else {
-            if ($this->form_type == 'imei') {
-                $this->stock = 0;
-            }
-        }
-    }
-
     public function save()
     {
-        // 1. Validasi
+        // 1. Validasi Minimalis (Tanpa Stok/Harga)
         if ($this->form_type == 'jasa') {
             $this->validate([
                 'name' => 'required|min:3',
                 'category_id' => 'required',
-                'cost_price' => 'required|numeric',
-                'srp_price' => 'required|numeric',
             ]);
         } elseif ($this->form_type == 'non-imei') {
             $this->validate([
                 'brand_id' => 'required',
                 'name' => 'required|min:3',
                 'category_id' => 'required',
-                'cost_price' => 'required|numeric',
-                'srp_price' => 'required|numeric',
-                'stock' => 'required|numeric|min:0',
             ]);
         } else {
             // Tipe IMEI
@@ -109,8 +86,6 @@ class ProductCreate extends Component
                 'storage' => 'required',
                 'color' => 'required',
                 'condition' => 'required',
-                'cost_price' => 'required|numeric',
-                'srp_price' => 'required|numeric',
             ]);
         }
 
@@ -130,7 +105,7 @@ class ProductCreate extends Component
                 ]
             );
 
-            // 3. Buat Nama Varian
+            // 3. Tentukan Nama Varian Tunggal
             if ($this->form_type == 'imei') {
                 $attributeName = "{$this->ram}/{$this->storage} {$this->color} ({$this->condition})";
             } elseif ($this->form_type == 'non-imei') {
@@ -139,19 +114,32 @@ class ProductCreate extends Component
                 $attributeName = 'Jasa Layanan';
             }
 
-            // 4. Simpan Varian
-            ProductVariant::create([
-                'product_id' => $product->id,
-                'attribute_name' => $attributeName,
-                'stock' => $this->stock,
-                'cost_price' => $this->cost_price,
-                'srp_price' => $this->srp_price,
-            ]);
+            // 4. Cek apakah varian ini sudah ada di produk tersebut?
+            // Agar tidak double "Original" dan varian baru
+            $existingVariant = ProductVariant::where('product_id', $product->id)
+                                ->where('attribute_name', $attributeName)
+                                ->first();
 
+            if (!$existingVariant) {
+                // Hanya create jika belum ada
+                ProductVariant::create([
+                    'product_id' => $product->id,
+                    'attribute_name' => $attributeName,
+                    'stock' => 0, // Default 0, edit nanti
+                    'cost_price' => 0,
+                    'srp_price' => 0,
+                ]);
+            }
+
+            // Jika produk baru dibuat dan punya varian 'Original' bawaan yang tidak diinginkan (dari observer lain jika ada),
+            // kita bisa hapus varian 'Original' jika namanya beda dengan yang baru kita buat.
+            // (Opsional, tergantung setup DB Anda).
+            
             DB::commit();
 
-            session()->flash('success', 'Produk berhasil ditambahkan.');
-            return redirect()->route('product.index');
+            session()->flash('success', 'Produk berhasil dibuat. Silakan update stok & harga.');
+            // Redirect ke halaman EDIT produk tersebut agar user langsung isi stok
+            return redirect()->route('product.edit', $product->id);
 
         } catch (\Exception $e) {
             DB::rollBack();
