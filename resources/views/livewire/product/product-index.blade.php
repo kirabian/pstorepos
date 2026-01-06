@@ -190,9 +190,9 @@
                                 </td>
                                 <td class="pe-4 text-center">
                                     <div class="d-flex justify-content-center gap-1">
-                                        <a href="{{ route('product.edit', $p->id) }}" class="btn btn-sm btn-outline-primary border-0 rounded-3" title="Edit">
+                                        {{-- <a href="{{ route('product.edit', $p->id) }}" class="btn btn-sm btn-outline-primary border-0 rounded-3" title="Edit">
                                             <i class="fas fa-edit"></i>
-                                        </a>
+                                        </a> --}}
                                         <button class="btn btn-sm btn-outline-danger border-0 rounded-3" 
                                                 onclick="return confirm('Hapus produk {{ $p->name }}?')" 
                                                 wire:click="deleteProduct({{ $p->id }})"
