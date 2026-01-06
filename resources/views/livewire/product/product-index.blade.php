@@ -137,17 +137,54 @@
     </div>
     @endif
 
+    {{-- AREA FILTER BRAND --}}
+    @if($availableBrands->count() > 0)
+    <div class="mb-4">
+        <div class="d-flex align-items-center mb-2">
+            <h6 class="text-uppercase text-secondary fw-bold small mb-0 me-2">
+                <i class="fas fa-filter me-1"></i> Filter Brand:
+            </h6>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button wire:click="setBrandFilter(null)" 
+                    class="btn btn-sm rounded-pill px-3 shadow-sm border {{ $selectedBrandId === null ? 'btn-dark' : 'btn-white bg-white text-secondary' }}">
+                Semua Brand
+            </button>
+
+            @foreach($availableBrands as $brand)
+                <button wire:click="setBrandFilter({{ $brand->id }})" 
+                        class="btn btn-sm rounded-pill px-3 shadow-sm border d-flex align-items-center gap-2 {{ $selectedBrandId === $brand->id ? 'btn-primary text-white border-primary' : 'btn-white bg-white text-dark hover-shadow' }}"
+                        style="transition: all 0.2s;">
+                    <span>{{ $brand->name }}</span>
+                    <span class="badge {{ $selectedBrandId === $brand->id ? 'bg-white text-primary' : 'bg-light text-secondary' }} rounded-circle" style="font-size: 0.65rem;">
+                        {{ $brand->products_count }}
+                    </span>
+                </button>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
     {{-- AREA DAFTAR PRODUK --}}
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="card-header bg-white py-3 border-bottom">
             <div class="row g-2 align-items-center">
                 <div class="col-md-6">
-                    <h6 class="mb-0 fw-bold"><i class="fas fa-boxes me-2"></i> Daftar Produk ({{ $products->total() }})</h6>
+                    <h6 class="mb-0 fw-bold">
+                        <i class="fas fa-boxes me-2"></i> Daftar Produk 
+                        <span class="text-muted fw-normal">({{ $products->total() }})</span>
+                        @if($selectedBrandId)
+                            <span class="badge bg-primary-subtle text-primary ms-2">
+                                Filter: {{ $availableBrands->find($selectedBrandId)->name }}
+                                <i class="fas fa-times ms-1 cursor-pointer" wire:click="setBrandFilter(null)"></i>
+                            </span>
+                        @endif
+                    </h6>
                 </div>
                 <div class="col-md-6 d-flex justify-content-end gap-2">
                     <div class="input-group input-group-sm" style="max-width: 250px;">
                         <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" wire:model.live.debounce.300ms="search" class="form-control border-start-0 ps-0" placeholder="Cari Brand atau Produk...">
+                        <input type="text" wire:model.live.debounce.300ms="search" class="form-control border-start-0 ps-0" placeholder="Cari Tipe Produk...">
                     </div>
                     
                     <button wire:click="$refresh" class="btn btn-sm btn-light border" title="Refresh">
@@ -252,7 +289,13 @@
                 <div class="py-4">
                     <i class="fas fa-box-open fa-3x mb-3 text-muted opacity-50"></i>
                     <h6 class="mb-2">Data tidak ditemukan</h6>
-                    <p class="small text-muted mb-4">Belum ada data atau pencarian tidak cocok.</p>
+                    <p class="small text-muted mb-4">
+                        @if($selectedBrandId)
+                            Tidak ada produk untuk brand yang dipilih.
+                        @else
+                            Belum ada data atau pencarian tidak cocok.
+                        @endif
+                    </p>
                     <div class="d-flex justify-content-center gap-2">
                         <label for="fileImport" class="btn btn-success btn-sm">
                             <i class="fas fa-file-excel me-1"></i> Import Excel
@@ -267,3 +310,10 @@
         </div>
     </div>
 </div>
+
+<style>
+    .hover-shadow:hover {
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+        border-color: #dee2e6 !important;
+    }
+</style>
