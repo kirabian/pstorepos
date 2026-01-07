@@ -29,9 +29,9 @@ class UserSeeder extends Seeder
             'kode_cabang' => 'CB-004', 'nama_cabang' => 'PSTORE MAKASSAR', 'lokasi' => 'Makassar', 'timezone' => 'Asia/Makassar'
         ]);
 
-        // 2. Buat Data Master Distributor (FIX: Tambah kode_distributor)
+        // 2. Buat Data Master Distributor (Dummy)
         $dist = Distributor::create([
-            'kode_distributor' => 'DST-001', // <--- INI YANG KURANG TADI
+            'kode_distributor' => 'DST-001',
             'nama_distributor' => 'DISTRIBUTOR UTAMA', 
             'lokasi' => 'Jakarta', 
             'kontak' => '08123456789'
@@ -47,6 +47,7 @@ class UserSeeder extends Seeder
             'email'        => 'superadmin@pstore.com',
             'password'     => $passwordDefault,
             'role'         => 'superadmin',
+            'tanggal_lahir'=> '1990-01-01', // <--- Ditambahkan
             'cabang_id'    => null,
             'is_active'    => true,
         ]);
@@ -58,7 +59,8 @@ class UserSeeder extends Seeder
             'email'        => 'produk@pstore.com',
             'password'     => $passwordDefault,
             'role'         => 'adminproduk',
-            'cabang_id'    => $cabangPusat->id, // Admin produk biasanya di pusat
+            'tanggal_lahir'=> '1992-05-15', // <--- Ditambahkan
+            'cabang_id'    => $cabangPusat->id,
             'is_active'    => true,
         ]);
 
@@ -69,18 +71,20 @@ class UserSeeder extends Seeder
             'email'        => 'analis@pstore.com',
             'password'     => $passwordDefault,
             'role'         => 'analis',
+            'tanggal_lahir'=> '1993-08-20', // <--- Ditambahkan
             'cabang_id'    => $cabangPusat->id,
             'is_active'    => true,
         ]);
 
-        // AUDIT (Multi Cabang) - Penting!
+        // AUDIT (Multi Cabang)
         $userAudit = User::create([
             'nama_lengkap' => 'Tim Audit Internal',
             'idlogin'      => 'audit',
             'email'        => 'audit@pstore.com',
             'password'     => $passwordDefault,
             'role'         => 'audit',
-            'cabang_id'    => null, // Audit tidak terikat 1 cabang di kolom ini
+            'tanggal_lahir'=> '1988-12-12', // <--- Ditambahkan
+            'cabang_id'    => null,
             'is_active'    => true,
         ]);
         // Audit ini memegang Cabang Pusat & Bandung
@@ -93,6 +97,7 @@ class UserSeeder extends Seeder
             'email'        => 'leader@pstore.com',
             'password'     => $passwordDefault,
             'role'         => 'leader',
+            'tanggal_lahir'=> '1991-03-10', // <--- Ditambahkan
             'cabang_id'    => $cabangSby->id,
             'is_active'    => true,
         ]);
@@ -104,6 +109,7 @@ class UserSeeder extends Seeder
             'email'        => 'mitra@pstore.com',
             'password'     => $passwordDefault,
             'role'         => 'distributor',
+            'tanggal_lahir'=> '1985-07-25', // <--- Ditambahkan
             'distributor_id' => $dist->id,
             'cabang_id'    => null,
             'is_active'    => true,
@@ -116,6 +122,7 @@ class UserSeeder extends Seeder
             'email'        => 'sales@pstore.com',
             'password'     => $passwordDefault,
             'role'         => 'sales',
+            'tanggal_lahir'=> '1998-11-05', // <--- Ditambahkan
             'cabang_id'    => $cabangPusat->id,
             'is_active'    => true,
         ]);
@@ -127,6 +134,7 @@ class UserSeeder extends Seeder
             'email'        => 'gudang@pstore.com',
             'password'     => $passwordDefault,
             'role'         => 'gudang',
+            'tanggal_lahir'=> '1996-02-14', // <--- Ditambahkan
             'cabang_id'    => $cabangPusat->id,
             'is_active'    => true,
         ]);
@@ -138,6 +146,7 @@ class UserSeeder extends Seeder
             'email'        => 'security@pstore.com',
             'password'     => $passwordDefault,
             'role'         => 'security',
+            'tanggal_lahir'=> '1980-09-30', // <--- Ditambahkan
             'cabang_id'    => $cabangPusat->id,
             'is_active'    => true,
         ]);
