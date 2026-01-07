@@ -32,7 +32,6 @@ Route::get('/login', Login::class)->name('login')->middleware('guest');
 
 Route::post('/logout', function () {
     if (Auth::check()) {
-        // Hapus cache agar lampu hijau mati seketika
         \Illuminate\Support\Facades\Cache::forget('user-is-online-'.Auth::id());
     }
 
@@ -47,44 +46,26 @@ Route::post('/logout', function () {
 |--------------------------------------------------------------------------
 | Area Terproteksi (Login Required & Akun Aktif)
 |--------------------------------------------------------------------------
-| Middleware 'active.user' ditambahkan disini untuk mencegah 
-| user yang dinonaktifkan mengakses dashboard.
 */
 Route::middleware(['auth', 'active.user'])->group(function () {
 
-    // Semua Role bisa akses Dashboard
+    // Dashboard (Semua Role)
     Route::get('/', Dashboard::class)->name('dashboard');
 
     /* |--------------------------------------------------------------------------
     | MANAJEMEN USER (SUPERADMIN & AUDIT)
     |--------------------------------------------------------------------------
-    | Route ini dikeluarkan dari 'superadmin-only' agar Audit bisa akses.
-    | Kita gunakan closure middleware untuk membatasi hanya Superadmin & Audit.
+    | Menggunakan middleware 'user.management' yang baru dibuat.
     */
-    Route::prefix('users')->name('user.')->group(function () {
-        
-        // Logic Akses: Hanya Superadmin & Audit
-        Route::middleware(function ($request, $next) {
-            if (in_array(Auth::user()->role, ['superadmin', 'audit'])) {
-                return $next($request);
-            }
-            abort(403, 'Akses Ditolak: Hanya untuk Superadmin & Audit');
-        })->group(function () {
-            
-            Route::get('/', UserIndex::class)->name('index');
-            
-            // Route Create & Edit tetap ada untuk kompatibilitas, 
-            // meskipun di UserIndex terbaru kita sudah pakai Modal.
-            Route::get('/create', UserCreate::class)->name('create');
-            Route::get('/{id}/edit', UserEdit::class)->name('edit');
-        });
+    Route::prefix('users')->name('user.')->middleware('user.management')->group(function () {
+        Route::get('/', UserIndex::class)->name('index');
+        Route::get('/create', UserCreate::class)->name('create');
+        Route::get('/{id}/edit', UserEdit::class)->name('edit');
     });
 
     /* |--------------------------------------------------------------------------
     | AREA KHUSUS SUPERADMIN
     |--------------------------------------------------------------------------
-    | Middleware 'can:superadmin-only' memastikan user selain superadmin
-    | akan dilempar ke halaman 403.
     */
     Route::middleware('can:superadmin-only')->group(function () {
 
