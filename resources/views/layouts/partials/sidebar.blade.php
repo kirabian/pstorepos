@@ -83,6 +83,24 @@
                 </a>
             </li>
 
+            {{-- MENU BARANG MASUK --}}
+            <li class="mb-2">
+                <a href="{{ route('barang-masuk.index') }}"
+                    class="nav-link p-3 rounded-4 d-flex align-items-center {{ request()->routeIs('barang-masuk.*') ? 'bg-white text-black fw-bold shadow' : 'text-secondary' }}">
+                    <i class="fas fa-arrow-circle-down fs-5 flex-shrink-0" style="width: 24px;"></i>
+                    <span class="ms-3 sidebar-text text-nowrap">Barang Masuk</span>
+                </a>
+            </li>
+
+            {{-- MENU BARANG KELUAR --}}
+            <li class="mb-2">
+                <a href="{{ route('barang-keluar.index') }}"
+                    class="nav-link p-3 rounded-4 d-flex align-items-center {{ request()->routeIs('barang-keluar.*') ? 'bg-white text-black fw-bold shadow' : 'text-secondary' }}">
+                    <i class="fas fa-arrow-circle-up fs-5 flex-shrink-0" style="width: 24px;"></i>
+                    <span class="ms-3 sidebar-text text-nowrap">Barang Keluar</span>
+                </a>
+            </li>
+
             <li class="mt-4 mb-2 small text-uppercase text-muted fw-bold px-3 sidebar-text text-nowrap"
                 style="font-size: 0.65rem; letter-spacing: 1px;">Preference</li>
             <li>
@@ -187,9 +205,9 @@
             border: none !important;
             background: transparent !important;
         }
-        
+
         #sidebar.minimized .logout-btn span {
-             display: none;
+            display: none;
         }
     }
 
@@ -200,14 +218,17 @@
             left: 0;
             top: 0;
             bottom: 0;
-            transform: translateX(-100%); /* Sembunyi ke kiri */
+            transform: translateX(-100%);
+            /* Sembunyi ke kiri */
             z-index: 1050;
-            width: 280px; /* Lebar tetap di mobile */
+            width: 280px;
+            /* Lebar tetap di mobile */
         }
-        
+
         #sidebar.show-mobile {
-            transform: translateX(0); /* Muncul */
-            box-shadow: 5px 0 15px rgba(0,0,0,0.3);
+            transform: translateX(0);
+            /* Muncul */
+            box-shadow: 5px 0 15px rgba(0, 0, 0, 0.3);
         }
     }
 </style>

@@ -1,6 +1,8 @@
 <?php
 
 use App\Livewire\Auth\Login;
+use App\Livewire\BarangKeluar\BarangKeluarIndex;
+use App\Livewire\BarangMasuk\BarangMasukIndex;
 use App\Livewire\Cabang\CabangCreate;
 use App\Livewire\Cabang\CabangEdit;
 use App\Livewire\Cabang\CabangIndex;
@@ -92,4 +94,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::get('/stok', StokIndex::class)->name('stok.index');
     Route::get('/lacak-imei', LacakImei::class)->name('lacak.imei');
+
+    Route::get('/barang-masuk', BarangMasukIndex::class)->name('barang-masuk.index');
+    Route::get('/barang-keluar', BarangKeluarIndex::class)->name('barang-keluar.index');
 });
