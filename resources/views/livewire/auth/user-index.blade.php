@@ -287,10 +287,9 @@
                                             @endif
                                             <option value="adminproduk">ADMIN PRODUK</option>
                                             <option value="analis">ANALIST DATA</option>
-                                            <option value="distributor">DISTRIBUTOR PARTNER</option>
                                             <option value="leader">TEAM LEADER</option>
                                             <option value="sales">SALES / CASHIER</option>
-                                            <option value="gudang">WAREHOUSE STAFF</option>
+                                            <option value="gudang">INVENTORY STAFF</option>
                                             <option value="security">SECURITY</option>
                                         </select>
                                         <label for="roleSelect" class="text-dark fw-bold">User Role</label>
@@ -300,7 +299,7 @@
                             </div>
 
                             {{-- DYNAMIC LOCATION --}}
-                            @if($role && !in_array($role, ['superadmin', 'audit', 'distributor']))
+                            @if($role && !in_array($role, ['superadmin', 'audit', 'distributor', 'gudang']))
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="form-floating">
                                         <select class="form-select bg-warning-subtle border-0 text-dark fw-bold rounded-4" id="branchSelect" wire:model="cabang_id">
