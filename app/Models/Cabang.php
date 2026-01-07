@@ -27,6 +27,11 @@ class Cabang extends Model
         return now($tz);
     }
 
+     public function users()
+    {
+        return $this->belongsToMany(User::class, 'branch_user', 'branch_id', 'user_id');
+    }
+
     /**
      * Relasi Multi-Cabang (Many-to-Many)
      * KHUSUS UNTUK ROLE AUDIT
