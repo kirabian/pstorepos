@@ -45,7 +45,7 @@ class Dashboard extends Component
             $this->onlineUsersCount = User::all()->filter(fn($u) => $u->isOnline())->count();
         }
 
-        // 2. JIKA AUDIT (FIXING HERE)
+        // 2. JIKA AUDIT
         elseif ($user->role === 'audit') {
             
             // FIX: Pastikan ini selalu array, hindari null
@@ -85,7 +85,7 @@ class Dashboard extends Component
                 // Jika belum pegang cabang, kosongkan data
                 $this->masukToday = 0;
                 $this->keluarToday = 0;
-                $this->pendingApprovals = collect([]); // Collection kosong
+                $this->pendingApprovals = collect([]); 
                 $this->priceLogs = collect([]);
             }
         }
@@ -100,7 +100,6 @@ class Dashboard extends Component
 
     public function placeholder()
     {
-        // Pastikan file view dashboard-skeleton ada, jika tidak, return string loading
         if (view()->exists('livewire.dashboard-skeleton')) {
             return view('livewire.dashboard-skeleton');
         }
@@ -127,8 +126,14 @@ class Dashboard extends Component
 
         // 1. Tampilan Khusus AUDIT
         if ($user->role === 'audit') {
-            return view('livewire.dashboard-audit')
-                ->title('Audit Control Center');
+            // PASSING DATA SECARA EKSPLISIT KE VIEW AGAR VARIABEL DIKENALI
+            return view('livewire.dashboard-audit', [
+                'cabang_count' => $this->cabangCount,
+                'masuk_today' => $this->masukToday,
+                'keluar_today' => $this->keluarToday,
+                'pending_approvals' => $this->pendingApprovals,
+                'price_logs' => $this->priceLogs
+            ])->title('Audit Control Center');
         }
 
         // 2. Tampilan Khusus SUPERADMIN
