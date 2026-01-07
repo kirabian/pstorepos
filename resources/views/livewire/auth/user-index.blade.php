@@ -314,11 +314,10 @@
                                 </div>
                             @endif
 
-                            {{-- MULTI CABANG (AUDIT) - NEW DROPDOWN UI --}}
+                            {{-- MULTI CABANG (AUDIT) - FIXED & PROFESSIONAL UI --}}
                             @if($role === 'audit')
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     
-                                    {{-- ALPINE JS MULTI-SELECT DROPDOWN --}}
                                     <div x-data="{ 
                                         open: false, 
                                         selected: @entangle('selected_branches').live,
@@ -329,45 +328,67 @@
                                                 this.selected.push(String(id));
                                             }
                                         }
-                                    }" class="position-relative">
+                                    }">
                                         
                                         {{-- Trigger Button --}}
-                                        <div @click="open = !open" @click.outside="open = false" 
-                                             class="form-control bg-light border-0 rounded-4 py-3 px-4 d-flex justify-content-between align-items-center cursor-pointer shadow-sm">
+                                        <div @click="open = !open" 
+                                             class="form-control bg-light border-0 rounded-4 py-3 px-4 d-flex justify-content-between align-items-center cursor-pointer shadow-sm hover-bg-light transition-all">
                                             <div>
                                                 <span class="text-secondary fw-semibold small text-uppercase d-block mb-1" style="font-size: 0.7rem;">Audit Coverage</span>
-                                                <span class="fw-bold text-dark" x-text="selected.length > 0 ? selected.length + ' Branches Selected' : 'Select Branches...'"></span>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <i class="fas fa-building text-dark opacity-50"></i>
+                                                    <span class="fw-bold text-dark" x-text="selected.length > 0 ? selected.length + ' Branches Selected' : 'Select Target Branches...'"></span>
+                                                </div>
                                             </div>
-                                            <i class="fas fa-chevron-down text-muted transition-all" :class="{'rotate-180': open}"></i>
+                                            <div class="bg-white rounded-circle p-2 shadow-sm">
+                                                <i class="fas fa-chevron-down text-dark transition-all" :class="{'rotate-180': open}"></i>
+                                            </div>
                                         </div>
 
-                                        {{-- Dropdown Menu --}}
-                                        <div x-show="open" x-transition.opacity.duration.200ms
-                                             class="position-absolute w-100 mt-2 bg-white rounded-4 shadow-xl border overflow-hidden z-3" 
-                                             style="max-height: 250px; overflow-y: auto; display: none;">
+                                        {{-- Dropdown Container (Relative Flow - Pushes content down) --}}
+                                        <div x-show="open" x-transition.opacity.duration.300ms
+                                             class="mt-3 bg-white rounded-4 border border-light-subtle shadow-sm overflow-hidden" 
+                                             style="display: none;">
                                             
-                                            <div class="p-2">
-                                                @foreach($cabangs as $c)
-                                                    <div @click="toggle('{{ $c->id }}')" 
-                                                         class="d-flex align-items-center justify-content-between p-3 rounded-3 cursor-pointer mb-1 transition-all"
-                                                         :class="selected.includes('{{ $c->id }}') ? 'bg-dark text-white' : 'bg-white text-dark hover-bg-light'">
-                                                        
-                                                        <span class="fw-bold small">{{ $c->nama_cabang }}</span>
-                                                        
-                                                        {{-- Check Icon --}}
-                                                        <i class="fas fa-check-circle" x-show="selected.includes('{{ $c->id }}')"></i>
-                                                    </div>
-                                                @endforeach
+                                            {{-- Selection Header --}}
+                                            <div class="p-3 bg-light border-bottom border-light-subtle d-flex justify-content-between align-items-center">
+                                                <span class="text-muted small fw-bold text-uppercase tracking-wide">Available Branches</span>
+                                                <span class="badge bg-dark text-white rounded-pill px-2 extra-small">Multiple Select</span>
+                                            </div>
+
+                                            {{-- Scrollable List --}}
+                                            <div class="custom-scrollbar" style="max-height: 250px; overflow-y: auto;">
+                                                <div class="p-2">
+                                                    @foreach($cabangs as $c)
+                                                        <div @click="toggle('{{ $c->id }}')" 
+                                                             class="d-flex align-items-center justify-content-between p-3 rounded-3 cursor-pointer mb-1 transition-all"
+                                                             :class="selected.includes('{{ $c->id }}') ? 'bg-dark text-white shadow-sm transform-scale' : 'bg-white text-dark hover-bg-light'">
+                                                            
+                                                            <div class="d-flex align-items-center gap-3">
+                                                                <div class="rounded-circle p-1 d-flex align-items-center justify-content-center" 
+                                                                     :class="selected.includes('{{ $c->id }}') ? 'bg-white bg-opacity-25' : 'bg-light'">
+                                                                    <i class="fas fa-store fa-sm"></i>
+                                                                </div>
+                                                                <span class="fw-bold small">{{ $c->nama_cabang }}</span>
+                                                            </div>
+                                                            
+                                                            <div x-show="selected.includes('{{ $c->id }}')">
+                                                                <i class="fas fa-check-circle text-success"></i>
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {{-- Selected Badges Preview --}}
-                                        <div class="d-flex flex-wrap gap-2 mt-3" x-show="selected.length > 0">
+                                        {{-- Selected Chips Summary --}}
+                                        <div class="d-flex flex-wrap gap-2 mt-3" x-show="selected.length > 0" x-transition>
                                             <template x-for="id in selected" :key="id">
-                                                <span class="badge bg-dark text-white border border-dark rounded-pill px-3 py-2 fw-bold extra-small d-flex align-items-center">
-                                                    <span x-text="document.querySelector(`[@click*='${id}'] span`)?.innerText || 'Branch ' + id"></span>
-                                                    <i class="fas fa-times ms-2 cursor-pointer opacity-50 hover-opacity-100" @click.stop="toggle(id)"></i>
-                                                </span>
+                                                <div class="badge bg-white text-dark border shadow-sm rounded-pill px-3 py-2 fw-bold extra-small d-flex align-items-center gap-2 animate__animated animate__fadeIn">
+                                                    <span class="bg-success rounded-circle" style="width: 6px; height: 6px;"></span>
+                                                    <span x-text="document.querySelector(`[@click*='${id}'] span.fw-bold`)?.innerText || 'Branch ' + id"></span>
+                                                    <i class="fas fa-times ms-1 cursor-pointer text-muted hover-text-danger" @click.stop="toggle(id)"></i>
+                                                </div>
                                             </template>
                                         </div>
 
@@ -450,6 +471,8 @@
         .hover-primary:hover { background-color: #0d6efd; color: white; border-color: #0d6efd; }
         .hover-danger:hover { background-color: #dc3545; color: white; border-color: #dc3545; }
         .hover-opacity:hover { opacity: 0.7; }
+        .hover-scale:hover { transform: scale(1.02); }
+        .hover-text-danger:hover { color: #dc3545 !important; }
         
         /* Shadows */
         .shadow-xl { box-shadow: 0 20px 40px -10px rgba(0,0,0,0.05); }
@@ -461,7 +484,14 @@
         .form-floating > label { font-size: 0.85rem; font-weight: 600; }
         .rotate-180 { transform: rotate(180deg); }
         .hover-bg-light:hover { background-color: #f8f9fa; }
+        .transform-scale { transform: scale(0.98); }
         
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #999; }
+
         /* Transitions */
         .transition-all { transition: all 0.3s ease; }
         .cursor-pointer { cursor: pointer; }
