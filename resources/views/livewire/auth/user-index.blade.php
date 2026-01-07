@@ -1,20 +1,22 @@
-<div wire:poll.5s> 
+<div wire:poll.10s> 
     <div class="p-4 animate__animated animate__fadeIn">
         
+        {{-- Header & Search Bar --}}
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-5 gap-4">
             <div class="header-left ps-3 border-start border-5 border-dark">
                 <h1 class="fw-900 text-dark mb-0 tracking-tighter display-5">Manajemen User</h1>
                 <p class="text-muted small fw-bold text-uppercase mb-0 mt-1" style="letter-spacing: 4px; opacity: 0.7;">Otoritas & Akses Pengguna</p>
             </div>
             <div class="header-right">
-                <a href="{{ route('user.create') }}" 
+                <button wire:click="resetInputFields" data-bs-toggle="modal" data-bs-target="#userModal" 
                    class="btn btn-dark rounded-pill px-5 py-3 fw-900 d-flex align-items-center shadow-premium hover-scale transition-all">
                     <i class="fas fa-plus-circle me-2 fs-5"></i> 
                     <span class="small tracking-widest text-uppercase">Tambah Pengguna</span>
-                </a>
+                </button>
             </div>
         </div>
 
+        {{-- Table Card --}}
         <div class="glass-card rounded-5 shadow-extra-lg bg-white overflow-hidden border border-light-subtle">
             
             <div class="p-4 bg-white d-flex flex-column flex-md-row justify-content-between align-items-center gap-4 border-bottom border-light">
@@ -94,6 +96,7 @@
                                 </span>
                             </td>
                             
+                            {{-- LOGIKA DISPLAY CABANG --}}
                             <td>
                                 @if($user->role === 'superadmin')
                                     <span class="extra-small fw-900 text-dark text-uppercase tracking-tight bg-light px-2 py-1 rounded border">
@@ -101,7 +104,7 @@
                                     </span>
                                 @elseif($user->role === 'audit')
                                     <div class="d-flex flex-wrap gap-1">
-                                        @forelse($user->branches as $b)
+                                        @forelse($user->accessibleBranches as $b)
                                             <span class="badge bg-white text-dark border extra-small fw-bold">{{ $b->nama_cabang }}</span>
                                         @empty
                                             <span class="text-danger extra-small fw-bold">Belum ada cabang</span>
@@ -128,10 +131,10 @@
                             </td>
                             <td class="text-end pe-5">
                                 <div class="d-flex justify-content-center gap-3">
-                                    <a href="{{ route('user.edit', $user->id) }}" 
+                                    <button wire:click="edit({{ $user->id }})" data-bs-toggle="modal" data-bs-target="#userModal"
                                        class="action-btn edit-btn shadow-sm rounded-circle d-flex align-items-center justify-content-center transition-all">
                                         <i class="fas fa-user-edit text-primary small"></i>
-                                    </a>
+                                    </button>
                                     @if($user->id !== auth()->id())
                                     <button onclick="confirm('Hapus akun ini?') || event.stopImmediatePropagation()" 
                                             wire:click="delete({{ $user->id }})" 
@@ -164,8 +167,130 @@
         </div>
     </div>
 
+    {{-- MODAL CREATE / EDIT --}}
+    @teleport('body')
+    <div wire:ignore.self class="modal fade" id="userModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content rounded-5 border-0 shadow-extra-lg">
+                <div class="modal-header border-0 px-5 pt-5 pb-0">
+                    <div>
+                        <h3 class="fw-900 text-dark mb-0 tracking-tighter">{{ $isEdit ? 'Edit User' : 'Registrasi User' }}</h3>
+                        <p class="text-secondary small fw-bold text-uppercase">Kelola Akses Pengguna Sistem</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" wire:click="resetInputFields"></button>
+                </div>
+                <div class="modal-body p-5">
+                    <form wire:submit.prevent="store">
+                        <div class="row g-4">
+                            {{-- Role Selection --}}
+                            <div class="col-md-12">
+                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Hak Akses (Role)</label>
+                                <select wire:model.live="role" class="form-select border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none fw-600">
+                                    <option value="">-- Pilih Role --</option>
+                                    @if(Auth::user()->role === 'superadmin')
+                                        <option value="superadmin">SUPERADMIN</option>
+                                        <option value="audit">AUDIT (MULTI CABANG)</option>
+                                    @endif
+                                    <option value="adminproduk">ADMIN PRODUK</option>
+                                    <option value="analis">ANALIS</option>
+                                    <option value="distributor">DISTRIBUTOR</option>
+                                    <option value="leader">LEADER</option>
+                                    <option value="sales">SALES</option>
+                                    <option value="gudang">GUDANG</option>
+                                    <option value="security">SECURITY</option>
+                                </select>
+                                @error('role') <small class="text-danger fw-bold mt-2 d-block">{{ $message }}</small> @enderror
+                            </div>
+
+                            {{-- Penempatan Cabang (Single) --}}
+                            @if($role && !in_array($role, ['superadmin', 'audit', 'distributor']))
+                            <div class="col-md-12 animate__animated animate__fadeIn">
+                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Penempatan Cabang</label>
+                                <select wire:model="cabang_id" class="form-select border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none fw-600">
+                                    <option value="">-- Pilih Cabang --</option>
+                                    @foreach($cabangs as $cabang)
+                                        <option value="{{ $cabang->id }}">{{ $cabang->nama_cabang }}</option>
+                                    @endforeach
+                                </select>
+                                @error('cabang_id') <small class="text-danger fw-bold mt-2 d-block">{{ $message }}</small> @enderror
+                            </div>
+                            @endif
+
+                            {{-- Multi Cabang (Audit) --}}
+                            @if($role === 'audit')
+                            <div class="col-12 animate__animated animate__fadeIn">
+                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Akses Multi Cabang</label>
+                                <div class="p-4 bg-light-subtle rounded-4 border">
+                                    <div class="row g-3" style="max-height: 200px; overflow-y: auto;">
+                                        @foreach($cabangs as $cabang)
+                                        <div class="col-md-6">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" value="{{ $cabang->id }}" wire:model="selected_branches" id="cabang_{{ $cabang->id }}">
+                                                <label class="form-check-label fw-bold small ms-2" for="cabang_{{ $cabang->id }}">
+                                                    {{ $cabang->nama_cabang }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                @error('selected_branches') <small class="text-danger fw-bold mt-2 d-block">{{ $message }}</small> @enderror
+                            </div>
+                            @endif
+
+                            {{-- Mitra Distributor --}}
+                            @if($role === 'distributor')
+                            <div class="col-12 animate__animated animate__fadeInDown">
+                                <label class="small fw-900 text-primary mb-2 text-uppercase letter-spacing-1">Hubungkan ke Mitra</label>
+                                <select wire:model="distributor_id" class="form-select border-2 border-primary bg-white py-3 px-4 rounded-4 shadow-none fw-600">
+                                    <option value="">-- Pilih Distributor --</option>
+                                    @foreach($distributors as $dist)
+                                        <option value="{{ $dist->id }}">{{ $dist->nama_distributor }}</option>
+                                    @endforeach
+                                </select>
+                                @error('distributor_id') <small class="text-danger fw-bold mt-2 d-block">{{ $message }}</small> @enderror
+                            </div>
+                            @endif
+
+                            {{-- Identitas User --}}
+                            <div class="col-12">
+                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Nama Lengkap</label>
+                                <input type="text" wire:model="nama_lengkap" class="form-control border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none">
+                                @error('nama_lengkap') <small class="text-danger fw-bold mt-2 d-block">{{ $message }}</small> @enderror
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">ID Login</label>
+                                <input type="text" wire:model="idlogin" class="form-control border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none">
+                                @error('idlogin') <small class="text-danger fw-bold mt-2 d-block">{{ $message }}</small> @enderror
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Email</label>
+                                <input type="email" wire:model="email" class="form-control border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none">
+                                @error('email') <small class="text-danger fw-bold mt-2 d-block">{{ $message }}</small> @enderror
+                            </div>
+
+                            <div class="col-12">
+                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Kata Sandi {{ $isEdit ? '(Opsional)' : '' }}</label>
+                                <input type="password" wire:model="password" class="form-control border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none" placeholder="••••••••">
+                                @error('password') <small class="text-danger fw-bold mt-2 d-block">{{ $message }}</small> @enderror
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-3 mt-5">
+                            <button type="submit" class="btn btn-dark py-3 rounded-4 fw-900 shadow-lg hover-scale transition-all">
+                                {{ $isEdit ? 'SIMPAN PERUBAHAN' : 'DAFTARKAN PENGGUNA' }}
+                            </button>
+                            <button type="button" class="btn btn-link text-decoration-none text-muted fw-bold small text-center" data-bs-dismiss="modal" wire:click="resetInputFields">BATAL</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <style>
-        /* Tetap menggunakan style premium Anda sebelumnya */
         .fw-900, .fw-black { font-weight: 900 !important; }
         .fw-600 { font-weight: 600 !important; }
         .tracking-2 { letter-spacing: 2px; }
@@ -190,3 +315,13 @@
         .italic { font-style: italic; }
     </style>
 </div>
+
+@script
+<script>
+    Livewire.on('close-modal', () => {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('userModal'));
+        if(modal) modal.hide();
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    });
+</script>
+@endscript
