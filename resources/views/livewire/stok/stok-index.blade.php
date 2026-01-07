@@ -208,7 +208,8 @@
                                             <label class="form-label-custom">Ke Cabang Mana? <span class="required-star">*</span></label>
                                             <select class="form-select rounded-3 py-2" wire:model="target_cabang_id">
                                                 <option value="">-- Pilih Cabang Tujuan --</option>
-                                                @foreach($cabangs as $c) <option value="{{ $c->id }}">{{ $c->nama }}</option> @endforeach
+                                                {{-- PERBAIKAN DISINI: Menggunakan nama_cabang --}}
+                                                @foreach($cabangs as $c) <option value="{{ $c->id }}">{{ $c->nama_cabang }}</option> @endforeach
                                             </select>
                                             @error('target_cabang_id') <span class="text-danger small">{{ $message }}</span> @enderror
                                         </div>
