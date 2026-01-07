@@ -13,34 +13,39 @@ class Login extends Component
 
     // Pastikan menggunakan layout master
     #[Layout('layouts.master')]
-    public function login()
+   public function login()
     {
         $this->validate([
             'idlogin' => 'required',
             'password' => 'required',
         ]);
 
+        // Cek kredensial
         if (Auth::attempt(['idlogin' => $this->idlogin, 'password' => $this->password])) {
+            
             $user = Auth::user();
 
-            // --- LOGIKA BARU: Set Status Online ke Cache saat Login Berhasil ---
-            // Simpan selama 11 detik agar sinkron dengan middleware UserActivity
-            $expiresAt = now()->addSeconds(11);
+            // Cek Status Aktif (Double Protection selain Middleware)
+            if (!$user->is_active) {
+                Auth::logout();
+                $this->addError('idlogin', 'Akun Anda dinonaktifkan. Hubungi Admin.');
+                return;
+            }
+
+            // Set Cache Online Status
+            $expiresAt = now()->addSeconds(60); // 60 detik
             Cache::put('user-is-online-' . $user->id, true, $expiresAt);
             
-            // Opsional: Update timestamp last_login_at jika kolomnya tersedia di database
-            $user->update(['last_login_at' => now()]);
-            // ------------------------------------------------------------------
+            // Update last login (Optional jika kolom ada)
+            // $user->update(['last_seen' => now()]);
 
             session()->regenerate();
-
-            // Flash message untuk memberikan feedback sukses
             session()->flash('info', 'Selamat datang kembali, ' . $user->nama_lengkap);
 
             return redirect()->intended('/');
         }
 
-        $this->addError('idlogin', 'ID Login atau Password tidak sesuai dengan record kami.');
+        $this->addError('idlogin', 'ID Login atau Password salah.');
     }
 
     public function render()

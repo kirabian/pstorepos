@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use App\Models\User;
+use App\Models\Cabang;
+use App\Models\Distributor;
 
 class UserSeeder extends Seeder
 {
@@ -13,86 +15,128 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Super Admin (Akses Penuh)
-        User::create([
-            'nama_lengkap'  => 'Fabian Super Admin',
-            'idlogin'       => 'superbian',
-            'email'         => 'superadmin@pstore.com',
-            'password'      => Hash::make('password123'),
-            'tanggal_lahir' => '1995-05-20',
-            'role'          => 'superadmin',
+        // 1. Buat Data Master Cabang (Dummy)
+        $cabangPusat = Cabang::create([
+            'kode_cabang' => 'CB-001', 'nama_cabang' => 'PSTORE PUSAT (JAKARTA)', 'lokasi' => 'Jakarta', 'timezone' => 'Asia/Jakarta'
+        ]);
+        $cabangBdg = Cabang::create([
+            'kode_cabang' => 'CB-002', 'nama_cabang' => 'PSTORE BANDUNG', 'lokasi' => 'Bandung', 'timezone' => 'Asia/Jakarta'
+        ]);
+        $cabangSby = Cabang::create([
+            'kode_cabang' => 'CB-003', 'nama_cabang' => 'PSTORE SURABAYA', 'lokasi' => 'Surabaya', 'timezone' => 'Asia/Jakarta'
+        ]);
+        $cabangMks = Cabang::create([
+            'kode_cabang' => 'CB-004', 'nama_cabang' => 'PSTORE MAKASSAR', 'lokasi' => 'Makassar', 'timezone' => 'Asia/Makassar'
         ]);
 
-        // 2. Admin Produk
-        User::create([
-            'nama_lengkap'  => 'Admin Produk PSTORE',
-            'idlogin'       => 'adminproduk',
-            'email'         => 'produk@pstore.com',
-            'password'      => Hash::make('password123'),
-            'tanggal_lahir' => '1998-10-12',
-            'role'          => 'adminproduk',
+        // 2. Buat Data Master Distributor (Dummy)
+        $dist = Distributor::create([
+            'nama_distributor' => 'DISTRIBUTOR UTAMA', 'lokasi' => 'Jakarta', 'kontak' => '08123456789'
         ]);
 
-        // 3. Inventory - Distributor
+        // 3. Buat User untuk Setiap Role
+        $passwordDefault = Hash::make('password'); // Password seragam: 'password'
+
+        // SUPERADMIN (Akses Semua)
         User::create([
-            'nama_lengkap'  => 'Inventory Distributor',
-            'idlogin'       => 'distributor01',
-            'email'         => 'dist@pstore.com',
-            'password'      => Hash::make('password123'),
-            'tanggal_lahir' => '1992-01-01',
-            'role'          => 'distributor',
+            'nama_lengkap' => 'Super Admin PStore',
+            'idlogin'      => 'superadmin',
+            'email'        => 'superadmin@pstore.com',
+            'password'     => $passwordDefault,
+            'role'         => 'superadmin',
+            'cabang_id'    => null,
+            'is_active'    => true,
         ]);
 
-        // 4. Inventory - Gudang
+        // ADMIN PRODUK (Akses Inventory)
         User::create([
-            'nama_lengkap'  => 'Kepala Gudang Pusat',
-            'idlogin'       => 'gudangpusat',
-            'email'         => 'gudang@pstore.com',
-            'password'      => Hash::make('password123'),
-            'tanggal_lahir' => '1990-03-15',
-            'role'          => 'gudang',
+            'nama_lengkap' => 'Admin Produk',
+            'idlogin'      => 'adminproduk',
+            'email'        => 'produk@pstore.com',
+            'password'     => $passwordDefault,
+            'role'         => 'adminproduk',
+            'cabang_id'    => $cabangPusat->id, // Admin produk biasanya di pusat
+            'is_active'    => true,
         ]);
 
-        // 5. Inventory - Toko Offline
+        // ANALIST (Analisa Data)
         User::create([
-            'nama_lengkap'  => 'Admin Toko Cabang',
-            'idlogin'       => 'toko_offline',
-            'email'         => 'toko_offline@pstore.com',
-            'password'      => Hash::make('password123'),
-            'tanggal_lahir' => '1997-07-07',
-            'role'          => 'toko_offline',
+            'nama_lengkap' => 'Tim Analis Data',
+            'idlogin'      => 'analis',
+            'email'        => 'analis@pstore.com',
+            'password'     => $passwordDefault,
+            'role'         => 'analis',
+            'cabang_id'    => $cabangPusat->id,
+            'is_active'    => true,
         ]);
 
-        // 6. Inventory - Toko Online
+        // AUDIT (Multi Cabang) - Penting!
+        $userAudit = User::create([
+            'nama_lengkap' => 'Tim Audit Internal',
+            'idlogin'      => 'audit',
+            'email'        => 'audit@pstore.com',
+            'password'     => $passwordDefault,
+            'role'         => 'audit',
+            'cabang_id'    => null, // Audit tidak terikat 1 cabang di kolom ini
+            'is_active'    => true,
+        ]);
+        // Audit ini memegang Cabang Pusat & Bandung
+        $userAudit->branches()->attach([$cabangPusat->id, $cabangBdg->id]);
+
+        // LEADER (Kepala Cabang)
         User::create([
-            'nama_lengkap'  => 'Admin Toko Online',
-            'idlogin'       => 'toko_online',
-            'email'         => 'toko_online@pstore.com',
-            'password'      => Hash::make('password123'),
-            'tanggal_lahir' => '1999-09-09',
-            'role'          => 'toko_online',
+            'nama_lengkap' => 'Leader Surabaya',
+            'idlogin'      => 'leader_sby',
+            'email'        => 'leader@pstore.com',
+            'password'     => $passwordDefault,
+            'role'         => 'leader',
+            'cabang_id'    => $cabangSby->id,
+            'is_active'    => true,
         ]);
 
-        // 7. Sales
+        // DISTRIBUTOR (Mitra Luar)
         User::create([
-            'nama_lengkap'  => 'Sales Executive',
-            'idlogin'       => 'salespstore',
-            'email'         => 'sales@pstore.com',
-            'password'      => Hash::make('password123'),
-            'tanggal_lahir' => '2001-02-28',
-            'role'          => 'sales',
+            'nama_lengkap' => 'Mitra Distributor 1',
+            'idlogin'      => 'distributor',
+            'email'        => 'mitra@pstore.com',
+            'password'     => $passwordDefault,
+            'role'         => 'distributor',
+            'distributor_id' => $dist->id,
+            'cabang_id'    => null,
+            'is_active'    => true,
         ]);
 
-        // 8. Audit & Analis
+        // SALES / KASIR
         User::create([
-            'nama_lengkap'  => 'Tim Audit Internal',
-            'idlogin'       => 'audit01',
-            'email'         => 'audit@pstore.com',
-            'password'      => Hash::make('password123'),
-            'tanggal_lahir' => '1988-12-12',
-            'role'          => 'audit',
+            'nama_lengkap' => 'Sales Counter 1',
+            'idlogin'      => 'sales',
+            'email'        => 'sales@pstore.com',
+            'password'     => $passwordDefault,
+            'role'         => 'sales',
+            'cabang_id'    => $cabangPusat->id,
+            'is_active'    => true,
         ]);
-        
-        // Anda bisa menambahkan role lainnya (security, leader, analis) dengan pola yang sama
+
+        // GUDANG
+        User::create([
+            'nama_lengkap' => 'Staf Gudang',
+            'idlogin'      => 'gudang',
+            'email'        => 'gudang@pstore.com',
+            'password'     => $passwordDefault,
+            'role'         => 'gudang',
+            'cabang_id'    => $cabangPusat->id,
+            'is_active'    => true,
+        ]);
+
+        // SECURITY
+        User::create([
+            'nama_lengkap' => 'Security Pos 1',
+            'idlogin'      => 'security',
+            'email'        => 'security@pstore.com',
+            'password'     => $passwordDefault,
+            'role'         => 'security',
+            'cabang_id'    => $cabangPusat->id,
+            'is_active'    => true,
+        ]);
     }
 }
