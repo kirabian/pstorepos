@@ -5,11 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Distributor extends Model {
-    protected $fillable = ['nama_distributor', 'kode_distributor', 'alamat'];
+class Distributor extends Model
+{
+    use HasFactory;
 
-    // Relasi: Satu distributor bisa memiliki banyak user (PIC)
-    public function users() {
+    protected $fillable = [
+        'nama_distributor', 
+        'lokasi', 
+        'kontak'
+    ];
+
+    public function users()
+    {
         return $this->hasMany(User::class);
     }
 }
