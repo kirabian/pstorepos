@@ -254,11 +254,5 @@
             </div>
         </div>
     @endif
-    
-    <div class="text-center mt-5 pt-3 border-top border-light">
-        <small class="text-muted opacity-75">
-            &copy; {{ date('Y') }} PStore Inventory System
-        </small>
-    </div>
 
 </div>
