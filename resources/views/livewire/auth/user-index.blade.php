@@ -289,7 +289,7 @@
                                             <option value="analis">ANALIST DATA</option>
                                             <option value="leader">TEAM LEADER</option>
                                             <option value="sales">SALES / CASHIER</option>
-                                            <option value="gudang">INVENTORY STAFF (Warehouse & Distributor)</option>
+                                            <option value="gudang">INVENTORY STAFF</option>
                                             <option value="security">SECURITY</option>
                                         </select>
                                         <label for="roleSelect" class="text-dark fw-bold">User Role</label>
