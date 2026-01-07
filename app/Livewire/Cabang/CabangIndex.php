@@ -41,7 +41,7 @@ class CabangIndex extends Component
     {
         return view('livewire.cabang.cabang-index', [
             'cabangs' => Cabang::query()
-                // Gunakan relasi 'auditUsers' (dari model Cabang) dan 'regularStaff'
+                // PENTING: Gunakan 'auditUsers' karena nama fungsi di Model Cabang sudah diubah
                 ->with(['auditUsers', 'regularStaff']) 
                 ->where(function($q) {
                     $q->where('nama_cabang', 'like', '%'.$this->search.'%')

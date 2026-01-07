@@ -45,10 +45,9 @@ class User extends Authenticatable
         return $this->belongsTo(Cabang::class, 'cabang_id');
     }
 
-    // Relasi Multi (Khusus Role Audit) - PERBAIKAN DISINI
+    // Relasi Multi (Khusus Role Audit) - FIX KEY DISINI
     public function branches()
     {
-        // Parameter: RelatedModel, PivotTable, ForeignKunciModelIni, ForeignKunciModelLawan
         return $this->belongsToMany(Cabang::class, 'branch_user', 'user_id', 'cabang_id');
     }
     
