@@ -1,4 +1,4 @@
-<div wire:poll.10s class="min-vh-100 bg-light-subtle">
+<div wire:poll.10s class="min-vh-100 bg-light-subtle mobile-spacer">
     <div class="p-4 p-lg-5 animate__animated animate__fadeIn">
         
         {{-- HEADER SECTION --}}
@@ -35,17 +35,17 @@
                             <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-4 text-muted opacity-50"></i>
                             <input type="text" wire:model.live.debounce.300ms="search" 
                                 class="form-control border-0 bg-light py-3 ps-5 rounded-pill fw-semibold text-dark placeholder-muted focus-ring-dark" 
-                                placeholder="Search by name, email, or role...">
+                                placeholder="Cari nama, email, atau role...">
                         </div>
                     </div>
                     <div class="col-12 col-md-6 col-lg-8 text-md-end">
-                        <div class="d-inline-flex align-items-center gap-2">
-                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2">
-                                <i class="fas fa-circle me-1 small"></i> Online
-                            </span>
-                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-3 py-2">
-                                <i class="fas fa-clock me-1 small"></i> Offline
-                            </span>
+                        <div class="d-inline-flex align-items-center gap-3 small text-muted fw-bold">
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="bg-success rounded-circle" style="width: 8px; height: 8px;"></span> Online
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="bg-secondary rounded-circle opacity-50" style="width: 8px; height: 8px;"></span> Offline
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -56,7 +56,7 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th class="ps-5 py-4 text-secondary text-uppercase extra-small fw-bold tracking-widest">User Profile</th>
+                            <th class="ps-5 py-4 text-secondary text-uppercase extra-small fw-bold tracking-widest" style="min-width: 250px;">User Profile</th>
                             <th class="py-4 text-secondary text-uppercase extra-small fw-bold tracking-widest">Access Role</th>
                             <th class="py-4 text-secondary text-uppercase extra-small fw-bold tracking-widest">Location</th>
                             <th class="py-4 text-center text-secondary text-uppercase extra-small fw-bold tracking-widest">Status</th>
@@ -66,6 +66,7 @@
                     <tbody class="border-top-0">
                         @forelse($users as $user)
                         <tr class="group-hover-bg transition-all cursor-pointer">
+                            {{-- KOLOM PROFILE & LAST SEEN --}}
                             <td class="ps-5 py-4">
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="position-relative">
@@ -78,16 +79,30 @@
                                         @endif
                                     </div>
                                     <div>
-                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                        <div class="d-flex align-items-center gap-2 mb-0">
                                             <h6 class="fw-bold text-dark mb-0">{{ $user->nama_lengkap }}</h6>
                                             @if($user->id === auth()->id())
                                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill extra-small px-2">YOU</span>
                                             @endif
                                         </div>
-                                        <div class="d-flex align-items-center gap-2 text-muted small">
-                                            <i class="far fa-envelope"></i> {{ $user->email }}
+                                        
+                                        <div class="text-muted small lh-sm mt-1">
+                                            <span class="fw-medium text-dark opacity-75">ID: {{ $user->idlogin }}</span>
                                             <span class="text-light-gray mx-1">•</span>
-                                            <span class="fw-medium text-dark">ID: {{ $user->idlogin }}</span>
+                                            <span class="text-secondary">{{ $user->email }}</span>
+                                        </div>
+
+                                        {{-- FITUR LAST SEEN --}}
+                                        <div class="mt-1">
+                                            @if($user->isOnline())
+                                                <span class="text-success extra-small fw-bold tracking-wide">
+                                                    <i class="fas fa-wifi me-1"></i> ONLINE SEKARANG
+                                                </span>
+                                            @else
+                                                <span class="text-muted extra-small fw-bold fst-italic opacity-75">
+                                                    <i class="far fa-clock me-1"></i> Terakhir dilihat: {{ $user->last_seen_formatted }}
+                                                </span>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
@@ -193,7 +208,7 @@
     {{-- PREMIUM MODAL --}}
     @teleport('body')
     <div wire:ignore.self class="modal fade" id="userModal" tabindex="-1" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-2xl rounded-5 overflow-hidden">
                 
                 {{-- Modal Header --}}
@@ -276,6 +291,7 @@
                                             <option value="leader">TEAM LEADER</option>
                                             <option value="sales">SALES / CASHIER</option>
                                             <option value="gudang">WAREHOUSE STAFF</option>
+                                            <option value="security">SECURITY</option>
                                         </select>
                                         <label for="roleSelect" class="text-dark fw-bold">User Role</label>
                                     </div>
@@ -371,6 +387,13 @@
     @endteleport
 
     <style>
+        /* Mobile Spacer untuk mengatasi 'ketutupan' */
+        @media (max-width: 991px) {
+            .mobile-spacer {
+                padding-top: 80px !important; /* Dorong konten ke bawah di HP */
+            }
+        }
+
         /* Typography */
         .fw-black { font-weight: 900; }
         .tracking-tight { letter-spacing: -0.025em; }
