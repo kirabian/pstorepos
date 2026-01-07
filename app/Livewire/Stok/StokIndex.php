@@ -179,7 +179,7 @@ class StokIndex extends Component
                     'alamat' => 'required',
                     'catatan' => 'required',
                 ];
-                $cabangTujuan = Cabang::find($this->target_cabang_id)->nama ?? '-';
+                $cabangTujuan = Cabang::find($this->target_cabang_id)->nama_cabang ?? '-';
                 $keteranganDetail = "Ke Cabang: {$cabangTujuan} | PIC: {$this->nama_penerima} | HP: {$this->nomor_handphone} | Note: {$this->catatan}";
                 break;
 
@@ -249,7 +249,7 @@ class StokIndex extends Component
         ]);
 
         $user = Auth::user();
-        $namaCabang = $user->cabang->nama ?? 'Pusat';
+        $namaCabang = $user->cabang->nama_cabang ?? 'Pusat';
 
         StokHistory::create([
             'imei' => $this->imei,
@@ -311,7 +311,8 @@ class StokIndex extends Component
             ->paginate(10);
 
         $merks = Merk::orderBy('nama', 'asc')->get();
-        $cabangs = Cabang::orderBy('nama', 'asc')->get(); // Ambil Data Cabang
+        // PERBAIKAN DI SINI: order by 'nama_cabang', bukan 'nama'
+        $cabangs = Cabang::orderBy('nama_cabang', 'asc')->get(); 
 
         $selectedItems = [];
         if (!empty($this->selectedStok)) {
@@ -321,7 +322,7 @@ class StokIndex extends Component
         return view('livewire.stok.stok-index', [
             'stoks' => $stoks,
             'merks' => $merks,
-            'cabangs' => $cabangs, // Kirim ke view
+            'cabangs' => $cabangs, 
             'selectedItems' => $selectedItems
         ])->title('Manajemen Stok');
     }
