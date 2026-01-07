@@ -38,73 +38,137 @@
                             <th class="ps-5 py-4 border-0 extra-small fw-900 text-dark text-uppercase tracking-2">Pengguna</th>
                             <th class="py-4 border-0 extra-small fw-900 text-dark text-uppercase tracking-2">Role</th>
                             <th class="py-4 border-0 extra-small fw-900 text-dark text-uppercase tracking-2">Akses Cabang</th>
-                            <th class="py-4 border-0 extra-small fw-900 text-dark text-uppercase tracking-2 text-center">Status</th> {{-- KOLOM STATUS --}}
+                            <th class="py-4 border-0 extra-small fw-900 text-dark text-uppercase tracking-2 text-center">Status</th>
                             <th class="text-end pe-5 py-4 border-0 extra-small fw-900 text-dark text-uppercase tracking-2">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="border-0">
                         @forelse($users as $user)
                         <tr class="table-row-premium transition-all">
+                            
+                            {{-- KOLOM PENGGUNA (Nama, Email, Last Seen) --}}
                             <td class="ps-5">
                                 <div class="d-flex align-items-center">
-                                    <div class="avatar-circle-lg bg-dark text-white fw-900 shadow-sm me-3">
-                                        {{ strtoupper(substr($user->nama_lengkap, 0, 1)) }}
+                                    <div class="position-relative">
+                                        <div class="avatar-circle-lg bg-dark text-white fw-900 shadow-sm me-3">
+                                            {{ strtoupper(substr($user->nama_lengkap, 0, 1)) }}
+                                        </div>
+                                        @if($user->isOnline())
+                                            <span class="position-absolute top-0 start-0 translate-middle p-1 bg-success border border-2 border-white rounded-circle animate__animated animate__pulse animate__infinite" 
+                                                  style="width: 12px; height: 12px; margin-top: 5px; margin-left: 5px;"></span>
+                                        @endif
                                     </div>
+                                    
                                     <div>
-                                        <div class="fw-900 text-dark mb-0 fs-6">{{ $user->nama_lengkap }}</div>
-                                        <div class="extra-small text-muted">{{ $user->email }} | ID: {{ $user->idlogin }}</div>
+                                        <div class="fw-900 text-dark mb-0 fs-6 d-flex align-items-center gap-2">
+                                            {{ $user->nama_lengkap }}
+                                            @if($user->id === auth()->id())
+                                                <span class="badge bg-secondary-subtle text-secondary extra-small py-1 px-2 border-0 fw-bold">ME</span>
+                                            @endif
+                                        </div>
+                                        
+                                        <div class="d-flex flex-column">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="extra-small text-muted fw-bold">{{ $user->email }}</span>
+                                                <span class="v-line h-10px w-1px bg-dark opacity-20"></span>
+                                                <span class="extra-small text-dark fw-black opacity-70">ID: {{ $user->idlogin }}</span>
+                                            </div>
+                                            
+                                            {{-- LAST SEEN / ONLINE STATUS --}}
+                                            <div class="extra-small mt-1">
+                                                @if($user->isOnline())
+                                                    <span class="text-success fw-bold text-uppercase tracking-1" style="font-size: 0.55rem;">
+                                                        <i class="fas fa-circle me-1" style="font-size: 0.4rem;"></i> Online
+                                                    </span>
+                                                @else
+                                                    <span class="text-muted opacity-50 italic fw-bold" style="font-size: 0.55rem;">
+                                                        <i class="far fa-clock me-1"></i> {{ $user->last_seen_formatted }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </td>
+
+                            {{-- KOLOM ROLE --}}
                             <td>
-                                <span class="badge bg-dark rounded-pill px-3 py-2 extra-small fw-900 text-uppercase tracking-widest">
+                                <span class="badge {{ $user->role == 'superadmin' ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-dark text-white' }} rounded-pill px-3 py-2 extra-small fw-900 text-uppercase tracking-widest">
                                     {{ str_replace('_', ' ', $user->role) }}
                                 </span>
                             </td>
+
+                            {{-- KOLOM CABANG --}}
                             <td>
                                 @if($user->role === 'superadmin')
-                                    <span class="badge bg-primary text-white">ALL ACCESS</span>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle extra-small fw-bold px-2 py-1">
+                                        <i class="fas fa-globe me-1"></i> GLOBAL ACCESS
+                                    </span>
                                 @elseif($user->role === 'audit')
-                                    <div class="d-flex flex-wrap gap-1">
+                                    <div class="d-flex flex-wrap gap-1" style="max-width: 200px;">
                                         @forelse($user->branches as $b)
-                                            <span class="badge bg-white text-dark border">{{ $b->nama_cabang }}</span>
+                                            <span class="badge bg-white text-dark border extra-small fw-bold shadow-sm">{{ $b->nama_cabang }}</span>
                                         @empty
-                                            <span class="text-danger small fw-bold">Non-Aktif</span>
+                                            <span class="text-danger extra-small fw-bold fst-italic">Tidak ada cabang</span>
                                         @endforelse
                                     </div>
                                 @else
-                                    <span class="fw-bold text-dark">{{ $user->cabang->nama_cabang ?? '-' }}</span>
+                                    @if($user->cabang)
+                                        <span class="fw-bold text-dark extra-small d-flex align-items-center">
+                                            <i class="fas fa-map-marker-alt me-1 text-secondary opacity-50"></i> 
+                                            {{ $user->cabang->nama_cabang }}
+                                        </span>
+                                    @else
+                                        <span class="text-muted extra-small fw-bold opacity-30 italic">pusat / internal</span>
+                                    @endif
                                 @endif
                             </td>
                             
                             {{-- KOLOM STATUS (SWITCH) --}}
                             <td class="text-center">
                                 @if($user->id !== auth()->id() && $user->role !== 'superadmin')
-                                    <div class="form-check form-switch d-flex justify-content-center">
-                                        <input class="form-check-input" type="checkbox" wire:click="toggleStatus({{ $user->id }})" {{ $user->is_active ? 'checked' : '' }} style="cursor: pointer;">
+                                    <div class="form-check form-switch d-flex justify-content-center mb-1">
+                                        <input class="form-check-input shadow-none border-secondary" type="checkbox" wire:click="toggleStatus({{ $user->id }})" {{ $user->is_active ? 'checked' : '' }} style="cursor: pointer; transform: scale(1.2);">
                                     </div>
                                     <span class="extra-small fw-bold {{ $user->is_active ? 'text-success' : 'text-danger' }}">
                                         {{ $user->is_active ? 'AKTIF' : 'NON-AKTIF' }}
                                     </span>
                                 @else
-                                    <span class="badge bg-light text-secondary border">PROTECTED</span>
+                                    <span class="badge bg-light text-muted border extra-small fw-bold"><i class="fas fa-lock me-1"></i> LOCKED</span>
                                 @endif
                             </td>
 
+                            {{-- KOLOM AKSI --}}
                             <td class="text-end pe-5">
-                                <button wire:click="edit({{ $user->id }})" data-bs-toggle="modal" data-bs-target="#userModal" class="btn btn-sm btn-light rounded-circle shadow-sm me-2"><i class="fas fa-edit text-primary"></i></button>
-                                @if($user->id !== auth()->id())
-                                <button wire:confirm="Hapus user ini?" wire:click="delete({{ $user->id }})" class="btn btn-sm btn-light rounded-circle shadow-sm"><i class="fas fa-trash text-danger"></i></button>
-                                @endif
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button wire:click="edit({{ $user->id }})" data-bs-toggle="modal" data-bs-target="#userModal" class="btn btn-sm btn-light border rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                        <i class="fas fa-pen text-primary extra-small"></i>
+                                    </button>
+                                    @if($user->id !== auth()->id())
+                                    <button wire:confirm="Hapus user ini?" wire:click="delete({{ $user->id }})" class="btn btn-sm btn-light border rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                        <i class="fas fa-trash text-danger extra-small"></i>
+                                    </button>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="5" class="text-center py-5 text-muted fw-bold">Tidak ada data pengguna.</td></tr>
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <div class="py-5 opacity-50">
+                                    <i class="fas fa-users-slash display-4 mb-3 text-secondary"></i>
+                                    <p class="text-muted fw-bold text-uppercase tracking-widest small mb-0">Tidak Ada Data User</p>
+                                </div>
+                            </td>
+                        </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
-            <div class="p-4">{{ $users->links() }}</div>
+            
+            <div class="p-4 border-top border-light">
+                {{ $users->links() }}
+            </div>
         </div>
     </div>
 
@@ -126,14 +190,14 @@
                             
                             {{-- SWITCH STATUS AKTIF DI MODAL --}}
                             <div class="col-12 d-flex justify-content-end">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" wire:model="is_active" id="statusSwitch">
-                                    <label class="form-check-label fw-bold text-dark" for="statusSwitch">Akun Aktif?</label>
+                                <div class="form-check form-switch bg-light px-3 py-2 rounded-4 border d-flex align-items-center gap-2">
+                                    <input class="form-check-input ms-0 mt-0" type="checkbox" wire:model="is_active" id="statusSwitch" style="transform: scale(1.2);">
+                                    <label class="form-check-label fw-bold text-dark small mb-0 cursor-pointer" for="statusSwitch">Status Akun Aktif</label>
                                 </div>
                             </div>
 
                             <div class="col-12">
-                                <label class="small fw-900 text-dark mb-2">Pilih Role</label>
+                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Pilih Role</label>
                                 <select wire:model.live="role" class="form-select border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none fw-600">
                                     <option value="">-- Pilih Role --</option>
                                     @if(Auth::user()->role === 'superadmin')
@@ -147,66 +211,68 @@
                                     <option value="sales">SALES / KASIR</option>
                                     <option value="gudang">GUDANG</option>
                                 </select>
-                                @error('role') <small class="text-danger fw-bold">{{ $message }}</small> @enderror
+                                @error('role') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
                             </div>
 
                             @if($role === 'audit')
                             <div class="col-12 animate__animated animate__fadeIn">
-                                <label class="small fw-900 text-dark mb-2">Pilih Cabang (Akses Multi)</label>
+                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Pilih Cabang (Akses Multi)</label>
                                 <div class="p-3 bg-light-subtle rounded-4 border">
                                     <div class="row g-2" style="max-height: 150px; overflow-y: auto;">
                                         @foreach($cabangs as $c)
                                         <div class="col-6">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" value="{{ $c->id }}" wire:model="selected_branches" id="cb_{{ $c->id }}">
-                                                <label class="form-check-label small fw-bold" for="cb_{{ $c->id }}">{{ $c->nama_cabang }}</label>
+                                                <input class="form-check-input border-secondary" type="checkbox" value="{{ $c->id }}" wire:model="selected_branches" id="cb_{{ $c->id }}">
+                                                <label class="form-check-label small fw-bold text-dark" for="cb_{{ $c->id }}">{{ $c->nama_cabang }}</label>
                                             </div>
                                         </div>
                                         @endforeach
                                     </div>
                                 </div>
-                                @error('selected_branches') <small class="text-danger fw-bold">{{ $message }}</small> @enderror
+                                @error('selected_branches') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
                             </div>
                             @endif
 
                             @if($role && !in_array($role, ['superadmin', 'audit', 'distributor']))
                             <div class="col-12 animate__animated animate__fadeIn">
-                                <label class="small fw-900 text-dark mb-2">Penempatan Cabang</label>
+                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Penempatan Cabang</label>
                                 <select wire:model="cabang_id" class="form-select border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none fw-600">
                                     <option value="">-- Pilih Cabang --</option>
                                     @foreach($cabangs as $c)
                                         <option value="{{ $c->id }}">{{ $c->nama_cabang }}</option>
                                     @endforeach
                                 </select>
-                                @error('cabang_id') <small class="text-danger fw-bold">{{ $message }}</small> @enderror
+                                @error('cabang_id') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
                             </div>
                             @endif
 
                             <div class="col-md-6">
-                                <label class="small fw-900 text-dark mb-2">Nama Lengkap</label>
+                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Nama Lengkap</label>
                                 <input type="text" wire:model="nama_lengkap" class="form-control border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none">
-                                @error('nama_lengkap') <small class="text-danger fw-bold">{{ $message }}</small> @enderror
+                                @error('nama_lengkap') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
                             </div>
                             <div class="col-md-6">
-                                <label class="small fw-900 text-dark mb-2">ID Login</label>
+                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">ID Login</label>
                                 <input type="text" wire:model="idlogin" class="form-control border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none">
-                                @error('idlogin') <small class="text-danger fw-bold">{{ $message }}</small> @enderror
+                                @error('idlogin') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
                             </div>
                             <div class="col-12">
-                                <label class="small fw-900 text-dark mb-2">Email</label>
+                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Email</label>
                                 <input type="email" wire:model="email" class="form-control border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none">
-                                @error('email') <small class="text-danger fw-bold">{{ $message }}</small> @enderror
+                                @error('email') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
                             </div>
                             <div class="col-12">
-                                <label class="small fw-900 text-dark mb-2">Password {{ $isEdit ? '(Opsional)' : '' }}</label>
+                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Password {{ $isEdit ? '(Opsional)' : '' }}</label>
                                 <input type="password" wire:model="password" class="form-control border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none" placeholder="••••••">
-                                @error('password') <small class="text-danger fw-bold">{{ $message }}</small> @enderror
+                                @error('password') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
                             </div>
                         </div>
 
                         <div class="d-grid gap-2 mt-5">
-                            <button type="submit" class="btn btn-dark py-3 rounded-4 fw-900 shadow-lg">SIMPAN DATA</button>
-                            <button type="button" wire:click="resetInputFields" data-bs-dismiss="modal" class="btn btn-link text-muted fw-bold text-decoration-none">Batal</button>
+                            <button type="submit" class="btn btn-dark py-3 rounded-4 fw-900 shadow-lg hover-scale transition-all">
+                                {{ $isEdit ? 'SIMPAN PERUBAHAN' : 'DAFTARKAN PENGGUNA' }}
+                            </button>
+                            <button type="button" wire:click="resetInputFields" data-bs-dismiss="modal" class="btn btn-link text-muted fw-bold text-decoration-none small">BATAL</button>
                         </div>
                     </form>
                 </div>
@@ -222,6 +288,7 @@
         .avatar-circle-lg { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
         .table-row-premium { transition: background-color 0.2s; }
         .table-row-premium:hover { background-color: #f8f9fa; }
+        .cursor-pointer { cursor: pointer; }
     </style>
 </div>
 
