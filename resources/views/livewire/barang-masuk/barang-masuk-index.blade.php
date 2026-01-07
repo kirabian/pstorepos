@@ -91,10 +91,26 @@
                                     </span>
                                 </td>
                                 <td class="text-muted small">{{ Str::limit($item->keterangan, 40) }}</td>
+                                
+                                {{-- PERBAIKAN LOGIKA KONDISI (CEK KE TABLE STOK) --}}
                                 <td>
-                                    {{-- Karena kondisi tidak disimpan di history, kita hardcode atau ambil dari keterangan jika ada --}}
-                                    <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-2">NEW</span>
+                                    @php
+                                        // Cari data stok aktif berdasarkan IMEI
+                                        $stokAktif = \App\Models\Stok::where('imei', $item->imei)->first();
+                                    @endphp
+
+                                    @if($stokAktif)
+                                        @if($stokAktif->kondisi == 'Baru')
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-2">NEW</span>
+                                        @else
+                                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning rounded-2">2ND</span>
+                                        @endif
+                                    @else
+                                        {{-- Jika stok sudah keluar/hapus --}}
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary rounded-2">-</span>
+                                    @endif
                                 </td>
+
                                 <td>
                                     <span class="small fw-bold">{{ $item->user->nama_lengkap ?? 'System' }}</span>
                                 </td>
