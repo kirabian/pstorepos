@@ -45,8 +45,7 @@
                     <tbody class="border-0">
                         @forelse($users as $user)
                         <tr class="table-row-premium transition-all">
-                            
-                            {{-- KOLOM PENGGUNA (Nama, Email, Last Seen) --}}
+                            {{-- KOLOM PENGGUNA --}}
                             <td class="ps-5">
                                 <div class="d-flex align-items-center">
                                     <div class="position-relative">
@@ -58,7 +57,6 @@
                                                   style="width: 12px; height: 12px; margin-top: 5px; margin-left: 5px;"></span>
                                         @endif
                                     </div>
-                                    
                                     <div>
                                         <div class="fw-900 text-dark mb-0 fs-6 d-flex align-items-center gap-2">
                                             {{ $user->nama_lengkap }}
@@ -66,15 +64,12 @@
                                                 <span class="badge bg-secondary-subtle text-secondary extra-small py-1 px-2 border-0 fw-bold">ME</span>
                                             @endif
                                         </div>
-                                        
                                         <div class="d-flex flex-column">
                                             <div class="d-flex align-items-center gap-2">
                                                 <span class="extra-small text-muted fw-bold">{{ $user->email }}</span>
                                                 <span class="v-line h-10px w-1px bg-dark opacity-20"></span>
                                                 <span class="extra-small text-dark fw-black opacity-70">ID: {{ $user->idlogin }}</span>
                                             </div>
-                                            
-                                            {{-- LAST SEEN / ONLINE STATUS --}}
                                             <div class="extra-small mt-1">
                                                 @if($user->isOnline())
                                                     <span class="text-success fw-bold text-uppercase tracking-1" style="font-size: 0.55rem;">
@@ -172,107 +167,169 @@
         </div>
     </div>
 
-    {{-- MODAL FORM --}}
+    {{-- MODAL FORM (PREMIUM DESIGN) --}}
     @teleport('body')
     <div wire:ignore.self class="modal fade" id="userModal" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content rounded-5 border-0 shadow-extra-lg">
-                <div class="modal-header border-0 px-5 pt-5 pb-0">
+            <div class="modal-content rounded-5 border-0 shadow-extra-lg overflow-hidden">
+                <div class="modal-header border-0 px-5 pt-5 pb-0 bg-white">
                     <div>
-                        <h3 class="fw-900 text-dark mb-0">{{ $isEdit ? 'Edit User' : 'Buat User Baru' }}</h3>
-                        <p class="text-secondary small fw-bold text-uppercase">Kelola Akses & Otoritas</p>
+                        <h3 class="fw-900 text-dark mb-1">{{ $isEdit ? 'Edit User' : 'User Baru' }}</h3>
+                        <p class="text-secondary small fw-bold text-uppercase tracking-wide mb-0">
+                            {{ $isEdit ? 'Perbarui data akses pengguna' : 'Tambahkan anggota tim baru' }}
+                        </p>
                     </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" wire:click="resetInputFields"></button>
+                    <button type="button" class="btn-close bg-light p-2 rounded-circle" data-bs-dismiss="modal" wire:click="resetInputFields"></button>
                 </div>
+                
                 <div class="modal-body p-5">
                     <form wire:submit.prevent="store">
-                        <div class="row g-4">
-                            
-                            {{-- SWITCH STATUS AKTIF DI MODAL --}}
-                            <div class="col-12 d-flex justify-content-end">
-                                <div class="form-check form-switch bg-light px-3 py-2 rounded-4 border d-flex align-items-center gap-2">
-                                    <input class="form-check-input ms-0 mt-0" type="checkbox" wire:model="is_active" id="statusSwitch" style="transform: scale(1.2);">
-                                    <label class="form-check-label fw-bold text-dark small mb-0 cursor-pointer" for="statusSwitch">Status Akun Aktif</label>
+                        
+                        {{-- STATUS ACTIVE SWITCH --}}
+                        <div class="d-flex justify-content-end mb-4">
+                            <div class="form-check form-switch bg-light px-4 py-2 rounded-pill border d-flex align-items-center gap-3">
+                                <label class="form-check-label fw-bold text-dark small mb-0 cursor-pointer text-uppercase" for="statusSwitch">
+                                    Status Akun: <span class="{{ $is_active ? 'text-success' : 'text-danger' }}">{{ $is_active ? 'AKTIF' : 'NON-AKTIF' }}</span>
+                                </label>
+                                <input class="form-check-input ms-0 mt-0 shadow-none border-secondary" type="checkbox" wire:model.live="is_active" id="statusSwitch" style="transform: scale(1.3);">
+                            </div>
+                        </div>
+
+                        {{-- SECTION 1: INFORMASI DASAR --}}
+                        <h6 class="fw-bold text-secondary text-uppercase mb-3 small tracking-widest border-bottom pb-2">Informasi Dasar</h6>
+                        <div class="row g-4 mb-5">
+                            <div class="col-md-6">
+                                <label class="small fw-bold text-dark mb-2">Nama Lengkap</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-0 bg-light-subtle rounded-start-4 ps-3 text-muted"><i class="fas fa-user"></i></span>
+                                    <input type="text" wire:model="nama_lengkap" class="form-control border-0 bg-light-subtle py-3 rounded-end-4 shadow-none fw-bold" placeholder="Contoh: Budi Santoso">
                                 </div>
+                                @error('nama_lengkap') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
                             </div>
 
-                            <div class="col-12">
-                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Pilih Role</label>
-                                <select wire:model.live="role" class="form-select border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none fw-600">
-                                    <option value="">-- Pilih Role --</option>
+                            <div class="col-md-6">
+                                <label class="small fw-bold text-dark mb-2">Tanggal Lahir</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-0 bg-light-subtle rounded-start-4 ps-3 text-muted"><i class="fas fa-calendar-alt"></i></span>
+                                    <input type="date" wire:model="tanggal_lahir" class="form-control border-0 bg-light-subtle py-3 rounded-end-4 shadow-none fw-bold">
+                                </div>
+                                @error('tanggal_lahir') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="small fw-bold text-dark mb-2">Email Resmi</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-0 bg-light-subtle rounded-start-4 ps-3 text-muted"><i class="fas fa-envelope"></i></span>
+                                    <input type="email" wire:model="email" class="form-control border-0 bg-light-subtle py-3 rounded-end-4 shadow-none fw-bold" placeholder="user@pstore.com">
+                                </div>
+                                @error('email') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="small fw-bold text-dark mb-2">Nomor WhatsApp / HP</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-0 bg-light-subtle rounded-start-4 ps-3 text-muted"><i class="fab fa-whatsapp"></i></span>
+                                    <input type="text" class="form-control border-0 bg-light-subtle py-3 rounded-end-4 shadow-none fw-bold" placeholder="0812...">
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- SECTION 2: OTORITAS & KEAMANAN --}}
+                        <h6 class="fw-bold text-secondary text-uppercase mb-3 small tracking-widest border-bottom pb-2">Otoritas & Keamanan</h6>
+                        <div class="row g-4">
+                            <div class="col-md-12">
+                                <label class="small fw-bold text-dark mb-2">Hak Akses (Role)</label>
+                                <select wire:model.live="role" class="form-select border-0 bg-dark text-white py-3 px-4 rounded-4 shadow-lg fw-bold">
+                                    <option value="" class="text-muted">-- PILIH ROLE --</option>
                                     @if(Auth::user()->role === 'superadmin')
-                                        <option value="superadmin">SUPERADMIN</option>
+                                        <option value="superadmin">SUPERADMIN (FULL ACCESS)</option>
                                         <option value="audit">AUDIT (MULTI CABANG)</option>
                                     @endif
                                     <option value="adminproduk">ADMIN PRODUK</option>
-                                    <option value="analis">ANALIS</option>
-                                    <option value="distributor">DISTRIBUTOR</option>
-                                    <option value="leader">LEADER</option>
+                                    <option value="analis">ANALIS DATA</option>
+                                    <option value="distributor">DISTRIBUTOR MITRA</option>
+                                    <option value="leader">LEADER TEAM</option>
                                     <option value="sales">SALES / KASIR</option>
-                                    <option value="gudang">GUDANG</option>
+                                    <option value="gudang">STAFF GUDANG</option>
                                 </select>
                                 @error('role') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
                             </div>
 
-                            @if($role === 'audit')
-                            <div class="col-12 animate__animated animate__fadeIn">
-                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Pilih Cabang (Akses Multi)</label>
-                                <div class="p-3 bg-light-subtle rounded-4 border">
-                                    <div class="row g-2" style="max-height: 150px; overflow-y: auto;">
-                                        @foreach($cabangs as $c)
-                                        <div class="col-6">
-                                            <div class="form-check">
-                                                <input class="form-check-input border-secondary" type="checkbox" value="{{ $c->id }}" wire:model="selected_branches" id="cb_{{ $c->id }}">
-                                                <label class="form-check-label small fw-bold text-dark" for="cb_{{ $c->id }}">{{ $c->nama_cabang }}</label>
-                                            </div>
-                                        </div>
-                                        @endforeach
+                            {{-- DYNAMIC FIELD: CABANG (SINGLE) --}}
+                            @if($role && !in_array($role, ['superadmin', 'audit', 'distributor']))
+                                <div class="col-md-12 animate__animated animate__fadeIn">
+                                    <div class="p-3 bg-warning-subtle rounded-4 border border-warning-subtle">
+                                        <label class="small fw-bold text-dark mb-2">Penempatan Cabang</label>
+                                        <select wire:model="cabang_id" class="form-select border-0 bg-white py-3 px-4 rounded-4 shadow-sm fw-bold text-dark">
+                                            <option value="">-- Pilih Lokasi Kerja --</option>
+                                            @foreach($cabangs as $c)
+                                                <option value="{{ $c->id }}">{{ $c->nama_cabang }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('cabang_id') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
                                     </div>
                                 </div>
-                                @error('selected_branches') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
-                            </div>
                             @endif
 
-                            @if($role && !in_array($role, ['superadmin', 'audit', 'distributor']))
-                            <div class="col-12 animate__animated animate__fadeIn">
-                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Penempatan Cabang</label>
-                                <select wire:model="cabang_id" class="form-select border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none fw-600">
-                                    <option value="">-- Pilih Cabang --</option>
-                                    @foreach($cabangs as $c)
-                                        <option value="{{ $c->id }}">{{ $c->nama_cabang }}</option>
-                                    @endforeach
-                                </select>
-                                @error('cabang_id') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
-                            </div>
+                            {{-- DYNAMIC FIELD: MULTI CABANG (AUDIT) --}}
+                            @if($role === 'audit')
+                                <div class="col-md-12 animate__animated animate__fadeIn">
+                                    <div class="p-4 bg-light border rounded-4">
+                                        <label class="small fw-bold text-dark mb-3 d-block text-uppercase">Cakupan Wilayah Audit</label>
+                                        <div class="row g-3" style="max-height: 150px; overflow-y: auto;">
+                                            @foreach($cabangs as $c)
+                                            <div class="col-md-6">
+                                                <div class="form-check bg-white p-2 rounded-3 border">
+                                                    <input class="form-check-input ms-1 border-secondary" type="checkbox" value="{{ $c->id }}" wire:model="selected_branches" id="cb_{{ $c->id }}">
+                                                    <label class="form-check-label fw-bold small text-dark ms-2 cursor-pointer" for="cb_{{ $c->id }}">{{ $c->nama_cabang }}</label>
+                                                </div>
+                                            </div>
+                                            @endforeach
+                                        </div>
+                                        @error('selected_branches') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
+                                    </div>
+                                </div>
+                            @endif
+
+                            {{-- DYNAMIC FIELD: DISTRIBUTOR --}}
+                            @if($role === 'distributor')
+                                <div class="col-md-12 animate__animated animate__fadeIn">
+                                    <label class="small fw-bold text-primary mb-2">Afiliasi Mitra Distributor</label>
+                                    <select wire:model="distributor_id" class="form-select border-2 border-primary bg-white py-3 px-4 rounded-4 shadow-sm fw-bold">
+                                        <option value="">-- Pilih Mitra --</option>
+                                        @foreach($distributors as $dist)
+                                            <option value="{{ $dist->id }}">{{ $dist->nama_distributor }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('distributor_id') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
+                                </div>
                             @endif
 
                             <div class="col-md-6">
-                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Nama Lengkap</label>
-                                <input type="text" wire:model="nama_lengkap" class="form-control border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none">
-                                @error('nama_lengkap') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
-                            </div>
-                            <div class="col-md-6">
-                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">ID Login</label>
-                                <input type="text" wire:model="idlogin" class="form-control border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none">
+                                <label class="small fw-bold text-dark mb-2">ID Login (Username)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-0 bg-light-subtle rounded-start-4 ps-3 text-muted"><i class="fas fa-id-badge"></i></span>
+                                    <input type="text" wire:model="idlogin" class="form-control border-0 bg-light-subtle py-3 rounded-end-4 shadow-none fw-bold">
+                                </div>
                                 @error('idlogin') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
                             </div>
-                            <div class="col-12">
-                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Email</label>
-                                <input type="email" wire:model="email" class="form-control border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none">
-                                @error('email') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
-                            </div>
-                            <div class="col-12">
-                                <label class="small fw-900 text-dark mb-2 text-uppercase letter-spacing-1">Password {{ $isEdit ? '(Opsional)' : '' }}</label>
-                                <input type="password" wire:model="password" class="form-control border-0 bg-light-subtle py-3 px-4 rounded-4 shadow-none" placeholder="••••••">
+
+                            <div class="col-md-6">
+                                <label class="small fw-bold text-dark mb-2">Password {{ $isEdit ? '(Opsional)' : '' }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text border-0 bg-light-subtle rounded-start-4 ps-3 text-muted"><i class="fas fa-lock"></i></span>
+                                    <input type="password" wire:model="password" class="form-control border-0 bg-light-subtle py-3 rounded-end-4 shadow-none fw-bold" placeholder="••••••">
+                                </div>
                                 @error('password') <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small> @enderror
                             </div>
                         </div>
 
-                        <div class="d-grid gap-2 mt-5">
-                            <button type="submit" class="btn btn-dark py-3 rounded-4 fw-900 shadow-lg hover-scale transition-all">
-                                {{ $isEdit ? 'SIMPAN PERUBAHAN' : 'DAFTARKAN PENGGUNA' }}
+                        {{-- FOOTER ACTION --}}
+                        <div class="d-grid gap-2 mt-5 pt-3 border-top">
+                            <button type="submit" class="btn btn-dark py-3 rounded-4 fw-900 shadow-lg hover-scale transition-all text-uppercase tracking-wide">
+                                <i class="fas fa-save me-2"></i> {{ $isEdit ? 'Simpan Perubahan' : 'Daftarkan Pengguna' }}
                             </button>
-                            <button type="button" wire:click="resetInputFields" data-bs-dismiss="modal" class="btn btn-link text-muted fw-bold text-decoration-none small">BATAL</button>
+                            <button type="button" wire:click="resetInputFields" data-bs-dismiss="modal" class="btn btn-link text-muted fw-bold text-decoration-none small text-uppercase">Batal & Kembali</button>
                         </div>
                     </form>
                 </div>
@@ -289,6 +346,9 @@
         .table-row-premium { transition: background-color 0.2s; }
         .table-row-premium:hover { background-color: #f8f9fa; }
         .cursor-pointer { cursor: pointer; }
+        
+        /* Custom Input Icon Style */
+        .input-group-text { background-color: #f8f9fa; }
     </style>
 </div>
 

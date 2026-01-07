@@ -23,8 +23,8 @@ class UserIndex extends Component
     public $userId;
     public $isEdit = false;
 
-    // Form Fields
-    public $nama_lengkap, $idlogin, $email, $password, $role, $distributor_id, $cabang_id, $is_active = true;
+    // Form Fields (Termasuk tanggal_lahir)
+    public $nama_lengkap, $idlogin, $email, $password, $tanggal_lahir, $role, $distributor_id, $cabang_id, $is_active = true;
     
     // Khusus Audit: Multi Cabang Selection
     public $selected_branches = []; 
@@ -56,36 +56,32 @@ class UserIndex extends Component
             });
         }
 
-        // 2. LOGIKA PROTEKSI AUDIT (HANYA LIHAT USER DI CABANGNYA)
+        // 2. LOGIKA PROTEKSI AUDIT
         if ($currentUser->role === 'audit') {
             $myBranchIds = $currentUser->access_cabang_ids;
             
             $query->where(function($q) use ($myBranchIds) {
-                // User reguler di cabang yang dipegang audit
                 $q->whereIn('cabang_id', $myBranchIds)
-                  // ATAU sesama audit yang juga pegang cabang tersebut
                   ->orWhereHas('branches', function($sq) use ($myBranchIds) {
                       $sq->whereIn('cabangs.id', $myBranchIds);
                   });
             });
             
-            // Audit TIDAK BOLEH lihat/edit Superadmin
             $query->where('role', '!=', 'superadmin');
         }
 
         $users = $query->latest()->paginate(10);
 
-        // Data Dropdown Modal
+        // Data Dropdown
         if ($currentUser->role === 'superadmin') {
             $cabangs = Cabang::orderBy('nama_cabang', 'asc')->get();
         } else {
-            // Audit hanya bisa pilih cabang miliknya saat create/edit user
             $cabangs = Cabang::whereIn('id', $currentUser->access_cabang_ids)->orderBy('nama_cabang', 'asc')->get();
         }
 
         $distributors = Distributor::orderBy('nama_distributor', 'asc')->get();
 
-        return view('livewire.auth.user-index', [
+        return view('livewire.user.user-index', [
             'users' => $users,
             'cabangs' => $cabangs,
             'distributors' => $distributors
@@ -99,10 +95,11 @@ class UserIndex extends Component
         $this->idlogin = '';
         $this->email = '';
         $this->password = '';
+        $this->tanggal_lahir = ''; // Reset tanggal lahir
         $this->role = '';
         $this->distributor_id = '';
         $this->cabang_id = '';
-        $this->is_active = true; // Default Aktif
+        $this->is_active = true; 
         $this->selected_branches = [];
         $this->userId = null;
         $this->isEdit = false;
@@ -112,11 +109,11 @@ class UserIndex extends Component
     // === CREATE / UPDATE (STORE) ===
     public function store()
     {
-        // 1. Definisikan Rules Dasar
+        // 1. Definisikan Rules
         $rules = [
             'nama_lengkap' => 'required',
+            'tanggal_lahir' => 'required|date', // Validasi tanggal lahir
             'role'         => 'required',
-            // Validasi Unique (abaikan ID sendiri saat edit)
             'idlogin'      => ['required', Rule::unique('users')->ignore($this->userId)],
             'email'        => ['required', 'email', Rule::unique('users')->ignore($this->userId)],
         ];
@@ -134,7 +131,7 @@ class UserIndex extends Component
             $rules['selected_branches'] = 'required|array|min:1';
         }
 
-        // 3. Password Wajib saat Create, Opsional saat Edit
+        // 3. Password Wajib saat Create
         if (!$this->userId) {
             $rules['password'] = 'required|min:6';
         } else {
@@ -143,7 +140,7 @@ class UserIndex extends Component
 
         $this->validate($rules);
 
-        // 4. Proteksi Backend: Audit gaboleh bikin Superadmin
+        // 4. Proteksi Audit
         if (Auth::user()->role === 'audit' && $this->role === 'superadmin') {
             abort(403, 'Anda tidak memiliki akses membuat Superadmin.');
         }
@@ -153,41 +150,39 @@ class UserIndex extends Component
             'nama_lengkap' => $this->nama_lengkap,
             'idlogin'      => $this->idlogin,
             'email'        => $this->email,
+            'tanggal_lahir'=> $this->tanggal_lahir, // Simpan tanggal lahir
             'role'         => $this->role,
             'is_active'    => $this->is_active,
             'distributor_id' => ($this->role === 'distributor') ? $this->distributor_id : null,
         ];
 
-        // Jika password diisi, update. Jika kosong saat edit, biarkan lama.
         if (!empty($this->password)) {
             $data['password'] = Hash::make($this->password);
         }
 
-        // Logic Cabang ID (Single)
         if (!in_array($this->role, ['superadmin', 'audit', 'distributor'])) {
             $data['cabang_id'] = $this->cabang_id;
         } else {
             $data['cabang_id'] = null;
         }
 
-        // 6. Eksekusi Simpan ke Database
+        // 6. Eksekusi Simpan
         $user = User::updateOrCreate(['id' => $this->userId], $data);
 
-        // 7. Sync Multi Cabang untuk Audit
+        // 7. Sync Multi Cabang Audit
         if ($this->role === 'audit') {
             $user->branches()->sync($this->selected_branches);
         } else {
-            // Hapus relasi jika role berubah jadi bukan audit
             $user->branches()->detach();
         }
 
-        // 8. Tutup Modal & Refresh
+        // 8. Selesai
         $this->dispatch('close-modal');
         session()->flash('info', 'Data user berhasil disimpan.');
         $this->resetInputFields();
     }
 
-    // === EDIT (LOAD DATA KE FORM) ===
+    // === EDIT ===
     public function edit($id)
     {
         $user = User::findOrFail($id);
@@ -202,12 +197,12 @@ class UserIndex extends Component
         $this->nama_lengkap = $user->nama_lengkap;
         $this->idlogin = $user->idlogin;
         $this->email = $user->email;
+        $this->tanggal_lahir = $user->tanggal_lahir; // Load tanggal lahir
         $this->role = $user->role;
         $this->distributor_id = $user->distributor_id;
         $this->cabang_id = $user->cabang_id;
-        $this->is_active = (bool) $user->is_active; // Pastikan boolean
+        $this->is_active = (bool) $user->is_active;
         
-        // Load cabang yang dicentang (untuk Audit)
         $this->selected_branches = $user->branches->pluck('id')->toArray();
 
         $this->isEdit = true;
@@ -242,9 +237,5 @@ class UserIndex extends Component
 
         $user->is_active = !$user->is_active;
         $user->save();
-        
-        if (!$user->is_active) {
-             // Logic logout paksa bisa ditambah disini
-        }
     }
 }
