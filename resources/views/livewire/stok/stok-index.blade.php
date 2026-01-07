@@ -6,8 +6,6 @@
         .modal-backdrop { z-index: 1055 !important; }
         .modal { z-index: 1060 !important; }
         .form-check-input:checked { background-color: #212529; border-color: #212529; }
-        
-        /* Floating Labels Style Custom untuk Modal Stok Keluar */
         .form-label-custom { font-size: 0.85rem; font-weight: 500; color: #6c757d; margin-bottom: 0.25rem; }
         .required-star { color: #dc3545; margin-left: 2px; }
     </style>
@@ -58,21 +56,20 @@
                             <th class="py-3 px-4 text-center" style="width: 50px;">
                                 <input type="checkbox" class="form-check-input" wire:model.live="selectAll">
                             </th>
-                            <th class="py-3 text-secondary small fw-bold">No</th>
                             <th class="py-3 text-secondary small fw-bold">Produk</th>
                             <th class="py-3 text-secondary small fw-bold">Spek / Kondisi</th>
                             <th class="py-3 text-secondary small fw-bold">IMEI</th>
+                            <th class="py-3 text-secondary small fw-bold text-center">Stok</th> {{-- KOLOM STOK BARU --}}
                             <th class="py-3 text-secondary small fw-bold text-end">Harga Jual</th>
                             <th class="py-3 px-4 text-secondary small fw-bold text-end">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($stoks as $index => $stok)
+                        @forelse($stoks as $stok)
                             <tr class="{{ in_array($stok->id, $selectedStok) ? 'table-active' : '' }}">
                                 <td class="px-4 text-center">
                                     <input type="checkbox" class="form-check-input" wire:model.live="selectedStok" value="{{ $stok->id }}">
                                 </td>
-                                <td class="text-muted fw-bold">{{ $stoks->firstItem() + $index }}</td>
                                 <td>
                                     <div class="d-flex flex-column">
                                         <span class="fw-bold text-dark">{{ $stok->merk->nama }}</span>
@@ -88,9 +85,22 @@
                                     @endif
                                 </td>
                                 <td class="font-monospace text-primary">{{ $stok->imei }}</td>
+                                
+                                {{-- LOGIKA BADGE STOK (HABIS / ADA) --}}
+                                <td class="text-center">
+                                    @if($stok->jumlah == 0)
+                                        <span class="badge bg-danger rounded-pill px-3">HABIS</span>
+                                    @else
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3">
+                                            {{ $stok->jumlah }} Unit
+                                        </span>
+                                    @endif
+                                </td>
+
                                 <td class="text-end fw-bold">Rp {{ number_format($stok->harga_jual, 0, ',', '.') }}</td>
                                 <td class="px-4 text-end">
                                     <button wire:click="edit({{ $stok->id }})" data-bs-toggle="modal" data-bs-target="#stokModal" class="btn btn-sm btn-light border rounded-circle text-primary"><i class="fas fa-pencil-alt"></i></button>
+                                    <button wire:confirm="Hapus stok ini?" wire:click="delete({{ $stok->id }})" class="btn btn-sm btn-light border rounded-circle text-danger hover-danger"><i class="fas fa-trash-alt"></i></button>
                                 </td>
                             </tr>
                         @empty
@@ -103,7 +113,7 @@
         </div>
     </div>
 
-    {{-- MODAL 1: TAMBAH/EDIT STOK (FORM LAMA) --}}
+    {{-- MODAL 1: TAMBAH/EDIT STOK --}}
     @teleport('body')
     <div wire:ignore.self class="modal fade" id="stokModal" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
@@ -114,50 +124,74 @@
                 </div>
                 <div class="modal-body p-4">
                     <form wire:submit.prevent="store">
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-secondary">Merk <span class="text-danger">*</span></label>
-                            <select class="form-select rounded-3 py-2" wire:model.live="merk_id">
-                                <option value="">-- Pilih Merk --</option>
-                                @foreach($merks as $m) <option value="{{ $m->id }}">{{ $m->nama }}</option> @endforeach
-                            </select>
-                            @error('merk_id') <span class="text-danger small">{{ $message }}</span> @enderror
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-secondary">Tipe <span class="text-danger">*</span></label>
-                            <select class="form-select rounded-3 py-2" wire:model.live="tipe_id" {{ empty($merk_id) ? 'disabled' : '' }}>
-                                <option value="">-- Pilih Tipe --</option>
-                                @foreach($tipeOptions as $t) <option value="{{ $t->id }}">{{ $t->nama }}</option> @endforeach
-                            </select>
-                        </div>
                         <div class="row g-2 mb-3">
                             <div class="col-6">
-                                <label class="form-label small fw-bold text-secondary">RAM <span class="text-danger">*</span></label>
-                                <select class="form-select rounded-3 py-2" wire:model="ram_storage">
+                                <label class="form-label small fw-bold text-secondary">Merk <span class="text-danger">*</span></label>
+                                <select class="form-select rounded-3 py-2" wire:model.live="merk_id">
                                     <option value="">-- Pilih --</option>
+                                    @foreach($merks as $m) <option value="{{ $m->id }}">{{ $m->nama }}</option> @endforeach
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-secondary">Tipe <span class="text-danger">*</span></label>
+                                <select class="form-select rounded-3 py-2" wire:model.live="tipe_id">
+                                    <option value="">-- Pilih --</option>
+                                    @foreach($tipeOptions as $t) <option value="{{ $t->id }}">{{ $t->nama }}</option> @endforeach
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-4">
+                                <label class="form-label small fw-bold text-secondary">RAM</label>
+                                <select class="form-select rounded-3 py-2" wire:model="ram_storage">
+                                    <option value="">--</option>
                                     @foreach($ramOptions as $ram) <option value="{{ $ram }}">{{ $ram }}</option> @endforeach
                                 </select>
                             </div>
-                            <div class="col-6">
-                                <label class="form-label small fw-bold text-secondary">Kondisi <span class="text-danger">*</span></label>
+                            <div class="col-4">
+                                <label class="form-label small fw-bold text-secondary">Kondisi</label>
                                 <select class="form-select rounded-3 py-2" wire:model="kondisi">
-                                    <option value="Baru">Baru (New)</option>
-                                    <option value="Second">Second (Bekas)</option>
+                                    <option value="Baru">Baru</option>
+                                    <option value="Second">Second</option>
                                 </select>
                             </div>
+                            {{-- INPUT JUMLAH STOK (Baru) --}}
+                            <div class="col-4">
+                                <label class="form-label small fw-bold text-secondary">Jumlah <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control rounded-3 py-2" wire:model="jumlah" min="0">
+                            </div>
                         </div>
+
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-secondary">IMEI <span class="text-danger">*</span></label>
                             <input type="text" class="form-control rounded-3 py-2" wire:model="imei" placeholder="Scan IMEI...">
                             @error('imei') <span class="text-danger small">{{ $message }}</span> @enderror
                         </div>
+
+                        {{-- INPUT HARGA DENGAN FORMAT RUPIAH JS --}}
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-secondary">Modal</label>
-                            <input type="number" class="form-control rounded-3 py-2" wire:model.live.debounce.500ms="harga_modal" placeholder="0">
+                            <label class="form-label small fw-bold text-secondary">Harga Modal</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">Rp</span>
+                                <input type="text" class="form-control border-start-0 rounded-end-3 py-2" 
+                                       wire:model="harga_modal" 
+                                       onkeyup="formatRupiah(this)" 
+                                       placeholder="0">
+                            </div>
                         </div>
+
                         <div class="mb-4">
-                            <label class="form-label small fw-bold text-secondary">Jual <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control rounded-3 py-2 fw-bold text-success" wire:model="harga_jual">
+                            <label class="form-label small fw-bold text-secondary">Harga Jual <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">Rp</span>
+                                <input type="text" class="form-control border-start-0 rounded-end-3 py-2 fw-bold text-success" 
+                                       wire:model="harga_jual" 
+                                       onkeyup="formatRupiah(this)" 
+                                       placeholder="0">
+                            </div>
                         </div>
+
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-dark rounded-3 py-2 fw-bold">Simpan Stok</button>
                         </div>
@@ -168,7 +202,7 @@
     </div>
     @endteleport
 
-    {{-- MODAL 2: STOK KELUAR (FORM DINAMIS BARU) --}}
+    {{-- MODAL 2: STOK KELUAR (FORM DINAMIS) --}}
     @teleport('body')
     <div wire:ignore.self class="modal fade" id="keluarStokModal" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
@@ -183,7 +217,6 @@
                 <div class="modal-body px-4 pb-4">
                     <form wire:submit.prevent="storeKeluarStok">
                         
-                        {{-- Kategori Dropdown --}}
                         <div class="mb-4">
                             <label class="form-label-custom">Kategori <span class="required-star">*</span></label>
                             <select class="form-select rounded-3 py-2 fw-bold {{ $errors->has('kategoriKeluar') ? 'is-invalid' : '' }}" 
@@ -196,11 +229,9 @@
                             @error('kategoriKeluar') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                         </div>
 
-                        {{-- AREA DINAMIS FORM FIELDS --}}
                         @if($kategoriKeluar)
                             <div class="bg-light p-3 rounded-3 mb-4 border animate__animated animate__fadeIn">
                                 
-                                {{-- 1. FORM UTAMA (Sales, Giveaway, Pindah Cabang) --}}
                                 @if(in_array($kategoriKeluar, ['Admin WhatsApp', 'Shopee', 'Tokopedia', 'Giveaway', 'Pindah Cabang']))
                                     
                                     @if($kategoriKeluar == 'Pindah Cabang')
@@ -208,7 +239,7 @@
                                             <label class="form-label-custom">Ke Cabang Mana? <span class="required-star">*</span></label>
                                             <select class="form-select rounded-3 py-2" wire:model="target_cabang_id">
                                                 <option value="">-- Pilih Cabang Tujuan --</option>
-                                                {{-- PERBAIKAN DISINI: Menggunakan nama_cabang --}}
+                                                {{-- FIX: Gunakan nama_cabang --}}
                                                 @foreach($cabangs as $c) <option value="{{ $c->id }}">{{ $c->nama_cabang }}</option> @endforeach
                                             </select>
                                             @error('target_cabang_id') <span class="text-danger small">{{ $message }}</span> @enderror
@@ -217,105 +248,49 @@
 
                                     <div class="mb-3">
                                         <label class="form-label-custom">Nama Penerima / PIC <span class="required-star">*</span></label>
-                                        <input type="text" class="form-control rounded-3 py-2" wire:model="nama_penerima" placeholder="Masukkan nama penerima">
-                                        @error('nama_penerima') <span class="text-danger small">{{ $message }}</span> @enderror
+                                        <input type="text" class="form-control rounded-3 py-2" wire:model="nama_penerima">
                                     </div>
-
                                     <div class="mb-3">
                                         <label class="form-label-custom">Nomor Handphone <span class="required-star">*</span></label>
-                                        <input type="text" class="form-control rounded-3 py-2" wire:model="nomor_handphone" placeholder="Contoh: 0812...">
-                                        @error('nomor_handphone') <span class="text-danger small">{{ $message }}</span> @enderror
+                                        <input type="text" class="form-control rounded-3 py-2" wire:model="nomor_handphone">
                                     </div>
-
                                     <div class="mb-3">
                                         <label class="form-label-custom">Alamat Lengkap <span class="required-star">*</span></label>
-                                        <textarea class="form-control rounded-3 py-2" rows="2" wire:model="alamat" placeholder="Masukkan alamat lengkap..."></textarea>
-                                        @error('alamat') <span class="text-danger small">{{ $message }}</span> @enderror
+                                        <textarea class="form-control rounded-3 py-2" rows="2" wire:model="alamat"></textarea>
                                     </div>
                                 @endif
 
-                                {{-- 2. FORM KHUSUS RETUR --}}
                                 @if($kategoriKeluar == 'Retur')
                                     <div class="row g-2">
-                                        <div class="col-md-6 mb-2">
-                                            <label class="form-label-custom">Petugas Pemeriksa <span class="required-star">*</span></label>
-                                            <input type="text" class="form-control rounded-3" wire:model="nama_petugas">
-                                        </div>
-                                        <div class="col-md-6 mb-2">
-                                            <label class="form-label-custom">Kondisi Segel <span class="required-star">*</span></label>
-                                            <input type="text" class="form-control rounded-3" wire:model="segel" placeholder="Utuh / Rusak">
-                                        </div>
-                                        <div class="col-12 mb-2">
-                                            <label class="form-label-custom">Kendala Retur <span class="required-star">*</span></label>
-                                            <input type="text" class="form-control rounded-3" wire:model="kendala_retur">
-                                        </div>
-                                        <div class="col-md-6 mb-2">
-                                            <label class="form-label-custom">Tgl Pembelian <span class="required-star">*</span></label>
-                                            <input type="date" class="form-control rounded-3" wire:model="tanggal_pembelian">
-                                        </div>
-                                        <div class="col-md-6 mb-2">
-                                            <label class="form-label-custom">Nama Customer <span class="required-star">*</span></label>
-                                            <input type="text" class="form-control rounded-3" wire:model="nama_customer">
-                                        </div>
-                                        <div class="col-md-6 mb-2">
-                                            <label class="form-label-custom">No HP Customer <span class="required-star">*</span></label>
-                                            <input type="text" class="form-control rounded-3" wire:model="nomor_handphone">
-                                        </div>
-                                        <div class="col-md-6 mb-2">
-                                            <label class="form-label-custom">Instagram (Opsional)</label>
-                                            <input type="text" class="form-control rounded-3" wire:model="instagram_customer">
-                                        </div>
-                                        <div class="col-md-6 mb-2">
-                                            <label class="form-label-custom">Email / iCloud <span class="required-star">*</span></label>
-                                            <input type="text" class="form-control rounded-3" wire:model="email_icloud">
-                                        </div>
-                                        <div class="col-md-6 mb-2">
-                                            <label class="form-label-custom">Password Email <span class="required-star">*</span></label>
-                                            <input type="text" class="form-control rounded-3" wire:model="password_email">
-                                        </div>
-                                        <div class="col-12 mb-2">
-                                            <label class="form-label-custom">Pola / PIN Layar <span class="required-star">*</span></label>
-                                            <input type="text" class="form-control rounded-3" wire:model="pola_pin">
-                                        </div>
+                                        <div class="col-md-6 mb-2"><label class="form-label-custom">Petugas *</label><input type="text" class="form-control rounded-3" wire:model="nama_petugas"></div>
+                                        <div class="col-md-6 mb-2"><label class="form-label-custom">Segel *</label><input type="text" class="form-control rounded-3" wire:model="segel"></div>
+                                        <div class="col-12 mb-2"><label class="form-label-custom">Kendala *</label><input type="text" class="form-control rounded-3" wire:model="kendala_retur"></div>
+                                        <div class="col-md-6 mb-2"><label class="form-label-custom">Nama Customer *</label><input type="text" class="form-control rounded-3" wire:model="nama_customer"></div>
+                                        <div class="col-md-6 mb-2"><label class="form-label-custom">Akun iCloud/Email</label><input type="text" class="form-control rounded-3" wire:model="email_icloud"></div>
                                     </div>
-                                    {{-- Validasi Error ditampilkan grouping agar rapi --}}
-                                    @if($errors->any())
-                                        <div class="alert alert-danger small mt-2 py-1 px-2">Lengkapi semua field bertanda bintang (*)</div>
-                                    @endif
+                                    @if($errors->any()) <div class="alert alert-danger small mt-2 py-1 px-2">Lengkapi field bertanda bintang (*)</div> @endif
                                 @endif
 
-                                {{-- 3. CATATAN (Wajib untuk Semua Kecuali Retur yg sudah detail) --}}
                                 @if($kategoriKeluar != 'Retur')
                                     <div class="mb-3">
                                         <label class="form-label-custom">Catatan / Keterangan <span class="required-star">*</span></label>
-                                        <textarea class="form-control rounded-3 py-2" rows="2" wire:model="catatan" placeholder="Masukkan catatan..."></textarea>
-                                        @error('catatan') <span class="text-danger small">{{ $message }}</span> @enderror
+                                        <textarea class="form-control rounded-3 py-2" rows="2" wire:model="catatan"></textarea>
                                     </div>
                                 @endif
-
                             </div>
                         @endif
 
-                        {{-- List Barang (Preview) --}}
                         <div class="mb-4">
                             <label class="form-label-custom">List Barang ({{ count($selectedItems) }} Unit)</label>
                             <div class="border rounded-3 overflow-hidden bg-white">
                                 <div class="table-responsive" style="max-height: 150px;">
                                     <table class="table table-sm table-striped mb-0 small">
                                         <thead class="bg-light sticky-top">
-                                            <tr>
-                                                <th class="ps-3">Merk</th>
-                                                <th>Tipe</th>
-                                                <th>IMEI</th>
-                                            </tr>
+                                            <tr><th class="ps-3">Merk</th><th>Tipe</th><th>IMEI</th></tr>
                                         </thead>
                                         <tbody>
                                             @forelse($selectedItems as $item)
-                                                <tr>
-                                                    <td class="ps-3 fw-bold">{{ $item->merk->nama }}</td>
-                                                    <td>{{ $item->tipe->nama }}</td>
-                                                    <td class="font-monospace">{{ $item->imei }}</td>
-                                                </tr>
+                                                <tr><td class="ps-3 fw-bold">{{ $item->merk->nama }}</td><td>{{ $item->tipe->nama }}</td><td class="font-monospace">{{ $item->imei }}</td></tr>
                                             @empty
                                                 <tr><td colspan="3" class="text-center text-muted py-3">Tidak ada item dipilih</td></tr>
                                             @endforelse
@@ -338,28 +313,46 @@
 
 </div>
 
-@script
+{{-- SCRIPT JAVASCRIPT: AUTO RUPIAH & EVENT LISTENER --}}
 <script>
-    Livewire.on('close-modal', () => {
-        const modalEl = document.getElementById('stokModal');
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) modal.hide();
-        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-    });
-    Livewire.on('open-keluar-modal', () => {
-        const modalEl = document.getElementById('keluarStokModal');
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
-    });
-    Livewire.on('close-keluar-modal', () => {
-        const modalEl = document.getElementById('keluarStokModal');
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) modal.hide();
-        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-    });
-    Livewire.on('swal', (data) => {
-        Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true })
-            .fire({ icon: data[0].icon, title: data[0].title, text: data[0].text });
+    // Fungsi Auto Format Rupiah
+    function formatRupiah(element) {
+        let value = element.value.replace(/[^,\d]/g, '').toString();
+        let split = value.split(',');
+        let sisa = split[0].length % 3;
+        let rupiah = split[0].substr(0, sisa);
+        let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+        if (ribuan) {
+            let separator = sisa ? '.' : '';
+            rupiah += separator + ribuan.join('.');
+        }
+
+        rupiah = split[1] != undefined ? rupiah + ',' + split[1] : rupiah;
+        element.value = rupiah;
+        
+        // Dispatch event agar Livewire mendeteksi perubahan
+        element.dispatchEvent(new Event('input'));
+    }
+
+    // Livewire Event Listeners
+    document.addEventListener('livewire:initialized', () => {
+        Livewire.on('close-modal', () => { 
+            const modal = bootstrap.Modal.getInstance(document.getElementById('stokModal'));
+            if(modal) modal.hide();
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        });
+        Livewire.on('open-keluar-modal', () => { 
+            new bootstrap.Modal(document.getElementById('keluarStokModal')).show(); 
+        });
+        Livewire.on('close-keluar-modal', () => { 
+            const modal = bootstrap.Modal.getInstance(document.getElementById('keluarStokModal'));
+            if(modal) modal.hide();
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        });
+        Livewire.on('swal', (data) => { 
+            Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true })
+                .fire({ icon: data[0].icon, title: data[0].title, text: data[0].text });
+        });
     });
 </script>
-@endscript

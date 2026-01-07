@@ -9,20 +9,24 @@ class Stok extends Model
 {
     use HasFactory;
 
-    protected $table = 'stoks';
-    
     protected $fillable = [
-        'merk_id', 'tipe_id', 'ram_storage', 'kondisi', 
-        'imei', 'harga_modal', 'harga_jual'
+        'merk_id', 
+        'tipe_id', 
+        'ram_storage', 
+        'kondisi', 
+        'imei', 
+        'jumlah', // <--- Tambahkan ini
+        'harga_modal', 
+        'harga_jual'
     ];
 
     public function merk()
     {
-        return $this->belongsTo(Merk::class, 'merk_id');
+        return $this->belongsTo(Merk::class);
     }
 
     public function tipe()
     {
-        return $this->belongsTo(Tipe::class, 'tipe_id');
+        return $this->belongsTo(Tipe::class);
     }
 }
