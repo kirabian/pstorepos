@@ -45,24 +45,46 @@ Route::post('/logout', function () {
 
 /*
 |--------------------------------------------------------------------------
-| Area Terproteksi (Login Required)
+| Area Terproteksi (Login Required & Akun Aktif)
 |--------------------------------------------------------------------------
+| Middleware 'active.user' ditambahkan disini untuk mencegah 
+| user yang dinonaktifkan mengakses dashboard.
 */
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'active.user'])->group(function () {
 
     // Semua Role bisa akses Dashboard
     Route::get('/', Dashboard::class)->name('dashboard');
 
     /* |--------------------------------------------------------------------------
-    | AREA SUPERADMIN & ADMIN PRODUK
+    | MANAJEMEN USER (SUPERADMIN & AUDIT)
     |--------------------------------------------------------------------------
+    | Route ini dikeluarkan dari 'superadmin-only' agar Audit bisa akses.
+    | Kita gunakan closure middleware untuk membatasi hanya Superadmin & Audit.
     */
+    Route::prefix('users')->name('user.')->group(function () {
+        
+        // Logic Akses: Hanya Superadmin & Audit
+        Route::middleware(function ($request, $next) {
+            if (in_array(Auth::user()->role, ['superadmin', 'audit'])) {
+                return $next($request);
+            }
+            abort(403, 'Akses Ditolak: Hanya untuk Superadmin & Audit');
+        })->group(function () {
+            
+            Route::get('/', UserIndex::class)->name('index');
+            
+            // Route Create & Edit tetap ada untuk kompatibilitas, 
+            // meskipun di UserIndex terbaru kita sudah pakai Modal.
+            Route::get('/create', UserCreate::class)->name('create');
+            Route::get('/{id}/edit', UserEdit::class)->name('edit');
+        });
+    });
 
     /* |--------------------------------------------------------------------------
     | AREA KHUSUS SUPERADMIN
     |--------------------------------------------------------------------------
     | Middleware 'can:superadmin-only' memastikan user selain superadmin
-    | akan dilempar ke halaman 403 custom yang baru kita buat.
+    | akan dilempar ke halaman 403.
     */
     Route::middleware('can:superadmin-only')->group(function () {
 
@@ -73,25 +95,26 @@ Route::middleware('auth')->group(function () {
             Route::get('/{id}/edit', DistributorEdit::class)->name('edit');
         });
 
-        // Manajemen User
-        Route::prefix('users')->name('user.')->group(function () {
-            Route::get('/', UserIndex::class)->name('index');
-            Route::get('/create', UserCreate::class)->name('create');
-            Route::get('/{id}/edit', UserEdit::class)->name('edit');
-        });
-
+        // Manajemen Cabang
         Route::get('/cabang', CabangIndex::class)->name('cabang.index');
         Route::get('/cabang/create', CabangCreate::class)->name('cabang.create');
         Route::get('/cabang/{id}/edit', CabangEdit::class)->name('cabang.edit');
 
+        // Manajemen Gudang
         Route::get('/gudang', GudangIndex::class)->name('gudang.index');
         Route::get('/gudang/create', GudangCreate::class)->name('gudang.create');
         Route::get('/gudang/{id}/edit', GudangEdit::class)->name('gudang.edit');
 
+        // Master Data Produk
         Route::get('/merk', MerkIndex::class)->name('merk.index');
         Route::get('/tipe', TipeIndex::class)->name('tipe.index');
 
     });
+
+    /* |--------------------------------------------------------------------------
+    | OPERASIONAL / UMUM (Sales, Gudang, Audit, Admin Produk)
+    |--------------------------------------------------------------------------
+    */
     Route::get('/stok', StokIndex::class)->name('stok.index');
     Route::get('/lacak-imei', LacakImei::class)->name('lacak.imei');
 
