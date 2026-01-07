@@ -97,7 +97,7 @@ class StokIndex extends Component
     }
 
     // ==========================================
-    // UPDATE DI BAGIAN INI (STORE)
+    // STORE FUNCTION (UPDATED)
     // ==========================================
     public function store()
     {
@@ -121,21 +121,26 @@ class StokIndex extends Component
             'harga_jual' => $this->harga_jual,
         ]);
 
-        // 2. LOGIKA HISTORY (LACAK IMEI) DENGAN NAMA CABANG
+        // 2. LOGIKA HISTORY + TIMEZONE CABANG
         $user = Auth::user();
         
-        // Ambil nama cabang dari relasi user (jika null, default ke 'Pusat' atau '-')
-        // Asumsi kolom di tabel cabangs adalah 'nama'
-        $namaCabang = $user->cabang->nama ?? 'Pusat'; 
+        // Ambil ID Cabang user (Bisa null jika admin pusat/tidak ada cabang)
+        // Jika null, nanti di Model akan otomatis dianggap WIB
+        $cabangId = $user->cabang_id; 
+        
+        // Ambil nama cabang untuk keterangan text (Opsional)
+        $namaCabang = $user->cabang->nama ?? 'Pusat (Web)';
 
         StokHistory::create([
             'imei' => $this->imei,
             'status' => $this->stokId ? 'Update Data' : 'Stok Masuk',
             
-            // Disini kita masukkan nama cabangnya ke dalam teks keterangan
+            // Masukkan cabang_id agar Model StokHistory tau ini transaksi zona waktu mana
+            'cabang_id' => $cabangId, 
+
             'keterangan' => $this->stokId 
-                ? "Data unit diperbarui di cabang $namaCabang." 
-                : "Stok baru ditambahkan melalui cabang $namaCabang.",
+                ? "Data unit diperbarui oleh {$user->nama_lengkap} ($namaCabang)." 
+                : "Stok baru masuk di $namaCabang.",
                 
             'user_id' => $user->id,
         ]);

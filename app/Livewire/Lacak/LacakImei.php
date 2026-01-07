@@ -28,7 +28,8 @@ class LacakImei extends Component
                             ->first();
 
         // 2. Cari Riwayat Perjalanan (Log)
-        $this->riwayat = StokHistory::with('user')
+        // Tambahkan 'cabang' di with() untuk optimasi pengambilan timezone
+        $this->riwayat = StokHistory::with(['user', 'cabang'])
                             ->where('imei', $this->searchImei)
                             ->latest()
                             ->get();

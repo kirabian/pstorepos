@@ -1,151 +1,269 @@
-<div class="container-fluid">
-    
+<div class="container py-4">
+
+    {{-- Custom CSS untuk Timeline & UI --}}
     <style>
-        /* CSS Timeline Custom */
-        .timeline {
+        /* Timeline Vertical Line */
+        .tracking-list {
             border-left: 2px solid #e9ecef;
-            padding: 0 20px 0 30px;
+            position: relative;
+            padding-left: 0;
             list-style: none;
-            position: relative;
         }
-        .timeline-item {
+
+        .tracking-item {
             position: relative;
-            margin-bottom: 2.5rem;
+            padding-left: 30px;
+            padding-bottom: 2.5rem;
         }
-        .timeline-item::before {
+
+        /* Titik (Dot) Timeline */
+        .tracking-item::before {
             content: '';
             position: absolute;
-            left: -39px;
-            top: 5px;
+            left: -9px; /* Adjust agar pas ditengah garis */
+            top: 4px;
             width: 16px;
             height: 16px;
             border-radius: 50%;
-            background: #fff;
-            border: 4px solid #212529; /* Warna hitam PStore */
+            background-color: #fff;
+            border: 4px solid #0d6efd; /* Warna Primary Bootstrap */
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+            transition: all 0.3s ease;
         }
-        .timeline-date {
-            font-size: 0.85rem;
-            color: #6c757d;
+
+        .tracking-item:hover::before {
+            background-color: #0d6efd;
+            transform: scale(1.2);
+        }
+
+        /* Hilangkan padding bawah item terakhir */
+        .tracking-item:last-child {
+            padding-bottom: 0;
+            border-left: 2px solid transparent; /* Hilangkan garis sisa */
+        }
+
+        /* Typography Timeline */
+        .tracking-date {
+            font-size: 0.8rem;
             font-weight: 600;
-            margin-bottom: 0.25rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
         }
-        .timeline-content {
-            background: #fff;
-            padding: 0;
-        }
-        .timeline-title {
-            font-weight: 700;
+
+        .tracking-title {
             font-size: 1rem;
-            color: #000;
+            font-weight: 700;
+            color: #212529;
+        }
+
+        /* Card Styling */
+        .card-hover {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        /* Background Gradient Header */
+        .bg-gradient-header {
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
         }
     </style>
 
-    <div class="mb-4">
-        <h4 class="fw-bold text-black">Lacak IMEI</h4>
-        <p class="text-secondary small">Telusuri riwayat perjalanan unit berdasarkan IMEI.</p>
+    {{-- Header Section --}}
+    <div class="text-center mb-5">
+        <h3 class="fw-bold text-dark mb-1">Lacak Status Unit</h3>
+        <p class="text-muted small">Masukkan Nomor IMEI untuk melacak posisi, kondisi, dan riwayat unit.</p>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-body p-4">
-            <form wire:submit.prevent="lacak">
-                <div class="input-group">
-                    <span class="input-group-text bg-white border-end-0 ps-3">
-                        <i class="fas fa-barcode text-muted"></i>
-                    </span>
-                    <input type="text" 
-                           class="form-control border-start-0 py-3 fw-bold fs-5" 
-                           placeholder="Scan atau ketik IMEI disini..." 
-                           wire:model="searchImei"
-                           style="letter-spacing: 1px;">
-                    
-                    <button class="btn btn-dark px-4 fw-bold" type="submit">
-                        <i class="fas fa-search me-2"></i> LACAK
-                    </button>
+    {{-- Search Box Section --}}
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow rounded-4 overflow-hidden">
+                <div class="card-body p-2 bg-white">
+                    <form wire:submit.prevent="lacak">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-0 ps-3">
+                                <i class="fas fa-search text-muted"></i>
+                            </span>
+                            <input type="text" 
+                                   class="form-control border-0 fs-5 fw-bold py-3 text-dark shadow-none" 
+                                   placeholder="Contoh: 3582910..." 
+                                   wire:model="searchImei"
+                                   style="letter-spacing: 1px;">
+                            
+                            <button class="btn btn-dark rounded-4 px-4 fw-bold m-1" type="button" wire:click="lacak">
+                                <span wire:loading.remove wire:target="lacak">CARI</span>
+                                <span wire:loading wire:target="lacak">
+                                    <i class="fas fa-circle-notch fa-spin"></i>
+                                </span>
+                            </button>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
+            {{-- Loading Indicator --}}
+            <div wire:loading wire:target="lacak" class="text-center w-100 mt-2 text-primary small fw-bold fade-in">
+                Sedang melacak data ke server...
+            </div>
         </div>
     </div>
 
+    {{-- Result Section --}}
     @if($stokDetail || count($riwayat) > 0)
-        <div class="row animate__animated animate__fadeInUp">
+        <div class="row g-4 animate__animated animate__fadeInUp">
             
-            <div class="col-md-4 mb-4">
-                <div class="card border-0 shadow-sm rounded-4 h-100">
-                    <div class="card-body p-4">
-                        <h6 class="fw-bold text-uppercase text-secondary mb-4 small ls-1">Informasi Unit</h6>
-                        
+            {{-- KOLOM KIRI: Detail Produk --}}
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
+                    <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-3">
+                                <i class="fas fa-mobile-alt fa-lg"></i>
+                            </div>
+                            <h6 class="fw-bold text-uppercase m-0 ls-1">Informasi Produk</h6>
+                        </div>
+                        <hr class="my-2 text-muted opacity-25">
+                    </div>
+
+                    <div class="card-body px-4 pb-4">
                         @if($stokDetail)
-                            <div class="mb-3">
-                                <label class="small text-muted d-block">Merk / Tipe</label>
-                                <span class="fw-bold fs-5">{{ $stokDetail->merk->nama }} {{ $stokDetail->tipe->nama }}</span>
+                            {{-- Nama Produk --}}
+                            <div class="mb-4">
+                                <label class="small text-muted fw-bold d-block mb-1">UNIT</label>
+                                <h5 class="fw-bold text-dark mb-0">{{ $stokDetail->merk->nama }}</h5>
+                                <div class="text-secondary">{{ $stokDetail->tipe->nama }}</div>
                             </div>
-                            <div class="mb-3">
-                                <label class="small text-muted d-block">Varian</label>
-                                <span class="badge bg-light text-dark border">{{ $stokDetail->ram_storage }}</span>
+
+                            <div class="row g-3 mb-4">
+                                {{-- RAM/Storage --}}
+                                <div class="col-6">
+                                    <label class="small text-muted fw-bold d-block mb-1">VARIAN</label>
+                                    <span class="badge bg-light text-dark border px-3 py-2 rounded-3 w-100 text-start">
+                                        <i class="fas fa-memory me-1 text-secondary"></i> {{ $stokDetail->ram_storage }}
+                                    </span>
+                                </div>
+                                {{-- Kondisi --}}
+                                <div class="col-6">
+                                    <label class="small text-muted fw-bold d-block mb-1">KONDISI</label>
+                                    @if($stokDetail->kondisi == 'Baru')
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-2 rounded-3 w-100 text-start">
+                                            <i class="fas fa-check-circle me-1"></i> BARU
+                                        </span>
+                                    @else
+                                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning px-3 py-2 rounded-3 w-100 text-start">
+                                            <i class="fas fa-box-open me-1"></i> SECOND
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="small text-muted d-block">Kondisi</label>
-                                @if($stokDetail->kondisi == 'Baru')
-                                    <span class="badge bg-success">NEW / BARU</span>
-                                @else
-                                    <span class="badge bg-warning text-dark">SECOND</span>
-                                @endif
-                            </div>
-                            <div class="mb-3">
-                                <label class="small text-muted d-block">Harga Jual (SRP)</label>
-                                <span class="fw-bold text-primary">Rp {{ number_format($stokDetail->harga_jual, 0, ',', '.') }}</span>
+
+                            {{-- Harga --}}
+                            <div class="p-3 bg-light rounded-3 border border-dashed text-center">
+                                <label class="small text-muted mb-1">Harga Jual (SRP)</label>
+                                <h4 class="fw-bold text-primary mb-0">Rp {{ number_format($stokDetail->harga_jual, 0, ',', '.') }}</h4>
                             </div>
                         @else
-                            <div class="alert alert-warning small">
-                                <i class="fas fa-exclamation-triangle me-1"></i> 
-                                Data unit fisik tidak ditemukan di stok aktif (Mungkin sudah terjual habis atau data lama).
+                            {{-- Jika stok fisik sudah tidak ada (terjual/dihapus) tapi history ada --}}
+                            <div class="alert alert-warning border-0 d-flex align-items-start rounded-3" role="alert">
+                                <i class="fas fa-info-circle fs-5 me-3 mt-1"></i>
+                                <div>
+                                    <strong>Status: Tidak Aktif</strong>
+                                    <p class="small mb-0 mt-1">
+                                        Unit fisik dengan IMEI ini tidak ditemukan di gudang aktif. Kemungkinan unit sudah <b>Terjual</b> atau data dihapus. Namun, riwayat tersedia di sebelah kanan.
+                                    </p>
+                                </div>
                             </div>
                         @endif
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-8">
-                <div class="card border-0 shadow-sm rounded-4 h-100">
-                    <div class="card-body p-4">
-                        <h6 class="fw-bold text-uppercase text-secondary mb-4 small ls-1">Riwayat Perjalanan</h6>
+            {{-- KOLOM KANAN: Timeline History --}}
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm rounded-4 h-100 card-hover">
+                    <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="bg-info bg-opacity-10 text-info rounded-circle p-2 me-3">
+                                <i class="fas fa-history fa-lg"></i>
+                            </div>
+                            <h6 class="fw-bold text-uppercase m-0 ls-1">Riwayat Perjalanan</h6>
+                        </div>
+                        <hr class="my-2 text-muted opacity-25">
+                    </div>
 
+                    <div class="card-body px-4 pb-4">
                         @if(count($riwayat) > 0)
-                            <div class="timeline mt-4">
-                                @foreach($riwayat as $log)
-                                    <div class="timeline-item">
-                                        <div class="timeline-date">
-                                            <i class="far fa-clock me-1"></i> 
-                                            {{ $log->created_at->translatedFormat('d F Y, H:i:s') }}
-                                        </div>
-                                        <div class="timeline-content">
-                                            <div class="timeline-title">{{ $log->status }}</div>
-                                            <p class="text-secondary mb-1">{{ $log->keterangan }}</p>
-                                            <div class="small text-muted fst-italic">
-                                                Oleh: {{ $log->user->nama_lengkap ?? 'System' }}
+                            <div class="mt-3">
+                                <ul class="tracking-list">
+                                    @foreach($riwayat as $log)
+                                        <li class="tracking-item">
+                                            {{-- WAKTU (MENGGUNAKAN LOGIKA TIMEZONE MODEL) --}}
+                                            <div class="tracking-date">
+                                                <i class="far fa-clock me-1"></i> {{ $log->waktu_lokal }}
                                             </div>
-                                        </div>
-                                    </div>
-                                @endforeach
+                                            
+                                            {{-- STATUS --}}
+                                            <div class="tracking-title mb-1">{{ $log->status }}</div>
+                                            
+                                            {{-- KETERANGAN --}}
+                                            <p class="text-secondary small mb-2 text-break">
+                                                {{ $log->keterangan }}
+                                            </p>
+                                            
+                                            {{-- USER & CABANG --}}
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary border rounded-pill px-2 fw-normal" style="font-size: 0.7rem;">
+                                                    <i class="fas fa-user-circle me-1"></i> {{ $log->user->nama_lengkap ?? 'System' }}
+                                                </span>
+                                                
+                                                @if($log->cabang)
+                                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-2 fw-normal" style="font-size: 0.7rem;">
+                                                        <i class="fas fa-store me-1"></i> {{ $log->cabang->nama_cabang ?? $log->cabang->nama }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </li>
+                                    @endforeach
+                                </ul>
                             </div>
                         @else
-                            <div class="text-center py-5 text-muted">
-                                <i class="fas fa-history fa-3x mb-3 opacity-25"></i>
-                                <p>Belum ada riwayat tercatat untuk IMEI ini.</p>
+                            <div class="text-center py-5">
+                                <img src="https://cdn-icons-png.flaticon.com/512/7486/7486744.png" alt="Empty" width="80" class="opacity-50 mb-3 grayscale">
+                                <h6 class="fw-bold text-muted">Belum ada riwayat</h6>
+                                <p class="small text-muted">Unit ini belum memiliki catatan aktivitas apapun.</p>
                             </div>
                         @endif
                     </div>
                 </div>
             </div>
         </div>
+
+    {{-- Not Found State --}}
     @elseif($notFound)
-        <div class="alert alert-danger shadow-sm rounded-3 border-0 d-flex align-items-center animate__animated animate__headShake">
-            <i class="fas fa-times-circle fs-4 me-3"></i>
-            <div>
-                <strong>IMEI Tidak Ditemukan!</strong>
-                <div class="small">Pastikan nomor IMEI yang Anda masukkan benar dan sudah terdaftar di sistem.</div>
+        <div class="row justify-content-center animate__animated animate__headShake">
+            <div class="col-md-8 col-lg-6">
+                <div class="alert alert-danger bg-white border-danger border-start border-4 border-0 shadow-sm rounded-3 p-4">
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <i class="fas fa-times-circle text-danger fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="alert-heading fw-bold text-danger mb-1">IMEI Tidak Ditemukan</h5>
+                            <p class="mb-0 text-secondary">
+                                Nomor IMEI <strong>"{{ $searchImei }}"</strong> tidak terdaftar dalam sistem stok aktif maupun arsip riwayat kami. Silakan periksa kembali digit angka yang dimasukkan.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     @endif
+    
+    {{-- Footer Copyright (Optional) --}}
+    <div class="text-center mt-5 pt-3 border-top border-light">
+        <small class="text-muted opacity-75">
+            &copy; {{ date('Y') }} Sistem Manajemen Stok • Waktu Server: {{ now()->format('H:i') }} WIB
+        </small>
+    </div>
 
 </div>
