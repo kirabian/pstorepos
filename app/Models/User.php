@@ -15,7 +15,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'nama_lengkap', 'idlogin', 'email', 'password', 'tanggal_lahir', 
-        'role', 'distributor_id', 'cabang_id', 'last_seen', 'is_active' // <--- Tambah is_active
+        'role', 'distributor_id', 'cabang_id', 'last_seen', 'is_active'
     ];
 
     protected $hidden = [
@@ -26,7 +26,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'last_seen' => 'datetime',
-        'is_active' => 'boolean', // <--- Cast ke boolean
+        'is_active' => 'boolean',
     ];
 
     public function distributor()
@@ -45,9 +45,10 @@ class User extends Authenticatable
         return $this->belongsTo(Cabang::class, 'cabang_id');
     }
 
-    // Relasi Multi (Khusus Role Audit)
+    // Relasi Multi (Khusus Role Audit) - PERBAIKAN DISINI
     public function branches()
     {
+        // Parameter: RelatedModel, PivotTable, ForeignKunciModelIni, ForeignKunciModelLawan
         return $this->belongsToMany(Cabang::class, 'branch_user', 'user_id', 'cabang_id');
     }
     

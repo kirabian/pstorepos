@@ -86,7 +86,8 @@
                             </td>
 
                             <td class="text-center">
-                                @php $auditors = $cabang->users->where('role', 'audit'); @endphp
+                                {{-- PERBAIKAN: Gunakan relasi auditUsers --}}
+                                @php $auditors = $cabang->auditUsers; @endphp 
                                 @if($auditors->count() > 0)
                                     @foreach($auditors as $auditor)
                                         <div class="d-inline-flex align-items-center bg-primary-subtle text-primary px-3 py-1 rounded-pill extra-small fw-900 border border-primary-subtle shadow-sm mb-1">
@@ -154,7 +155,6 @@
         .shadow-premium { box-shadow: 0 15px 35px -5px rgba(0,0,0,0.2) !important; }
         .rounded-5 { border-radius: 2.5rem !important; }
         
-        /* Table Premium Styling */
         .table-row-premium { border-bottom: 1px solid #f8f9fa; }
         .table-row-premium:hover { 
             background-color: #fafafa !important; 
@@ -162,7 +162,6 @@
             box-shadow: inset 4px 0 0 #000;
         }
 
-        /* Avatar Stacking */
         .avatar-group .avatar-stack-item {
             transition: all 0.2s ease;
             cursor: pointer;
@@ -173,7 +172,6 @@
             margin-right: 5px;
         }
 
-        /* Action Buttons */
         .btn-action-modern {
             width: 38px;
             height: 38px;
@@ -185,14 +183,12 @@
         .btn-action-modern.edit:hover { background: #000; color: #fff; border-color: #000; }
         .btn-action-modern.delete:hover { background: #dc3545; color: #fff; border-color: #dc3545; }
 
-        /* Status Dot */
         .status-dot {
             width: 6px;
             height: 6px;
             border-radius: 50%;
         }
 
-        /* Responsive adjustments */
         @media (max-width: 768px) {
             .display-5 { font-size: 2rem; }
             .rounded-5 { border-radius: 1.5rem !important; }

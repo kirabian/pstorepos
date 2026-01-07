@@ -37,13 +37,16 @@ class CabangIndex extends Component
         return view('livewire.cabang.cabang-skeleton');
     }
 
-public function render()
+    public function render()
     {
         return view('livewire.cabang.cabang-index', [
             'cabangs' => Cabang::query()
-                ->with(['users', 'regularStaff']) // Eager loading dua jenis relasi
-                ->where('nama_cabang', 'like', '%'.$this->search.'%')
-                ->orWhere('kode_cabang', 'like', '%'.$this->search.'%')
+                // Gunakan relasi 'auditUsers' (dari model Cabang) dan 'regularStaff'
+                ->with(['auditUsers', 'regularStaff']) 
+                ->where(function($q) {
+                    $q->where('nama_cabang', 'like', '%'.$this->search.'%')
+                      ->orWhere('kode_cabang', 'like', '%'.$this->search.'%');
+                })
                 ->latest()
                 ->paginate(10),
         ]);
