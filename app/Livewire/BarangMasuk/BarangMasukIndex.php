@@ -3,6 +3,7 @@
 namespace App\Livewire\BarangMasuk;
 
 use App\Models\StokHistory;
+use App\Models\Stok; // Pastikan Import Model Stok Aktif
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -24,11 +25,14 @@ class BarangMasukIndex extends Component
 
     public function render()
     {
-        // Logika: Barang masuk biasanya statusnya 'Stok Masuk' atau 'Update Data' (tergantung sistem)
-        // Disini kita filter history yang statusnya mengandung kata 'Masuk'
-        
+        // LOGIKA BARU:
+        // 1. Ambil History yang statusnya 'Masuk' (Stok Masuk)
+        // 2. Filter hanya tampilkan jika IMEI tersebut MASIH ADA di tabel 'stoks' (Stok Aktif)
+        // 3. Jika stok sudah keluar (dihapus dari tabel stoks), maka history masuknya hidden.
+
         $query = StokHistory::with(['user', 'cabang'])
-            ->where('status', 'like', '%Masuk%');
+            ->where('status', 'like', '%Masuk%')
+            ->whereIn('imei', Stok::select('imei')); // <--- FILTER KUNCI DISINI
 
         // Filter Search IMEI
         if ($this->search) {
@@ -43,7 +47,7 @@ class BarangMasukIndex extends Component
             $query->whereYear('created_at', $this->tahun);
         }
 
-        // Filter Kategori (Jika ada kolom kategori spesifik di history, sesuaikan)
+        // Filter Kategori (Jika ada)
         if ($this->kategori) {
             $query->where('keterangan', 'like', '%' . $this->kategori . '%');
         }
