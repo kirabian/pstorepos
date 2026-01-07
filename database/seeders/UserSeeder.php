@@ -29,9 +29,12 @@ class UserSeeder extends Seeder
             'kode_cabang' => 'CB-004', 'nama_cabang' => 'PSTORE MAKASSAR', 'lokasi' => 'Makassar', 'timezone' => 'Asia/Makassar'
         ]);
 
-        // 2. Buat Data Master Distributor (Dummy)
+        // 2. Buat Data Master Distributor (FIX: Tambah kode_distributor)
         $dist = Distributor::create([
-            'nama_distributor' => 'DISTRIBUTOR UTAMA', 'lokasi' => 'Jakarta', 'kontak' => '08123456789'
+            'kode_distributor' => 'DST-001', // <--- INI YANG KURANG TADI
+            'nama_distributor' => 'DISTRIBUTOR UTAMA', 
+            'lokasi' => 'Jakarta', 
+            'kontak' => '08123456789'
         ]);
 
         // 3. Buat User untuk Setiap Role
