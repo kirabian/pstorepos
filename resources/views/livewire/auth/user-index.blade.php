@@ -208,7 +208,7 @@
     {{-- PREMIUM MODAL --}}
     @teleport('body')
     <div wire:ignore.self class="modal fade" id="userModal" tabindex="-1" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-2xl rounded-5 overflow-hidden">
                 
                 {{-- Modal Header --}}
@@ -266,7 +266,7 @@
 
                             <div class="col-md-6">
                                 <div class="form-floating">
-                                    <input type="text" class="form-control bg-light border-0 fw-bold text-dark rounded-4" id="phoneInput" placeholder="0812..." wire:model="distributor_id"> {{-- Assuming field used for phone temp --}}
+                                    <input type="text" class="form-control bg-light border-0 fw-bold text-dark rounded-4" id="phoneInput" placeholder="0812..." wire:model="distributor_id"> 
                                     <label for="phoneInput" class="text-secondary fw-semibold">Phone (Optional)</label>
                                 </div>
                             </div>
@@ -289,10 +289,7 @@
                                             <option value="analis">ANALIST DATA</option>
                                             <option value="leader">TEAM LEADER</option>
                                             <option value="sales">SALES / CASHIER</option>
-                                            
-                                            {{-- GABUNGAN DISTRIBUTOR & GUDANG --}}
                                             <option value="gudang">INVENTORY STAFF (Warehouse & Distributor)</option>
-                                            
                                             <option value="security">SECURITY</option>
                                         </select>
                                         <label for="roleSelect" class="text-dark fw-bold">User Role</label>
@@ -302,7 +299,7 @@
                             </div>
 
                             {{-- DYNAMIC LOCATION --}}
-                            @if($role && !in_array($role, ['superadmin', 'audit']))
+                            @if($role && !in_array($role, ['superadmin', 'audit', 'distributor']))
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="form-floating">
                                         <select class="form-select bg-warning-subtle border-0 text-dark fw-bold rounded-4" id="branchSelect" wire:model="cabang_id">
@@ -317,23 +314,80 @@
                                 </div>
                             @endif
 
-                            {{-- MULTI CABANG (AUDIT) --}}
+                            {{-- MULTI CABANG (AUDIT) - NEW DROPDOWN UI --}}
                             @if($role === 'audit')
                                 <div class="col-12 animate__animated animate__fadeIn">
-                                    <div class="bg-light border rounded-4 p-4">
-                                        <label class="d-block text-dark fw-bold mb-3 small text-uppercase">Audit Coverage Area</label>
-                                        <div class="d-flex flex-wrap gap-2" style="max-height: 200px; overflow-y: auto;">
-                                            @foreach($cabangs as $c)
-                                                <div class="form-check bg-white px-3 py-2 rounded-3 border d-inline-flex align-items-center">
-                                                    <input class="form-check-input me-2 shadow-none cursor-pointer" type="checkbox" value="{{ $c->id }}" wire:model="selected_branches" id="chk_{{ $c->id }}">
-                                                    <label class="form-check-label fw-bold small text-dark cursor-pointer stretched-link" for="chk_{{ $c->id }}">
-                                                        {{ $c->nama_cabang }}
-                                                    </label>
-                                                </div>
-                                            @endforeach
+                                    
+                                    {{-- ALPINE JS MULTI-SELECT DROPDOWN --}}
+                                    <div x-data="{ 
+                                        open: false, 
+                                        selected: @entangle('selected_branches').live,
+                                        toggle(id) {
+                                            if (this.selected.includes(String(id))) {
+                                                this.selected = this.selected.filter(item => item !== String(id));
+                                            } else {
+                                                this.selected.push(String(id));
+                                            }
+                                        }
+                                    }" class="position-relative">
+                                        
+                                        {{-- Trigger Button --}}
+                                        <div @click="open = !open" @click.outside="open = false" 
+                                             class="form-control bg-light border-0 rounded-4 py-3 px-4 d-flex justify-content-between align-items-center cursor-pointer shadow-sm">
+                                            <div>
+                                                <span class="text-secondary fw-semibold small text-uppercase d-block mb-1" style="font-size: 0.7rem;">Audit Coverage</span>
+                                                <span class="fw-bold text-dark" x-text="selected.length > 0 ? selected.length + ' Branches Selected' : 'Select Branches...'"></span>
+                                            </div>
+                                            <i class="fas fa-chevron-down text-muted transition-all" :class="{'rotate-180': open}"></i>
                                         </div>
+
+                                        {{-- Dropdown Menu --}}
+                                        <div x-show="open" x-transition.opacity.duration.200ms
+                                             class="position-absolute w-100 mt-2 bg-white rounded-4 shadow-xl border overflow-hidden z-3" 
+                                             style="max-height: 250px; overflow-y: auto; display: none;">
+                                            
+                                            <div class="p-2">
+                                                @foreach($cabangs as $c)
+                                                    <div @click="toggle('{{ $c->id }}')" 
+                                                         class="d-flex align-items-center justify-content-between p-3 rounded-3 cursor-pointer mb-1 transition-all"
+                                                         :class="selected.includes('{{ $c->id }}') ? 'bg-dark text-white' : 'bg-white text-dark hover-bg-light'">
+                                                        
+                                                        <span class="fw-bold small">{{ $c->nama_cabang }}</span>
+                                                        
+                                                        {{-- Check Icon --}}
+                                                        <i class="fas fa-check-circle" x-show="selected.includes('{{ $c->id }}')"></i>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+
+                                        {{-- Selected Badges Preview --}}
+                                        <div class="d-flex flex-wrap gap-2 mt-3" x-show="selected.length > 0">
+                                            <template x-for="id in selected" :key="id">
+                                                <span class="badge bg-dark text-white border border-dark rounded-pill px-3 py-2 fw-bold extra-small d-flex align-items-center">
+                                                    <span x-text="document.querySelector(`[@click*='${id}'] span`)?.innerText || 'Branch ' + id"></span>
+                                                    <i class="fas fa-times ms-2 cursor-pointer opacity-50 hover-opacity-100" @click.stop="toggle(id)"></i>
+                                                </span>
+                                            </template>
+                                        </div>
+
                                     </div>
-                                    @error('selected_branches') <span class="text-danger extra-small fw-bold ms-2">{{ $message }}</span> @enderror
+                                    @error('selected_branches') <span class="text-danger extra-small fw-bold ms-2 mt-2 d-block">{{ $message }}</span> @enderror
+                                </div>
+                            @endif
+
+                            @if($role === 'distributor')
+                                <div class="col-12 animate__animated animate__fadeIn">
+                                    <div class="form-floating">
+                                        <select class="form-select bg-primary-subtle border-0 text-dark fw-bold rounded-4" wire:model="distributor_id">
+                                            <option value="">Select Partner</option>
+                                            @foreach($distributors as $dist)
+                                                <option value="{{ $dist->id }}">{{ $dist->nama_distributor }}</option>
+                                            @endforeach
+                                        </select>
+                                        <label class="text-primary fw-bold">Partner Affiliation</label>
+                                    </div>
+                                    @error('distributor_id') <span class="text-danger extra-small fw-bold ms-2">{{ $message }}</span> @enderror
                                 </div>
                             @endif
 
@@ -373,6 +427,13 @@
     @endteleport
 
     <style>
+        /* Mobile Spacer untuk mengatasi 'ketutupan' */
+        @media (max-width: 991px) {
+            .mobile-spacer {
+                padding-top: 80px !important; 
+            }
+        }
+
         /* Typography */
         .fw-black { font-weight: 900; }
         .tracking-tight { letter-spacing: -0.025em; }
@@ -398,6 +459,8 @@
         /* Form */
         .form-control:focus, .form-select:focus { box-shadow: none; background-color: #fff !important; ring: 2px solid #000; }
         .form-floating > label { font-size: 0.85rem; font-weight: 600; }
+        .rotate-180 { transform: rotate(180deg); }
+        .hover-bg-light:hover { background-color: #f8f9fa; }
         
         /* Transitions */
         .transition-all { transition: all 0.3s ease; }
