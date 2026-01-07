@@ -208,7 +208,7 @@
     {{-- PREMIUM MODAL --}}
     @teleport('body')
     <div wire:ignore.self class="modal fade" id="userModal" tabindex="-1" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow-2xl rounded-5 overflow-hidden">
                 
                 {{-- Modal Header --}}
@@ -289,7 +289,10 @@
                                             <option value="analis">ANALIST DATA</option>
                                             <option value="leader">TEAM LEADER</option>
                                             <option value="sales">SALES / CASHIER</option>
-                                            <option value="gudang">INVENTORY STAFF</option>
+                                            
+                                            {{-- GABUNGAN DISTRIBUTOR & GUDANG --}}
+                                            <option value="gudang">INVENTORY STAFF (Warehouse & Distributor)</option>
+                                            
                                             <option value="security">SECURITY</option>
                                         </select>
                                         <label for="roleSelect" class="text-dark fw-bold">User Role</label>
@@ -299,7 +302,7 @@
                             </div>
 
                             {{-- DYNAMIC LOCATION --}}
-                            @if($role && !in_array($role, ['superadmin', 'audit', 'distributor', 'gudang']))
+                            @if($role && !in_array($role, ['superadmin', 'audit']))
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="form-floating">
                                         <select class="form-select bg-warning-subtle border-0 text-dark fw-bold rounded-4" id="branchSelect" wire:model="cabang_id">
@@ -314,39 +317,23 @@
                                 </div>
                             @endif
 
+                            {{-- MULTI CABANG (AUDIT) --}}
                             @if($role === 'audit')
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="bg-light border rounded-4 p-4">
                                         <label class="d-block text-dark fw-bold mb-3 small text-uppercase">Audit Coverage Area</label>
-                                        <div class="row g-2" style="max-height: 150px; overflow-y: auto;">
+                                        <div class="d-flex flex-wrap gap-2" style="max-height: 200px; overflow-y: auto;">
                                             @foreach($cabangs as $c)
-                                                <div class="col-md-6">
-                                                    <div class="form-check bg-white p-3 rounded-3 border h-100">
-                                                        <input class="form-check-input me-2 shadow-none cursor-pointer" type="checkbox" value="{{ $c->id }}" wire:model="selected_branches" id="chk_{{ $c->id }}">
-                                                        <label class="form-check-label fw-bold small text-dark cursor-pointer stretched-link" for="chk_{{ $c->id }}">
-                                                            {{ $c->nama_cabang }}
-                                                        </label>
-                                                    </div>
+                                                <div class="form-check bg-white px-3 py-2 rounded-3 border d-inline-flex align-items-center">
+                                                    <input class="form-check-input me-2 shadow-none cursor-pointer" type="checkbox" value="{{ $c->id }}" wire:model="selected_branches" id="chk_{{ $c->id }}">
+                                                    <label class="form-check-label fw-bold small text-dark cursor-pointer stretched-link" for="chk_{{ $c->id }}">
+                                                        {{ $c->nama_cabang }}
+                                                    </label>
                                                 </div>
                                             @endforeach
                                         </div>
                                     </div>
                                     @error('selected_branches') <span class="text-danger extra-small fw-bold ms-2">{{ $message }}</span> @enderror
-                                </div>
-                            @endif
-
-                            @if($role === 'distributor')
-                                <div class="col-12 animate__animated animate__fadeIn">
-                                    <div class="form-floating">
-                                        <select class="form-select bg-primary-subtle border-0 text-dark fw-bold rounded-4" wire:model="distributor_id">
-                                            <option value="">Select Partner</option>
-                                            @foreach($distributors as $dist)
-                                                <option value="{{ $dist->id }}">{{ $dist->nama_distributor }}</option>
-                                            @endforeach
-                                        </select>
-                                        <label class="text-primary fw-bold">Partner Affiliation</label>
-                                    </div>
-                                    @error('distributor_id') <span class="text-danger extra-small fw-bold ms-2">{{ $message }}</span> @enderror
                                 </div>
                             @endif
 
@@ -386,13 +373,6 @@
     @endteleport
 
     <style>
-        /* Mobile Spacer untuk mengatasi 'ketutupan' */
-        @media (max-width: 991px) {
-            .mobile-spacer {
-                padding-top: 80px !important; /* Dorong konten ke bawah di HP */
-            }
-        }
-
         /* Typography */
         .fw-black { font-weight: 900; }
         .tracking-tight { letter-spacing: -0.025em; }
