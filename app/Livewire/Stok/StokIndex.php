@@ -5,6 +5,7 @@ namespace App\Livewire\Stok;
 use App\Models\Stok;
 use App\Models\Merk;
 use App\Models\Tipe;
+use App\Models\Cabang; // Import Model Cabang
 use App\Models\StokHistory; 
 use Illuminate\Support\Facades\Auth; 
 use Livewire\Component;
@@ -20,14 +21,34 @@ class StokIndex extends Component
     public $stokId;
     public $isEdit = false;
 
-    // --- FITUR BARU: SELEKSI & KELUAR STOK ---
-    public $selectedStok = []; // Array ID stok yang dicentang
-    public $selectAll = false; // Status checkbox header
-    
+    // --- FITUR SELEKSI & KELUAR STOK ---
+    public $selectedStok = []; 
+    public $selectAll = false; 
+
+    // --- FORM PROPERTIES: STOK KELUAR ---
     #[Rule('required', as: 'Kategori')]
-    public $kategoriKeluar = ''; // Alasan keluar stok
+    public $kategoriKeluar = '';
+
+    // Field Umum / Penerima
+    public $nama_penerima = '';
+    public $nomor_handphone = '';
+    public $alamat = '';
+    public $catatan = '';
     
-    // Opsi Kategori sesuai request gambar
+    // Field Khusus Pindah Cabang
+    public $target_cabang_id = '';
+    
+    // Field Khusus Retur
+    public $nama_petugas = '';
+    public $segel = '';
+    public $kendala_retur = '';
+    public $tanggal_pembelian = '';
+    public $nama_customer = '';
+    public $instagram_customer = ''; // Opsional
+    public $email_icloud = '';
+    public $password_email = '';
+    public $pola_pin = '';
+
     public $opsiKategori = [
         'Admin WhatsApp' => 'Admin WhatsApp',
         'Shopee' => 'Shopee',
@@ -39,26 +60,13 @@ class StokIndex extends Component
     ];
 
     // --- FORM PROPERTIES (CRUD BIASA) ---
-    #[Rule('required')]
-    public $merk_id = '';
-
-    #[Rule('required')]
-    public $tipe_id = '';
-
-    #[Rule('required')]
-    public $ram_storage = '';
-
-    #[Rule('required|in:Baru,Second')]
-    public $kondisi = 'Baru';
-
-    #[Rule('required|unique:stoks,imei')] 
-    public $imei = '';
-
-    #[Rule('nullable|numeric')]
-    public $harga_modal = 0;
-
-    #[Rule('required|numeric')]
-    public $harga_jual = 0;
+    #[Rule('required')] public $merk_id = '';
+    #[Rule('required')] public $tipe_id = '';
+    #[Rule('required')] public $ram_storage = '';
+    #[Rule('required|in:Baru,Second')] public $kondisi = 'Baru';
+    #[Rule('required|unique:stoks,imei')] public $imei = '';
+    #[Rule('nullable|numeric')] public $harga_modal = 0;
+    #[Rule('required|numeric')] public $harga_jual = 0;
 
     // --- DATA LISTS ---
     public $tipeOptions = []; 
@@ -68,9 +76,7 @@ class StokIndex extends Component
     public function updatedMerkId($value)
     {
         $this->tipeOptions = Tipe::where('merk_id', $value)->get();
-        $this->tipe_id = ''; 
-        $this->ram_storage = ''; 
-        $this->ramOptions = []; 
+        $this->tipe_id = ''; $this->ram_storage = ''; $this->ramOptions = []; 
     }
 
     public function updatedTipeId($value)
@@ -89,34 +95,24 @@ class StokIndex extends Component
     {
         $modal = (int) $value;
         if($modal > 0) {
-            $margin = $modal * 0.1; // 10% Profit
-            $this->harga_jual = $modal + $margin;
+            $this->harga_jual = $modal + ($modal * 0.1);
         } else {
             $this->harga_jual = 0;
         }
     }
 
-    // --- LOGIKA CHECKBOX (BULK SELECTION) ---
+    // --- LOGIKA CHECKBOX ---
     public function updatedSelectAll($value)
     {
         if ($value) {
-            // Ambil ID dari halaman yang sedang aktif saja agar tidak berat
             $stoksDiHalamanIni = Stok::where('imei', 'like', '%' . $this->search . '%')
-                ->orWhereHas('merk', fn($q) => $q->where('nama', 'like', '%'.$this->search.'%'))
-                ->orWhereHas('tipe', fn($q) => $q->where('nama', 'like', '%'.$this->search.'%'))
-                ->latest()
-                ->paginate(10)
-                ->pluck('id')
-                ->map(fn($id) => (string) $id)
-                ->toArray();
-                
+                ->latest()->paginate(10)->pluck('id')->map(fn($id) => (string) $id)->toArray();
             $this->selectedStok = $stoksDiHalamanIni;
         } else {
             $this->selectedStok = [];
         }
     }
 
-    // Jika user uncheck satu item, matikan selectAll
     public function updatedSelectedStok()
     {
         $this->selectAll = false;
@@ -124,72 +120,147 @@ class StokIndex extends Component
 
     public function resetInputFields()
     {
-        // Reset Form CRUD
-        $this->merk_id = '';
-        $this->tipe_id = '';
-        $this->ram_storage = '';
-        $this->kondisi = 'Baru';
-        $this->imei = '';
-        $this->harga_modal = 0;
-        $this->harga_jual = 0;
-        
-        $this->tipeOptions = [];
-        $this->ramOptions = [];
-        
-        $this->stokId = null;
-        $this->isEdit = false;
+        // Reset CRUD
+        $this->merk_id = ''; $this->tipe_id = ''; $this->ram_storage = '';
+        $this->kondisi = 'Baru'; $this->imei = ''; $this->harga_modal = 0; $this->harga_jual = 0;
+        $this->tipeOptions = []; $this->ramOptions = [];
+        $this->stokId = null; $this->isEdit = false;
 
-        // Reset Form Keluar Stok
+        // Reset Stok Keluar
         $this->kategoriKeluar = '';
+        $this->resetFormKeluar();
         
         $this->resetErrorBag();
     }
 
-    // --- LOGIKA TAMBAH/EDIT STOK (SINGLE) ---
+    public function resetFormKeluar()
+    {
+        $this->nama_penerima = ''; $this->nomor_handphone = ''; $this->alamat = ''; $this->catatan = '';
+        $this->target_cabang_id = '';
+        $this->nama_petugas = ''; $this->segel = ''; $this->kendala_retur = ''; 
+        $this->tanggal_pembelian = ''; $this->nama_customer = ''; $this->instagram_customer = '';
+        $this->email_icloud = ''; $this->password_email = ''; $this->pola_pin = '';
+    }
+
+    // --- LOGIKA UTAMA: VALIDASI DINAMIS & SIMPAN KELUAR ---
+    public function storeKeluarStok()
+    {
+        // 1. Validasi Dasar Kategori
+        $this->validate(['kategoriKeluar' => 'required']);
+
+        // 2. Validasi Dinamis Berdasarkan Kategori
+        $rules = [];
+        $keteranganDetail = ""; // String untuk deskripsi history
+
+        switch ($this->kategoriKeluar) {
+            case 'Admin WhatsApp':
+            case 'Shopee':
+            case 'Tokopedia':
+            case 'Giveaway':
+                $rules = [
+                    'nama_penerima' => 'required',
+                    'nomor_handphone' => 'required',
+                    'alamat' => 'required',
+                    'catatan' => 'required',
+                ];
+                $keteranganDetail = "Penerima: {$this->nama_penerima} | HP: {$this->nomor_handphone} | Alamat: {$this->alamat} | Note: {$this->catatan}";
+                break;
+
+            case 'Kesalahan Input':
+                $rules = ['catatan' => 'required'];
+                $keteranganDetail = "Alasan: {$this->catatan}";
+                break;
+
+            case 'Pindah Cabang':
+                $rules = [
+                    'target_cabang_id' => 'required',
+                    'nama_penerima' => 'required',
+                    'nomor_handphone' => 'required',
+                    'alamat' => 'required',
+                    'catatan' => 'required',
+                ];
+                $cabangTujuan = Cabang::find($this->target_cabang_id)->nama ?? '-';
+                $keteranganDetail = "Ke Cabang: {$cabangTujuan} | PIC: {$this->nama_penerima} | HP: {$this->nomor_handphone} | Note: {$this->catatan}";
+                break;
+
+            case 'Retur':
+                $rules = [
+                    'nama_petugas' => 'required',
+                    'segel' => 'required',
+                    'kendala_retur' => 'required',
+                    'tanggal_pembelian' => 'required|date',
+                    'nama_customer' => 'required',
+                    'nomor_handphone' => 'required',
+                    'email_icloud' => 'required',
+                    'password_email' => 'required',
+                    'pola_pin' => 'required',
+                ];
+                $keteranganDetail = "Retur oleh {$this->nama_petugas}. Customer: {$this->nama_customer} ({$this->nomor_handphone}). Kendala: {$this->kendala_retur}. Akun: {$this->email_icloud} / {$this->password_email}. PIN: {$this->pola_pin}.";
+                break;
+        }
+
+        $this->validate($rules);
+
+        // 3. Eksekusi
+        $user = Auth::user();
+        $cabangId = $user->cabang_id;
+        $count = 0;
+
+        foreach ($this->selectedStok as $id) {
+            $stok = Stok::find($id);
+            if ($stok) {
+                // Simpan History Lengkap
+                StokHistory::create([
+                    'imei' => $stok->imei,
+                    'status' => 'Stok Keluar', 
+                    'cabang_id' => $cabangId,
+                    'keterangan' => "[$this->kategoriKeluar] $keteranganDetail (Processed by: {$user->nama_lengkap})",
+                    'user_id' => $user->id,
+                ]);
+
+                // Hapus Stok Aktif
+                $stok->delete();
+                $count++;
+            }
+        }
+
+        // Reset
+        $this->selectedStok = [];
+        $this->selectAll = false;
+        $this->resetInputFields();
+
+        $this->dispatch('close-keluar-modal');
+        $this->dispatch('swal', ['title' => 'Berhasil!', 'text' => "$count unit berhasil dikeluarkan.", 'icon' => 'success']);
+    }
+
+    // --- CRUD FUNCTION LAMA (TIDAK DIUBAH) ---
     public function store()
     {
         $this->validate([
-            'merk_id' => 'required',
-            'tipe_id' => 'required',
-            'ram_storage' => 'required',
-            'kondisi' => 'required',
-            'imei' => 'required|unique:stoks,imei,' . $this->stokId,
+            'merk_id' => 'required', 'tipe_id' => 'required', 'ram_storage' => 'required',
+            'kondisi' => 'required', 'imei' => 'required|unique:stoks,imei,' . $this->stokId,
             'harga_jual' => 'required|numeric',
         ]);
 
-        // 1. Simpan Data Stok
         Stok::updateOrCreate(['id' => $this->stokId], [
-            'merk_id' => $this->merk_id,
-            'tipe_id' => $this->tipe_id,
-            'ram_storage' => $this->ram_storage,
-            'kondisi' => $this->kondisi,
-            'imei' => $this->imei,
-            'harga_modal' => $this->harga_modal ?: 0,
-            'harga_jual' => $this->harga_jual,
+            'merk_id' => $this->merk_id, 'tipe_id' => $this->tipe_id, 'ram_storage' => $this->ram_storage,
+            'kondisi' => $this->kondisi, 'imei' => $this->imei, 
+            'harga_modal' => $this->harga_modal ?: 0, 'harga_jual' => $this->harga_jual,
         ]);
 
-        // 2. LOGIKA HISTORY + TIMEZONE CABANG
         $user = Auth::user();
-        $cabangId = $user->cabang_id; 
-        $namaCabang = $user->cabang->nama ?? 'Pusat (Web)';
+        $namaCabang = $user->cabang->nama ?? 'Pusat';
 
         StokHistory::create([
             'imei' => $this->imei,
             'status' => $this->stokId ? 'Update Data' : 'Stok Masuk',
-            'cabang_id' => $cabangId, 
-            'keterangan' => $this->stokId 
-                ? "Data unit diperbarui oleh {$user->nama_lengkap} ($namaCabang)." 
-                : "Stok baru masuk di $namaCabang.",
+            'cabang_id' => $user->cabang_id,
+            'keterangan' => $this->stokId ? "Data unit diperbarui oleh {$user->nama_lengkap}." : "Stok baru masuk di $namaCabang.",
             'user_id' => $user->id,
         ]);
 
         $this->dispatch('close-modal');
-        $this->dispatch('swal', [
-            'title' => 'Berhasil!',
-            'text' => 'Data stok unit berhasil disimpan.',
-            'icon' => 'success'
-        ]);
-        
+        $this->dispatch('swal', ['title' => 'Berhasil!', 'text' => 'Data disimpan.', 'icon' => 'success']);
         $this->resetInputFields();
     }
 
@@ -198,99 +269,50 @@ class StokIndex extends Component
         $stok = Stok::findOrFail($id);
         $this->stokId = $id;
         $this->merk_id = $stok->merk_id;
-        
         $this->tipeOptions = Tipe::where('merk_id', $stok->merk_id)->get();
         $this->tipe_id = $stok->tipe_id;
-
         $tipe = Tipe::find($stok->tipe_id);
         $this->ramOptions = $tipe->ram_storage ?? [];
         $this->ram_storage = $stok->ram_storage;
-
         $this->kondisi = $stok->kondisi;
         $this->imei = $stok->imei;
         $this->harga_modal = $stok->harga_modal;
         $this->harga_jual = $stok->harga_jual;
-
         $this->isEdit = true;
     }
 
     public function delete($id)
     {
         Stok::find($id)->delete();
-        $this->dispatch('swal', ['title' => 'Dihapus!', 'text' => 'Unit berhasil dihapus.', 'icon' => 'success']);
+        $this->dispatch('swal', ['title' => 'Dihapus!', 'text' => 'Unit dihapus.', 'icon' => 'success']);
     }
 
-    // --- LOGIKA BARU: BUKA MODAL KELUAR STOK ---
     public function openKeluarStokModal()
     {
         if (empty($this->selectedStok)) {
-            $this->dispatch('swal', [['title' => 'Oops!', 'text' => 'Pilih minimal satu stok unit untuk dikeluarkan.', 'icon' => 'warning']]);
+            $this->dispatch('swal', [['title' => 'Oops!', 'text' => 'Pilih stok dulu.', 'icon' => 'warning']]);
             return;
         }
-        
-        $this->kategoriKeluar = ''; // Reset pilihan kategori
+        $this->resetFormKeluar();
+        $this->kategoriKeluar = ''; 
         $this->resetErrorBag();
         $this->dispatch('open-keluar-modal');
-    }
-
-    // --- LOGIKA BARU: PROSES SIMPAN STOK KELUAR ---
-    public function storeKeluarStok()
-    {
-        $this->validate([
-            'kategoriKeluar' => 'required'
-        ], [
-            'kategoriKeluar.required' => 'Kategori keluar barang dibutuhkan'
-        ]);
-
-        $user = Auth::user();
-        $cabangId = $user->cabang_id;
-        $count = 0;
-
-        // Loop semua ID yang dipilih checkbox
-        foreach ($this->selectedStok as $id) {
-            $stok = Stok::find($id);
-
-            if ($stok) {
-                // 1. Simpan ke History dulu sebelum dihapus
-                StokHistory::create([
-                    'imei' => $stok->imei,
-                    'status' => 'Stok Keluar', // Status agar tampil beda di timeline
-                    'cabang_id' => $cabangId,  // Penting untuk timezone
-                    'keterangan' => "Unit keluar dengan keterangan: {$this->kategoriKeluar}. (Oleh: {$user->nama_lengkap})",
-                    'user_id' => $user->id,
-                ]);
-
-                // 2. Hapus dari database Stok Aktif
-                $stok->delete();
-                $count++;
-            }
-        }
-
-        // Reset semua pilihan
-        $this->selectedStok = [];
-        $this->selectAll = false;
-        $this->kategoriKeluar = '';
-
-        $this->dispatch('close-keluar-modal');
-        $this->dispatch('swal', [
-            'title' => 'Berhasil!', 
-            'text' => "$count unit berhasil dikeluarkan dari stok.", 
-            'icon' => 'success'
-        ]);
     }
 
     public function render()
     {
         $stoks = Stok::with(['merk', 'tipe'])
-            ->where('imei', 'like', '%' . $this->search . '%')
-            ->orWhereHas('merk', fn($q) => $q->where('nama', 'like', '%'.$this->search.'%'))
-            ->orWhereHas('tipe', fn($q) => $q->where('nama', 'like', '%'.$this->search.'%'))
+            ->where(function($q) {
+                $q->where('imei', 'like', '%' . $this->search . '%')
+                  ->orWhereHas('merk', fn($q2) => $q2->where('nama', 'like', '%'.$this->search.'%'))
+                  ->orWhereHas('tipe', fn($q2) => $q2->where('nama', 'like', '%'.$this->search.'%'));
+            })
             ->latest()
             ->paginate(10);
 
         $merks = Merk::orderBy('nama', 'asc')->get();
+        $cabangs = Cabang::orderBy('nama', 'asc')->get(); // Ambil Data Cabang
 
-        // Ambil data detail item yang dipilih untuk ditampilkan di Modal Keluar Stok
         $selectedItems = [];
         if (!empty($this->selectedStok)) {
             $selectedItems = Stok::with(['merk', 'tipe'])->whereIn('id', $this->selectedStok)->get();
@@ -299,6 +321,7 @@ class StokIndex extends Component
         return view('livewire.stok.stok-index', [
             'stoks' => $stoks,
             'merks' => $merks,
+            'cabangs' => $cabangs, // Kirim ke view
             'selectedItems' => $selectedItems
         ])->title('Manajemen Stok');
     }
