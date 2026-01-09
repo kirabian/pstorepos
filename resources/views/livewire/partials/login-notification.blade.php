@@ -1,28 +1,29 @@
 <div>
-    {{-- Audio Element (Hidden) --}}
-    {{-- Ganti URL CDN Pixabay karena error 403 Forbidden, gunakan asset lokal atau URL lain --}}
-    {{-- Jika pakai asset lokal, pastikan file ada di public/audio/notif.mp3 --}}
+    {{-- Audio Element --}}
     <audio id="loginSound" src="{{ asset('images/notif.mp3') }}" preload="auto"></audio>
 
     @if(count($channels) > 0)
         @script
         <script>
-            // Ambil data channel
+            // Gunakan LET agar tidak error re-declaration di Livewire
             let activeChannels = @json($channels);
             let audioEl = document.getElementById('loginSound');
 
-            // Cek apakah Echo sudah ada
+            // Cek apakah Echo sudah terload
             if (typeof window.Echo === 'undefined') {
                 console.error('Laravel Echo BELUM dimuat. Cek bootstrap.js & app.js');
             } else {
                 console.log('Mendengarkan channel:', activeChannels);
 
                 activeChannels.forEach((channelName) => {
+                    // Pastikan unsubscribe dulu jika ada sisa subscription lama (opsional tapi aman)
+                    window.Echo.leave(channelName);
+
                     window.Echo.private(channelName)
                         .listen('.user.logged.in', (e) => {
-                            console.log('🔔 NOTIFIKASI MASUK:', e);
+                            console.log('🔔 NOTIFIKASI LOGIN:', e);
 
-                            // 1. Play Audio (User Interaction Policy mungkin memblokir ini)
+                            // 1. Play Audio
                             if (audioEl) {
                                 audioEl.currentTime = 0;
                                 audioEl.play().catch(err => {
