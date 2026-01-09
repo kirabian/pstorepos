@@ -12,7 +12,9 @@ class BroadcastServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Broadcast::routes();
+        // PENTING: Kita paksa middleware 'web' dan 'auth'
+        // agar user yang login terdeteksi saat request auth channel.
+        Broadcast::routes(['middleware' => ['web', 'auth']]);
 
         require base_path('routes/channels.php');
     }

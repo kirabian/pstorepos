@@ -3,26 +3,27 @@
 use Illuminate\Support\Facades\Broadcast;
 use App\Models\User;
 
-// Channel Pribadi User
+/*
+|--------------------------------------------------------------------------
+| Broadcast Channels
+|--------------------------------------------------------------------------
+*/
+
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
-// 1. Channel Superadmin (Hanya Superadmin yg bisa dengar)
-Broadcast::channel('superadmin-notify', function (User $user) {
+// Channel GLOBAL untuk Superadmin
+Broadcast::channel('superadmin-notify', function ($user) {
+    // Return true jika user boleh dengar channel ini
     return $user->role === 'superadmin';
 });
 
-// 2. Channel Cabang (Superadmin & Audit yg pegang cabang tsb yg bisa dengar)
-Broadcast::channel('branch-notify.{branchId}', function (User $user, $branchId) {
-    if ($user->role === 'superadmin') {
-        return true;
-    }
-    
+// Channel Per-Cabang
+Broadcast::channel('branch-notify.{branchId}', function ($user, $branchId) {
+    if ($user->role === 'superadmin') return true;
     if ($user->role === 'audit') {
-        // Pastikan akses_cabang_ids ada di Model User
         return in_array($branchId, $user->access_cabang_ids ?? []);
     }
-
     return false;
 });
