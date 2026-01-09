@@ -31,6 +31,6 @@ class LoginNotification extends Component
 
     public function render()
     {
-        return view('livewire.partials.login-notification');
+        return view('partials.login-notification');
     }
 }
