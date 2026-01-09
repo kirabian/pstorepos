@@ -26,14 +26,42 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-// Hapus: use Illuminate\Support\Facades\Broadcast; (Tidak perlu di sini lagi)
-
 /*
 |--------------------------------------------------------------------------
 | Autentikasi Publik (Guest)
 |--------------------------------------------------------------------------
 */
 Route::get('/login', Login::class)->name('login')->middleware('guest');
+
+// [PINDAHKAN KE SINI - AREA PUBLIK]
+// Agar bisa diakses CURL tanpa login terlebih dahulu
+Route::get('/debug-login/{id}', function ($id) {
+    // 1. Cari user
+    $user = User::find($id);
+
+    if (! $user) {
+        return response()->json(['error' => 'User not found'], 404);
+    }
+
+    // 2. Login paksa
+    Auth::login($user);
+
+    // 3. Update status online
+    $user->update([
+        'last_seen' => now(),
+        'is_online' => true,
+    ]);
+
+    // 4. Trigger Event Notifikasi
+    event(new UserLoggedIn($user));
+
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Login Berhasil & Event Dikirim',
+        'user' => $user->nama_lengkap,
+        'role' => $user->role,
+    ]);
+});
 
 Route::post('/logout', function () {
     if (Auth::check()) {
@@ -72,7 +100,6 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::middleware('can:superadmin-only')->group(function () {
-
         Route::get('/online-shops', OnlineShopIndex::class)->name('online-shop.index');
 
         // Manajemen Distributor
@@ -95,7 +122,6 @@ Route::middleware(['auth', 'active.user'])->group(function () {
         // Master Data Produk
         Route::get('/merk', MerkIndex::class)->name('merk.index');
         Route::get('/tipe', TipeIndex::class)->name('tipe.index');
-
     });
 
     /* |--------------------------------------------------------------------------
@@ -112,45 +138,16 @@ Route::middleware(['auth', 'active.user'])->group(function () {
         ->name('stock-opname.index')
         ->middleware('checkRole:gudang');
 
-    // Route Test Notifikasi
+    // Route Test Notifikasi (Ini tetap di dalam Auth karena butuh user yg sedang login)
     Route::get('/test-notif', function () {
         $user = Auth::user();
         event(new UserLoggedIn($user));
 
         return 'Notifikasi dikirim! Cek tab sebelah.';
-    })->middleware('auth');
+    });
 
     Route::get('/test-broadcast', function () {
         broadcast(new \App\Events\UserLoggedIn(\App\Models\User::first()));
-
         return 'Event broadcasted!';
-    });
-
-    Route::get('/debug-login/{id}', function ($id) {
-        // 1. Cari user
-        $user = User::find($id);
-
-        if (! $user) {
-            return response()->json(['error' => 'User not found'], 404);
-        }
-
-        // 2. Login paksa
-        Auth::login($user);
-
-        // 3. Update status online (untuk testing middleware active.user)
-        $user->update([
-            'last_seen' => now(),
-            'is_online' => true,
-        ]);
-
-        // 4. Trigger Event Notifikasi
-        event(new UserLoggedIn($user));
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Login Berhasil & Event Dikirim',
-            'user' => $user->nama_lengkap,
-            'role' => $user->role,
-        ]);
     });
 });
