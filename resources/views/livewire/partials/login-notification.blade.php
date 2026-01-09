@@ -1,85 +1,87 @@
 <div>
-    {{-- Elemen Audio & Data Wajib ada di dalam root div --}}
+    {{-- Audio Element (Hidden) --}}
     <audio id="loginSound" src="{{ asset('images/notif.mp3') }}" preload="auto" style="display: none;"></audio>
+
+    {{-- Data Channel --}}
     <div id="notification-channels-data" data-channels="{{ json_encode($channels) }}" style="display: none;"></div>
-</div>
 
-@push('scripts')
-<script>
-    // Fungsi inisialisasi yang aman dipanggil berulang kali
-    window.initLoginNotification = function() {
-        const dataEl = document.getElementById('notification-channels-data');
-        if (!dataEl) return;
+    <script>
+        document.addEventListener('livewire:navigated', () => {
+            initLoginNotification();
+        });
 
-        let activeChannels = [];
-        try {
-            const rawData = dataEl.getAttribute('data-channels');
-            if (rawData) activeChannels = JSON.parse(rawData);
-        } catch (e) {
-            console.error("Gagal parse channel notifikasi:", e);
-            return;
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            initLoginNotification();
+        });
 
-        const audioEl = document.getElementById('loginSound');
+        function initLoginNotification() {
+            const dataEl = document.getElementById('notification-channels-data');
+            if (!dataEl) return;
 
-        if (typeof window.Echo === 'undefined') {
-            console.warn('Laravel Echo belum siap.');
-            return;
-        }
+            let activeChannels = [];
+            try {
+                activeChannels = JSON.parse(dataEl.getAttribute('data-channels'));
+            } catch (e) { return; }
 
-        if (activeChannels.length > 0) {
-            console.log('Mendengarkan Channel:', activeChannels);
+            const audioEl = document.getElementById('loginSound');
 
-            activeChannels.forEach((channelName) => {
-                window.Echo.leave(channelName); // Hindari duplikasi listener
+            if (typeof window.Echo === 'undefined') {
+                console.error('Laravel Echo ERROR: Pastikan npm run build sudah dijalankan.');
+                return;
+            }
 
-                window.Echo.private(channelName)
-                    .listen('.user.logged.in', (e) => {
-                        console.log('🔔 NOTIFIKASI LOGIN:', e);
+            if (activeChannels.length > 0) {
+                console.log('Mendengarkan Channel:', activeChannels);
 
-                        // Play Audio
-                        if (audioEl) {
-                            audioEl.currentTime = 0;
-                            audioEl.play().catch(err => console.log('Autoplay blocked'));
-                        }
+                activeChannels.forEach((channelName) => {
+                    window.Echo.leave(channelName);
 
-                        // Tampilkan SweetAlert
-                        if (typeof Swal !== 'undefined') {
+                    window.Echo.private(channelName)
+                        // PENTING: Pakai titik (.) di depan nama class broadcastAs
+                        .listen('.UserLoginEvent', (e) => {
+                            console.log('🔔 NOTIFIKASI MASUK:', e);
+
+                            // 1. Play Audio
+                            if (audioEl) {
+                                audioEl.currentTime = 0;
+                                // Interaksi user diperlukan browser modern, tapi sweetalert biasanya memicu ini
+                                audioEl.play().catch(err => console.warn('Audio blocked:', err));
+                            }
+
+                            // 2. SweetAlert
                             Swal.fire({
-                                title: 'User Login Terdeteksi!',
+                                title: 'User Baru Saja Login!',
                                 html: `
                                     <div class="d-flex align-items-center gap-3 text-start">
-                                        <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
-                                            <i class="fas fa-user"></i>
+                                        <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width:45px;height:45px;">
+                                            <i class="fas fa-user-check fa-lg"></i>
                                         </div>
                                         <div>
-                                            <div class="fw-bold fs-5">${e.user_name}</div>
-                                            <div class="text-muted small text-uppercase">${e.user_role}</div>
-                                            <div class="text-primary small fw-bold"><i class="fas fa-map-marker-alt me-1"></i> ${e.location}</div>
+                                            <div class="fw-bold fs-5 text-dark">${e.user_name}</div>
+                                            <div class="badge bg-dark text-white mb-1">${e.user_role}</div>
+                                            <div class="text-secondary small fw-bold">
+                                                <i class="fas fa-map-marker-alt me-1 text-danger"></i> ${e.location}
+                                            </div>
                                         </div>
                                     </div>
                                 `,
                                 position: 'top-end',
-                                icon: 'info',
-                                toast: true,
                                 showConfirmButton: false,
-                                timer: 5000,
+                                timer: 6000,
                                 timerProgressBar: true,
+                                background: '#ffffff',
+                                color: '#000',
+                                customClass: {
+                                    popup: 'shadow-lg border-start border-5 border-dark rounded-4'
+                                },
                                 didOpen: (toast) => {
                                     toast.onmouseenter = Swal.stopTimer;
                                     toast.onmouseleave = Swal.resumeTimer;
                                 }
                             });
-                        }
-                    });
-            });
+                        });
+                });
+            }
         }
-    };
-
-    // Jalankan saat navigasi Livewire (SPA)
-    document.addEventListener('livewire:navigated', window.initLoginNotification);
-    
-    // Jalankan saat load pertama kali
-    document.addEventListener('DOMContentLoaded', window.initLoginNotification);
-</script>
-@endpush
+    </script>
+</div>

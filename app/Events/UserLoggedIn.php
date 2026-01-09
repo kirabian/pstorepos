@@ -7,7 +7,7 @@ use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow; // <-- PENTING
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow; // Wajib Now agar instan
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
@@ -24,7 +24,7 @@ class UserLoggedIn implements ShouldBroadcastNow
     public function __construct(User $user)
     {
         $this->user_name = $user->nama_lengkap;
-        $this->user_role = str_replace('_', ' ', strtoupper($user->role));
+        $this->user_role = strtoupper($user->role);
         $this->cabang_id = $user->cabang_id;
         $this->distributor_id = $user->distributor_id;
 
@@ -40,25 +40,21 @@ class UserLoggedIn implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         $channels = [];
-
-        // Channel Superadmin
         $channels[] = new PrivateChannel('superadmin-notify');
 
-        // Channel Cabang
         if ($this->cabang_id) {
             $channels[] = new PrivateChannel('branch-notify.' . $this->cabang_id);
         }
-
-        // Channel Distributor
-        if ($this->distributor_id) {
-            $channels[] = new PrivateChannel('distributor-notify.' . $this->distributor_id);
-        }
+        
+        // Debugging: Cek log laravel.log jika event ini terpanggil
+        \Illuminate\Support\Facades\Log::info('Broadcasting to channels:', $channels);
 
         return $channels;
     }
 
     public function broadcastAs()
     {
-        return 'user.logged.in';
+        // Ganti nama jadi simpel tanpa titik
+        return 'UserLoginEvent';
     }
 }

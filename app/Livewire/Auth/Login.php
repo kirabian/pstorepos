@@ -41,14 +41,13 @@ class Login extends Component
             // ======================================================
             // 5. TRIGGER EVENT NOTIFIKASI REALTIME
             // ======================================================
-            try {
-                // Opsional: Jangan kirim notif jika yang login adalah Superadmin/Audit sendiri
-                if (!in_array($user->role, ['superadmin', 'audit'])) {
+           try {
+                // HAPUS IF INI SEMENTARA AGAR MUDAH DITEST
+                // if (!in_array($user->role, ['superadmin', 'audit'])) {
                     UserLoggedIn::dispatch($user);
-                }
+                // }
             } catch (\Exception $e) {
-                // Silent fail: Jika Reverb mati, login tetap lanjut tanpa error
-                Log::error("Gagal mengirim notifikasi login: " . $e->getMessage());
+                Log::error("Gagal broadcast: " . $e->getMessage());
             }
             // ======================================================
 
