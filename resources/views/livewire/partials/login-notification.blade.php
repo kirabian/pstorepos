@@ -1,75 +1,47 @@
 <div>
-    {{-- Audio Element --}}
+    {{-- Audio Element (Hidden) --}}
     <audio id="loginSound" src="{{ asset('images/notif.mp3') }}" preload="auto" style="display: none;"></audio>
 
-    {{-- Data Channel --}}
-    <div id="notification-channels-data" data-channels="{{ json_encode($channels) }}" style="display: none;"></div>
-
+    {{-- Script Livewire 3 (Must be inside the root div) --}}
+    @script
     <script>
-        document.addEventListener('livewire:navigated', () => {
-            initLoginNotification();
-        });
+        // Access PHP property directly
+        const channels = $wire.channels; 
+        const audioEl = document.getElementById('loginSound');
 
-        document.addEventListener('DOMContentLoaded', () => {
-            initLoginNotification();
-        });
-
-        function initLoginNotification() {
-            // 1. Ambil Data Channel
-            const dataEl = document.getElementById('notification-channels-data');
-            if (!dataEl) return;
-
-            let activeChannels = [];
-            try {
-                const rawData = dataEl.getAttribute('data-channels');
-                if (rawData) activeChannels = JSON.parse(rawData);
-            } catch (e) { return; }
-
-            if (!activeChannels || activeChannels.length === 0) return;
-
-            // 2. Cek Pusher/Echo
-            if (typeof window.Echo === 'undefined') {
-                console.error('❌ Laravel Echo Error: Echo tidak terload. Cek npm run build.');
-                return;
-            }
-
-            // 3. AKTIFKAN DEBUG LOGGING (PENTING BUAT CEK)
-            if (typeof window.Pusher !== 'undefined') {
-                window.Pusher.logToConsole = true; // <-- Ini akan memunculkan log Pusher di Console
-            }
-
-            console.log('📡 System Ready. Listening on:', activeChannels);
-
-            const audioEl = document.getElementById('loginSound');
-
-            // 4. Loop Channel & Subscribe
-            activeChannels.forEach((channelName) => {
-                window.Echo.leave(channelName); // Reset dulu
+        if (typeof window.Echo === 'undefined') {
+            console.error('Laravel Echo is not loaded.');
+        } else if (channels.length > 0) {
+            
+            channels.forEach(channelName => {
+                window.Echo.leave(channelName);
 
                 window.Echo.private(channelName)
-                    .listen('.login-event', (e) => { // <-- Perhatikan titik di depan (.login-event)
-                        console.log('🚀 EVENT DITERIMA DARI SERVER:', e);
+                    .listen('.user.logged.in', (e) => {
+                        console.log('🔔 LOGIN NOTIFICATION:', e);
 
-                        // Mainkan Suara
+                        // 1. Play Audio
                         if (audioEl) {
                             audioEl.currentTime = 0;
-                            audioEl.play().catch(err => console.warn('Audio blocked:', err));
+                            audioEl.play().catch(err => {
+                                console.log('Audio autoplay blocked.');
+                            });
                         }
 
-                        // Tampilkan Notif
+                        // 2. Show SweetAlert
                         if (typeof Swal !== 'undefined') {
                             Swal.fire({
-                                title: 'User Login Terdeteksi!',
+                                title: 'User Login Detected!',
                                 html: `
                                     <div class="d-flex align-items-center gap-3 text-start">
                                         <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width:45px;height:45px;">
-                                            <i class="fas fa-user-check fa-lg"></i>
+                                            <i class="fas fa-user fa-lg"></i>
                                         </div>
                                         <div>
                                             <div class="fw-bold fs-5">${e.user_name}</div>
-                                            <div class="badge bg-dark text-white mb-1">${e.user_role}</div>
-                                            <div class="text-secondary small fw-bold">
-                                                <i class="fas fa-map-marker-alt me-1 text-danger"></i> ${e.location}
+                                            <div class="text-muted small text-uppercase fw-bold">${e.user_role}</div>
+                                            <div class="text-primary small fw-bold mt-1">
+                                                <i class="fas fa-map-marker-alt me-1"></i> ${e.location}
                                             </div>
                                         </div>
                                     </div>
@@ -78,9 +50,10 @@
                                 showConfirmButton: false,
                                 timer: 6000,
                                 timerProgressBar: true,
+                                toast: true,
                                 background: '#fff',
                                 customClass: {
-                                    popup: 'shadow-lg border-start border-5 border-dark rounded-4'
+                                    popup: 'shadow-lg border-start border-5 border-primary rounded-4'
                                 },
                                 didOpen: (toast) => {
                                     toast.onmouseenter = Swal.stopTimer;
@@ -88,11 +61,9 @@
                                 }
                             });
                         }
-                    })
-                    .error((error) => {
-                        console.error('❌ Gagal Subscribe Channel:', channelName, error);
                     });
             });
         }
     </script>
+    @endscript
 </div>

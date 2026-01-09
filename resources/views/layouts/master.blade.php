@@ -13,19 +13,17 @@
     <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 
-    {{-- Fonts --}}
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    {{-- CSS Libraries --}}
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
 
-    {{-- Custom Styles --}}
     <style>
         :root {
             --core-black: #09090b;
             --core-white: #ffffff;
+            /* Background Abu-abu Premium agar Navbar Putih terlihat Jelas */
             --core-bg: #f2f4f7;
             --core-gray-light: #f8f9fa;
             --core-gray-border: #eee;
@@ -57,12 +55,14 @@
             position: relative;
         }
 
+        /* Logic Konten */
         main {
+            /* Hapus margin-top besar karena kita pakai sticky, bukan fixed */
             padding-top: 1rem; 
             transition: all 0.3s ease;
         }
 
-        /* Overlay Mobile */
+        /* Overlay untuk Mobile */
         #sidebar-overlay {
             display: none;
             position: fixed;
@@ -81,7 +81,7 @@
             opacity: 1;
         }
 
-        /* Custom Scrollbar */
+        /* Scrollbar Customization */
         ::-webkit-scrollbar {
             width: 5px;
             height: 5px;
@@ -96,7 +96,6 @@
             border-radius: 10px;
         }
 
-        /* Shimmer Effect */
         .shimmer {
             background: #f6f7f8;
             background-image: linear-gradient(90deg, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
@@ -105,8 +104,13 @@
         }
 
         @keyframes shim {
-            0% { background-position: -468px 0; }
-            100% { background-position: 468px 0; }
+            0% {
+                background-position: -468px 0;
+            }
+
+            100% {
+                background-position: 468px 0;
+            }
         }
     </style>
 
@@ -120,14 +124,11 @@
     <div id="wrapper">
         @auth
             @include('layouts.partials.sidebar')
-            {{-- Komponen Status Online User (Invisible) --}}
             @livewire('user-status-handler')
         @endauth
 
         <div id="content">
-            @auth 
-                @include('layouts.partials.navbar') 
-            @endauth
+            @auth @include('layouts.partials.navbar') @endauth
             
             <main class="{{ Auth::check() ? 'p-3 p-md-5' : '' }} flex-grow-1 animate__animated animate__fadeIn">
                 <div class="{{ Auth::check() ? 'container-fluid' : '' }}">
@@ -135,39 +136,37 @@
                 </div>
             </main>
             
-            @auth 
-                @include('layouts.partials.footer') 
-            @endauth
+            @auth @include('layouts.partials.footer') @endauth
         </div>
     </div>
 
-    {{-- Core Scripts --}}
     @livewireScripts
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> {{-- SweetAlert Wajib --}}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    {{-- Global Script Logic --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- Navbar Scroll Effect ---
+            // --- LOGIC NAVBAR SCROLL (ISLAND EFFECT) ---
             const navbar = document.getElementById('main-navbar');
+            
             if(navbar) {
-                const handleScroll = () => {
+                if (window.scrollY > 10) {
+                    navbar.classList.add('scrolled');
+                }
+
+                window.addEventListener('scroll', function() {
                     if (window.scrollY > 10) { 
                         navbar.classList.add('scrolled');
                     } else {
                         navbar.classList.remove('scrolled');
                     }
-                };
-                
-                handleScroll(); // Init Check
-                window.addEventListener('scroll', handleScroll);
+                });
             }
 
-            // --- Sidebar Logic ---
-            const toggleBtn = document.getElementById('sidebarToggle');
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
+            // --- Sidebar Toggle Logic ---
+            const toggleBtn = document.getElementById('sidebarToggle'),
+                sidebar = document.getElementById('sidebar'),
+                overlay = document.getElementById('sidebar-overlay');
 
             if (toggleBtn && sidebar) {
                 toggleBtn.addEventListener('click', (e) => {
@@ -175,8 +174,10 @@
                     e.stopPropagation(); 
 
                     if (window.innerWidth >= 992) {
+                        // Desktop: Minimize Sidebar
                         sidebar.classList.toggle('minimized');
                     } else {
+                        // Mobile: Show Off-Canvas
                         sidebar.classList.toggle('show-mobile');
                         if (overlay) overlay.classList.toggle('show');
                     }
@@ -197,7 +198,6 @@
                 }
             });
 
-            // --- User Idle/Online Tracker ---
             @auth
             let idleTimer;
             let isCurrentlyOffline = false;
@@ -205,35 +205,44 @@
 
             function resetIdleTimer() {
                 if (isCurrentlyOffline) {
-                    // console.log('User active again');
+                    console.log('User kembali aktif, mengirim sinyal online...');
                     Livewire.dispatch('setUserOnline');
                     isCurrentlyOffline = false;
                 }
+
                 clearTimeout(idleTimer);
+
                 idleTimer = setTimeout(() => {
-                    // console.log('User idle detected');
+                    console.log('Status: Diam terdeteksi, mengirim sinyal offline...');
                     Livewire.dispatch('setUserOffline');
                     isCurrentlyOffline = true;
                 }, statusDelay);
             }
 
             resetIdleTimer();
+
             ['mousemove', 'mousedown', 'keypress', 'touchstart', 'scroll', 'click'].forEach(evt =>
-                window.addEventListener(evt, resetIdleTimer, { passive: true })
+                window.addEventListener(evt, resetIdleTimer, {
+                    passive: true
+                })
             );
             @endauth
         });
 
-        // --- Global Livewire Events ---
         document.addEventListener('livewire:init', () => {
-            // Event Handler untuk Notifikasi Stok/Inventory (Alert Biasa)
             Livewire.on('echo:pstore-channel,inventory.updated', (event) => {
-                // Logic custom alert jika ada
+                setTimeout(() => {
+                    let alertEl = document.querySelector('.alert');
+                    if (alertEl) {
+                        alertEl.classList.add('animate__fadeOutRight');
+                        setTimeout(() => alertEl.remove(), 1000);
+                    }
+                }, 7000);
             });
 
-            // Handler SweetAlert Global
+            // Global SweetAlert Listener
             Livewire.on('swal', (data) => {
-                const payload = data[0]; 
+                const payload = data[0];
                 Swal.fire({
                     title: payload.title,
                     text: payload.text,
@@ -248,13 +257,14 @@
         });
     </script>
 
-    {{-- Komponen Notifikasi Login Realtime --}}
+    {{-- [PENTING] Masukkan Komponen Notifikasi Disini --}}
     @auth
         @livewire('partials.login-notification')
     @endauth
 
-    {{-- Slot untuk script tambahan dari komponen Livewire (Push Stack) --}}
+    {{-- Slot untuk script tambahan dari komponen Livewire --}}
     @stack('scripts')
 
 </body>
+
 </html>
