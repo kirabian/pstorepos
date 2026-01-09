@@ -15,18 +15,16 @@ class LoginNotification extends Component
 
         if (!$user) return;
 
-        // 1. Jika Superadmin, dengarkan channel global
+        // Jika Superadmin, subscribe ke channel 'superadmin-notify'
         if ($user->role === 'superadmin') {
             $this->channels[] = 'superadmin-notify';
         }
 
-        // 2. Jika Audit, dengarkan channel per-cabang yang dia pegang
+        // Jika Audit, loop semua cabang yang dipegang dan subscribe
         if ($user->role === 'audit') {
-            // Mengambil accessor getAccessCabangIdsAttribute dari Model User
-            $branchIds = $user->access_cabang_ids; 
-            
-            foreach ($branchIds as $id) {
-                $this->channels[] = 'branch-notify.' . $id;
+            $myBranches = $user->access_cabang_ids ?? [];
+            foreach ($myBranches as $branchId) {
+                $this->channels[] = 'branch-notify.' . $branchId;
             }
         }
     }
