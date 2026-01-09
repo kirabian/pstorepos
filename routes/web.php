@@ -15,6 +15,7 @@ use App\Livewire\Gudang\GudangEdit;
 use App\Livewire\Gudang\GudangIndex;
 use App\Livewire\Lacak\LacakImei;
 use App\Livewire\Merk\MerkIndex;
+use App\Livewire\OnlineShop\OnlineShopIndex;
 use App\Livewire\Stok\StokIndex;
 use App\Livewire\Tipe\TipeIndex;
 use App\Livewire\User\UserCreate;
@@ -68,6 +69,8 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::middleware('can:superadmin-only')->group(function () {
+
+        Route::get('/online-shops', OnlineShopIndex::class)->name('online-shop.index')->middleware('checkRole:superadmin');
 
         // Manajemen Distributor
         Route::prefix('distributors')->name('distributor.')->group(function () {

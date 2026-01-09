@@ -25,6 +25,14 @@
                         <span class="ms-3 sidebar-text text-nowrap">Distributors</span>
                     </a>
                 </li>
+
+                <li class="mb-2">
+                    <a href="{{ route('online-shop.index') }}"
+                        class="nav-link p-3 rounded-4 d-flex align-items-center {{ request()->routeIs('online-shop.*') ? 'bg-white text-black fw-bold shadow' : 'text-secondary' }}">
+                        <i class="fas fa-shopping-bag fs-5 flex-shrink-0" style="width: 24px;"></i>
+                        <span class="ms-3 sidebar-text text-nowrap">Online Shops</span>
+                    </a>
+                </li>
             @endif
 
             {{-- UPDATE: Manage Users (Bisa Diakses Superadmin & Audit) --}}
