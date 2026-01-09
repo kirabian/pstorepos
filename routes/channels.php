@@ -13,17 +13,22 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
-// Channel GLOBAL untuk Superadmin
+// Superadmin Channel
 Broadcast::channel('superadmin-notify', function ($user) {
-    // Return true jika user boleh dengar channel ini
+    // Must return boolean
     return $user->role === 'superadmin';
 });
 
-// Channel Per-Cabang
+// Branch Channel
 Broadcast::channel('branch-notify.{branchId}', function ($user, $branchId) {
-    if ($user->role === 'superadmin') return true;
+    if ($user->role === 'superadmin') {
+        return true;
+    }
+    
     if ($user->role === 'audit') {
+        // Ensure access_cabang_ids is an array
         return in_array($branchId, $user->access_cabang_ids ?? []);
     }
+
     return false;
 });
