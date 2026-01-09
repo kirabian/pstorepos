@@ -1,16 +1,16 @@
-<div>
-    {{-- Audio Element --}}
+<div> {{-- Audio Element --}}
     <audio id="loginSound" src="{{ asset('images/notif.mp3') }}" preload="auto"></audio>
 
-    {{-- Data Channel disembunyikan di atribut data --}}
+    {{-- Data Channel (Hidden) --}}
     <div id="notif-data" data-channels="{{ json_encode($channels) }}"></div>
 
+    {{-- Script JavaScript --}}
     <script>
         document.addEventListener('livewire:navigated', () => {
             initializeNotification();
         });
 
-        // Fallback untuk load pertama kali
+        // Fallback untuk load pertama
         document.addEventListener('DOMContentLoaded', () => {
             initializeNotification();
         });
@@ -19,7 +19,15 @@
             const dataEl = document.getElementById('notif-data');
             if (!dataEl) return;
 
-            const channels = JSON.parse(dataEl.getAttribute('data-channels'));
+            // Mencegah parsing error jika data kosong
+            let channels = [];
+            try {
+                channels = JSON.parse(dataEl.getAttribute('data-channels'));
+            } catch (e) {
+                console.error("Gagal parse channel notifikasi", e);
+                return;
+            }
+
             const audioEl = document.getElementById('loginSound');
 
             if (!channels || channels.length === 0) return;
@@ -33,7 +41,7 @@
             console.log('Listening Channels:', channels);
 
             channels.forEach(channelName => {
-                // Unsubscribe dulu biar gak double listener
+                // Unsubscribe dulu
                 window.Echo.leave(channelName);
 
                 window.Echo.private(channelName)
@@ -76,4 +84,5 @@
             });
         }
     </script>
+
 </div>
