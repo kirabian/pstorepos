@@ -111,6 +111,8 @@ class UserIndex extends Component
     // === CREATE / UPDATE (STORE) ===
     public function store()
     {
+        $currentUser = Auth::user();
+
         // 1. Rules Dasar
         $rules = [
             'nama_lengkap' => 'required',
@@ -129,7 +131,10 @@ class UserIndex extends Component
         }
 
         if ($this->role === 'audit') {
-            $rules['selected_branches'] = 'required|array|min:1';
+            // Jika Superadmin, wajib pilih. Jika Audit, validasi nanti (karena read only)
+            if ($currentUser->role === 'superadmin') {
+                $rules['selected_branches'] = 'required|array|min:1';
+            }
         }
 
         if (!$this->userId) {
@@ -140,9 +145,7 @@ class UserIndex extends Component
 
         $this->validate($rules);
 
-        $currentUser = Auth::user();
-
-        // 3. SECURITY CHECK: Audit Management Rule
+        // 3. SECURITY CHECK & PROTEKSI AUDIT
         if ($currentUser->role === 'audit') {
             if ($this->role === 'superadmin') {
                 abort(403, 'Anda tidak memiliki akses membuat Superadmin.');
@@ -152,6 +155,16 @@ class UserIndex extends Component
                 if (!in_array($this->cabang_id, $currentUser->access_cabang_ids ?? [])) {
                     $this->addError('cabang_id', 'Anda tidak berhak menambahkan user di cabang ini.');
                     return;
+                }
+            }
+
+            // PROTEKSI BACKEND: Jika Audit sedang mengedit User Audit lain, 
+            // Jangan biarkan dia mengubah 'selected_branches' karena UI dikunci.
+            if ($this->isEdit && $this->role === 'audit') {
+                // Kembalikan ke nilai asli dari database agar tidak berubah
+                $existingUser = User::find($this->userId);
+                if ($existingUser) {
+                    $this->selected_branches = $existingUser->branches->pluck('id')->map(fn($id) => (string)$id)->toArray();
                 }
             }
         }
@@ -182,8 +195,12 @@ class UserIndex extends Component
 
         // 6. Sync Multi Cabang
         if ($this->role === 'audit') {
-            // Sync akan otomatis menghapus yang tidak dicentang dan menambah yang baru
-            $user->branches()->sync($this->selected_branches);
+            // Hanya Superadmin yang boleh mengubah coverage secara bebas
+            // Atau saat Create baru oleh Audit (defaultnya kosong/atau sesuai input jika diizinkan)
+            // Disini asumsinya Audit bisa create Audit, tapi Edit dikunci.
+            if ($currentUser->role === 'superadmin' || !$this->isEdit) {
+                $user->branches()->sync($this->selected_branches);
+            }
         } else {
             $user->branches()->detach();
         }
@@ -199,7 +216,7 @@ class UserIndex extends Component
         $this->resetInputFields();
     }
 
-    // === EDIT (FIXED BUG "MALAH NAMBAH") ===
+    // === EDIT ===
     public function edit($id)
     {
         $user = User::findOrFail($id);
@@ -226,9 +243,6 @@ class UserIndex extends Component
         $this->cabang_id = $user->cabang_id;
         $this->is_active = (bool) $user->is_active;
         
-        // --- PERBAIKAN UTAMA DISINI ---
-        // Kita paksa konversi ID menjadi String agar cocok dengan AlpineJS
-        // Jika tidak di-cast string, [1, 2] vs "1" dianggap beda di JS, makanya nambah
         $this->selected_branches = $user->branches->pluck('id')
             ->map(fn($id) => (string) $id) 
             ->toArray();

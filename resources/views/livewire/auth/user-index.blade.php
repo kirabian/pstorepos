@@ -324,10 +324,16 @@
                             @if($role === 'audit')
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     
+                                    @php
+                                        $isSuperAdmin = Auth::user()->role === 'superadmin';
+                                    @endphp
+
                                     <div x-data="{ 
                                         open: false, 
                                         selected: @entangle('selected_branches').live,
+                                        isReadOnly: @js(!$isSuperAdmin),
                                         toggle(id) {
+                                            if (this.isReadOnly) return; // Prevent toggle if readonly
                                             if (this.selected.includes(String(id))) {
                                                 this.selected = this.selected.filter(item => item !== String(id));
                                             } else {
@@ -337,54 +343,64 @@
                                     }">
                                         
                                         {{-- Trigger --}}
-                                        <div @click="open = !open" 
-                                             class="form-control bg-light border-0 rounded-4 py-3 px-4 d-flex justify-content-between align-items-center cursor-pointer shadow-sm hover-bg-light transition-all">
+                                        <div @click="if(!isReadOnly) open = !open" 
+                                             class="form-control bg-light border-0 rounded-4 py-3 px-4 d-flex justify-content-between align-items-center shadow-sm transition-all"
+                                             :class="isReadOnly ? 'cursor-not-allowed opacity-75' : 'cursor-pointer hover-bg-light'">
                                             <div>
                                                 <span class="text-secondary fw-semibold small text-uppercase d-block mb-1" style="font-size: 0.7rem;">Audit Coverage</span>
                                                 <div class="d-flex align-items-center gap-2">
                                                     <i class="fas fa-building text-dark opacity-50"></i>
                                                     <span class="fw-bold text-dark" x-text="selected.length > 0 ? selected.length + ' Branches Selected' : 'Select Target Branches...'"></span>
                                                 </div>
+                                                {{-- Pesan Terkunci untuk Non-Superadmin --}}
+                                                <template x-if="isReadOnly">
+                                                    <div class="text-danger extra-small fw-bold mt-1">
+                                                        <i class="fas fa-lock me-1"></i> Hubungi Superadmin untuk ubah
+                                                    </div>
+                                                </template>
                                             </div>
                                             <div class="bg-white rounded-circle p-2 shadow-sm">
-                                                <i class="fas fa-chevron-down text-dark transition-all" :class="{'rotate-180': open}"></i>
+                                                {{-- Ikon berubah jadi Gembok jika ReadOnly --}}
+                                                <i class="fas text-dark transition-all" 
+                                                   :class="isReadOnly ? 'fa-lock text-muted' : (open ? 'fa-chevron-up' : 'fa-chevron-down')"></i>
                                             </div>
                                         </div>
 
-                                        {{-- Dropdown --}}
-                                        <div x-show="open" x-transition.opacity.duration.300ms
-                                             class="mt-3 bg-white rounded-4 border border-light-subtle shadow-sm overflow-hidden" 
-                                             style="display: none;">
-                                            
-                                            <div class="p-3 bg-light border-bottom border-light-subtle d-flex justify-content-between align-items-center">
-                                                <span class="text-muted small fw-bold text-uppercase tracking-wide">Available Branches</span>
-                                                <span class="badge bg-dark text-white rounded-pill px-2 extra-small">Multiple Select</span>
-                                            </div>
+                                        {{-- Dropdown (Hanya Muncul jika TIDAK ReadOnly) --}}
+                                        <template x-if="!isReadOnly">
+                                            <div x-show="open" x-transition.opacity.duration.300ms
+                                                 class="mt-3 bg-white rounded-4 border border-light-subtle shadow-sm overflow-hidden" 
+                                                 style="display: none;">
+                                                
+                                                <div class="p-3 bg-light border-bottom border-light-subtle d-flex justify-content-between align-items-center">
+                                                    <span class="text-muted small fw-bold text-uppercase tracking-wide">Available Branches</span>
+                                                    <span class="badge bg-dark text-white rounded-pill px-2 extra-small">Multiple Select</span>
+                                                </div>
 
-                                            <div class="custom-scrollbar" style="max-height: 250px; overflow-y: auto;">
-                                                <div class="p-2">
-                                                    {{-- INI JUGA MENGGUNAKAN $cabangs YANG SUDAH DFILTER --}}
-                                                    @foreach($cabangs as $c)
-                                                        <div @click="toggle('{{ $c->id }}')" 
-                                                             class="d-flex align-items-center justify-content-between p-3 rounded-3 cursor-pointer mb-1 transition-all"
-                                                             :class="selected.includes('{{ $c->id }}') ? 'bg-dark text-white shadow-sm transform-scale' : 'bg-white text-dark hover-bg-light'">
-                                                            
-                                                            <div class="d-flex align-items-center gap-3">
-                                                                <div class="rounded-circle p-1 d-flex align-items-center justify-content-center" 
-                                                                     :class="selected.includes('{{ $c->id }}') ? 'bg-white bg-opacity-25' : 'bg-light'">
-                                                                    <i class="fas fa-store fa-sm"></i>
+                                                <div class="custom-scrollbar" style="max-height: 250px; overflow-y: auto;">
+                                                    <div class="p-2">
+                                                        @foreach($cabangs as $c)
+                                                            <div @click="toggle('{{ $c->id }}')" 
+                                                                 class="d-flex align-items-center justify-content-between p-3 rounded-3 cursor-pointer mb-1 transition-all"
+                                                                 :class="selected.includes('{{ $c->id }}') ? 'bg-dark text-white shadow-sm transform-scale' : 'bg-white text-dark hover-bg-light'">
+                                                                
+                                                                <div class="d-flex align-items-center gap-3">
+                                                                    <div class="rounded-circle p-1 d-flex align-items-center justify-content-center" 
+                                                                         :class="selected.includes('{{ $c->id }}') ? 'bg-white bg-opacity-25' : 'bg-light'">
+                                                                        <i class="fas fa-store fa-sm"></i>
+                                                                    </div>
+                                                                    <span class="fw-bold small">{{ $c->nama_cabang }}</span>
                                                                 </div>
-                                                                <span class="fw-bold small">{{ $c->nama_cabang }}</span>
+                                                                
+                                                                <div x-show="selected.includes('{{ $c->id }}')">
+                                                                    <i class="fas fa-check-circle text-success"></i>
+                                                                </div>
                                                             </div>
-                                                            
-                                                            <div x-show="selected.includes('{{ $c->id }}')">
-                                                                <i class="fas fa-check-circle text-success"></i>
-                                                            </div>
-                                                        </div>
-                                                    @endforeach
+                                                        @endforeach
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </template>
 
                                         {{-- Badges --}}
                                         <div class="d-flex flex-wrap gap-2 mt-3" x-show="selected.length > 0" x-transition>
@@ -392,7 +408,11 @@
                                                 <div class="badge bg-white text-dark border shadow-sm rounded-pill px-3 py-2 fw-bold extra-small d-flex align-items-center gap-2 animate__animated animate__fadeIn">
                                                     <span class="bg-success rounded-circle" style="width: 6px; height: 6px;"></span>
                                                     <span x-text="document.querySelector(`[@click*='${id}'] span.fw-bold`)?.innerText || 'Branch ' + id"></span>
-                                                    <i class="fas fa-times ms-1 cursor-pointer text-muted hover-text-danger" @click.stop="toggle(id)"></i>
+                                                    
+                                                    {{-- Tombol Hapus hanya muncul jika TIDAK ReadOnly --}}
+                                                    <template x-if="!isReadOnly">
+                                                        <i class="fas fa-times ms-1 cursor-pointer text-muted hover-text-danger" @click.stop="toggle(id)"></i>
+                                                    </template>
                                                 </div>
                                             </template>
                                         </div>
