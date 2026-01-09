@@ -426,7 +426,7 @@
         
         #sidebar.minimized .logo-container {
             width: 40px; height: 40px;
-            background: url('{{ asset("images/logo-icon-only.png") }}') no-repeat center/contain; /* Opsional jika punya icon only */
+            background: url('{{ asset("images/logo-pstore.png") }}') no-repeat center/contain; /* Opsional jika punya icon only */
         }
         
         #sidebar.minimized .nav-link { justify-content: center; padding: 1rem; }
