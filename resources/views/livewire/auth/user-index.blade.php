@@ -283,13 +283,17 @@
                             <div class="col-12">
                                 <div class="bg-dark p-1 rounded-4">
                                     <div class="form-floating">
-                                        <select class="form-select border-0 bg-white text-dark fw-bold rounded-4" id="roleSelect" wire:model.live="role">
+                                        {{-- LOGIKA DISABLE ROLE SAAT EDIT JIKA BUKAN SUPERADMIN --}}
+                                        <select class="form-select border-0 bg-white text-dark fw-bold rounded-4" 
+                                                id="roleSelect" 
+                                                wire:model.live="role"
+                                                @if($isEdit && Auth::user()->role !== 'superadmin') disabled @endif>
+                                            
                                             <option value="">Select Role</option>
                                             @if(Auth::user()->role === 'superadmin')
                                                 <option value="superadmin">SUPERADMIN (Full Access)</option>
                                                 <option value="audit">AUDIT (Multi-Branch Access)</option>
                                             @endif
-                                            {{-- Role Operasional --}}
                                             <option value="adminproduk">ADMIN PRODUK</option>
                                             <option value="analis">ANALIST DATA</option>
                                             <option value="leader">TEAM LEADER</option>
@@ -300,6 +304,14 @@
                                         <label for="roleSelect" class="text-dark fw-bold">User Role</label>
                                     </div>
                                 </div>
+                                
+                                {{-- PESAN INFO ROLE TERKUNCI --}}
+                                @if($isEdit && Auth::user()->role !== 'superadmin')
+                                    <div class="text-danger extra-small fw-bold mt-2 d-flex align-items-center">
+                                        <i class="fas fa-lock me-1"></i> Role terkunci. Hubungi Superadmin untuk mengubah jabatan.
+                                    </div>
+                                @endif
+
                                 @error('role') <span class="text-danger extra-small fw-bold ms-2">{{ $message }}</span> @enderror
                             </div>
 
@@ -309,7 +321,6 @@
                                     <div class="form-floating">
                                         <select class="form-select bg-warning-subtle border-0 text-dark fw-bold rounded-4" id="branchSelect" wire:model="cabang_id">
                                             <option value="">Select Branch Location</option>
-                                            {{-- DROPDOWN INI SUDAH DFILTER DARI BACKEND --}}
                                             @foreach($cabangs as $c)
                                                 <option value="{{ $c->id }}">{{ $c->nama_cabang }}</option>
                                             @endforeach
@@ -333,7 +344,7 @@
                                         selected: @entangle('selected_branches').live,
                                         isReadOnly: @js(!$isSuperAdmin),
                                         toggle(id) {
-                                            if (this.isReadOnly) return; // Prevent toggle if readonly
+                                            if (this.isReadOnly) return;
                                             if (this.selected.includes(String(id))) {
                                                 this.selected = this.selected.filter(item => item !== String(id));
                                             } else {
@@ -352,7 +363,6 @@
                                                     <i class="fas fa-building text-dark opacity-50"></i>
                                                     <span class="fw-bold text-dark" x-text="selected.length > 0 ? selected.length + ' Branches Selected' : 'Select Target Branches...'"></span>
                                                 </div>
-                                                {{-- Pesan Terkunci untuk Non-Superadmin --}}
                                                 <template x-if="isReadOnly">
                                                     <div class="text-danger extra-small fw-bold mt-1">
                                                         <i class="fas fa-lock me-1"></i> Hubungi Superadmin untuk ubah
@@ -360,13 +370,12 @@
                                                 </template>
                                             </div>
                                             <div class="bg-white rounded-circle p-2 shadow-sm">
-                                                {{-- Ikon berubah jadi Gembok jika ReadOnly --}}
                                                 <i class="fas text-dark transition-all" 
                                                    :class="isReadOnly ? 'fa-lock text-muted' : (open ? 'fa-chevron-up' : 'fa-chevron-down')"></i>
                                             </div>
                                         </div>
 
-                                        {{-- Dropdown (Hanya Muncul jika TIDAK ReadOnly) --}}
+                                        {{-- Dropdown --}}
                                         <template x-if="!isReadOnly">
                                             <div x-show="open" x-transition.opacity.duration.300ms
                                                  class="mt-3 bg-white rounded-4 border border-light-subtle shadow-sm overflow-hidden" 
@@ -409,7 +418,6 @@
                                                     <span class="bg-success rounded-circle" style="width: 6px; height: 6px;"></span>
                                                     <span x-text="document.querySelector(`[@click*='${id}'] span.fw-bold`)?.innerText || 'Branch ' + id"></span>
                                                     
-                                                    {{-- Tombol Hapus hanya muncul jika TIDAK ReadOnly --}}
                                                     <template x-if="!isReadOnly">
                                                         <i class="fas fa-times ms-1 cursor-pointer text-muted hover-text-danger" @click.stop="toggle(id)"></i>
                                                     </template>

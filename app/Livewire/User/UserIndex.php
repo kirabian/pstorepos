@@ -131,7 +131,7 @@ class UserIndex extends Component
         }
 
         if ($this->role === 'audit') {
-            // Jika Superadmin, wajib pilih. Jika Audit, validasi nanti (karena read only)
+            // Jika Superadmin, wajib pilih. Jika Audit, validasi nanti (karena read only saat edit)
             if ($currentUser->role === 'superadmin') {
                 $rules['selected_branches'] = 'required|array|min:1';
             }
@@ -144,6 +144,17 @@ class UserIndex extends Component
         }
 
         $this->validate($rules);
+
+        // 2. PROTEKSI BACKEND ROLE (PENTING!)
+        // Jika sedang EDIT dan user BUKAN superadmin, Role tidak boleh berubah
+        if ($this->userId && $currentUser->role !== 'superadmin') {
+            $existingUser = User::find($this->userId);
+            if ($existingUser) {
+                // Paksa kembalikan role ke data asli di DB
+                // Ini mencegah user mengganti value via inspect element
+                $this->role = $existingUser->role; 
+            }
+        }
 
         // 3. SECURITY CHECK & PROTEKSI AUDIT
         if ($currentUser->role === 'audit') {
@@ -161,7 +172,6 @@ class UserIndex extends Component
             // PROTEKSI BACKEND: Jika Audit sedang mengedit User Audit lain, 
             // Jangan biarkan dia mengubah 'selected_branches' karena UI dikunci.
             if ($this->isEdit && $this->role === 'audit') {
-                // Kembalikan ke nilai asli dari database agar tidak berubah
                 $existingUser = User::find($this->userId);
                 if ($existingUser) {
                     $this->selected_branches = $existingUser->branches->pluck('id')->map(fn($id) => (string)$id)->toArray();
@@ -196,8 +206,6 @@ class UserIndex extends Component
         // 6. Sync Multi Cabang
         if ($this->role === 'audit') {
             // Hanya Superadmin yang boleh mengubah coverage secara bebas
-            // Atau saat Create baru oleh Audit (defaultnya kosong/atau sesuai input jika diizinkan)
-            // Disini asumsinya Audit bisa create Audit, tapi Edit dikunci.
             if ($currentUser->role === 'superadmin' || !$this->isEdit) {
                 $user->branches()->sync($this->selected_branches);
             }
