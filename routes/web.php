@@ -24,7 +24,7 @@ use App\Livewire\User\UserEdit;
 use App\Livewire\User\UserIndex;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Broadcast; // Import Facade Broadcast
+// Hapus: use Illuminate\Support\Facades\Broadcast; (Tidak perlu di sini lagi)
 
 /*
 |--------------------------------------------------------------------------
@@ -56,7 +56,7 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     Route::get('/', Dashboard::class)->name('dashboard');
 
     /* |--------------------------------------------------------------------------
-    | MANAJEMEN USER
+    | MANAJEMEN USER (SUPERADMIN & AUDIT)
     |--------------------------------------------------------------------------
     */
     Route::prefix('users')->name('user.')->middleware('user.management')->group(function () {
@@ -97,7 +97,7 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     });
 
     /* |--------------------------------------------------------------------------
-    | OPERASIONAL UMUM
+    | OPERASIONAL / UMUM (Sales, Gudang, Audit, Admin Produk)
     |--------------------------------------------------------------------------
     */
     Route::get('/stok', StokIndex::class)->name('stok.index');
@@ -110,22 +110,10 @@ Route::middleware(['auth', 'active.user'])->group(function () {
         ->name('stock-opname.index')
         ->middleware('checkRole:gudang'); 
 
-    // Route Test Notifikasi Manual
+    // Route Test Notifikasi
     Route::get('/test-notif', function () {
         $user = Auth::user();
-        // Kirim event
         event(new UserLoggedIn($user));
         return 'Notifikasi dikirim! Cek tab sebelah.';
     })->middleware('auth');
 });
-
-// =========================================================================
-// FIX AUTH BROADCAST: REGISTRASI ROUTE & CHANNEL SECARA EKSPLISIT
-// =========================================================================
-
-// 1. Registrasi Route Auth (Override default)
-Broadcast::routes(['middleware' => ['web', 'auth']]);
-
-// 2. Load File Channels (WAJIB agar route auth tahu channel apa saja yang ada)
-// Tanpa baris ini, auth akan sukses (200) tapi return kosong karena channel tidak dikenali.
-require base_path('routes/channels.php');
