@@ -116,4 +116,9 @@ Route::middleware(['auth', 'active.user'])->group(function () {
         event(new UserLoggedIn($user));
         return 'Notifikasi dikirim! Cek tab sebelah.';
     })->middleware('auth');
+
+    Route::get('/test-broadcast', function() {
+    broadcast(new \App\Events\UserLoggedIn(\App\Models\User::first()));
+    return "Event broadcasted!";
+});
 });
