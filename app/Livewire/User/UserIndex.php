@@ -56,21 +56,17 @@ class UserIndex extends Component
             });
         }
 
-        // 2. LOGIKA PROTEKSI DATA AUDIT (Hanya lihat user di cabangnya)
+        // 2. LOGIKA PROTEKSI DATA AUDIT
         if ($currentUser->role === 'audit') {
-            // Ambil array ID cabang yang dipegang audit
             $myBranchIds = $currentUser->access_cabang_ids ?? []; 
             
             $query->where(function($q) use ($myBranchIds) {
-                // User biasa yang ada di cabang audit
                 $q->whereIn('cabang_id', $myBranchIds)
-                  // ATAU User audit lain yang memegang cabang yang sama (opsional, tergantung rule)
                   ->orWhereHas('branches', function($sq) use ($myBranchIds) {
                       $sq->whereIn('cabangs.id', $myBranchIds);
                   });
             });
             
-            // Audit tidak boleh lihat Superadmin
             $query->where('role', '!=', 'superadmin');
         }
 
@@ -78,10 +74,8 @@ class UserIndex extends Component
 
         // 3. LOGIKA DROPDOWN CABANG
         if ($currentUser->role === 'superadmin') {
-            // Superadmin lihat semua cabang
             $cabangs = Cabang::orderBy('nama_cabang', 'asc')->get();
         } else {
-            // Audit hanya lihat cabang miliknya di Dropdown
             $cabangs = Cabang::whereIn('id', $currentUser->access_cabang_ids ?? [])
                         ->orderBy('nama_cabang', 'asc')
                         ->get();
@@ -117,7 +111,7 @@ class UserIndex extends Component
     // === CREATE / UPDATE (STORE) ===
     public function store()
     {
-        // 1. Definisikan Rules Dasar
+        // 1. Rules Dasar
         $rules = [
             'nama_lengkap' => 'required',
             'tanggal_lahir' => 'required|date',
@@ -126,22 +120,18 @@ class UserIndex extends Component
             'email'        => ['required', 'email', Rule::unique('users')->ignore($this->userId)],
         ];
 
-        // 2. Rules Tambahan Sesuai Role Inputan
         if ($this->role === 'distributor') {
             $rules['distributor_id'] = 'required';
         }
         
-        // Wajib pilih cabang untuk role operasional
         if (in_array($this->role, ['adminproduk', 'analis', 'leader', 'sales', 'gudang', 'security'])) {
             $rules['cabang_id'] = 'required';
         }
 
-        // Jika user yang dibuat adalah audit, wajib pilih area coverage
         if ($this->role === 'audit') {
             $rules['selected_branches'] = 'required|array|min:1';
         }
 
-        // Password Wajib saat Create
         if (!$this->userId) {
             $rules['password'] = 'required|min:6';
         } else {
@@ -154,21 +144,16 @@ class UserIndex extends Component
 
         // 3. SECURITY CHECK: Audit Management Rule
         if ($currentUser->role === 'audit') {
-            // A. Audit tidak boleh bikin superadmin
             if ($this->role === 'superadmin') {
                 abort(403, 'Anda tidak memiliki akses membuat Superadmin.');
             }
 
-            // B. Jika Audit membuat user operasional, Cabang ID harus milik dia
             if ($this->cabang_id) {
                 if (!in_array($this->cabang_id, $currentUser->access_cabang_ids ?? [])) {
                     $this->addError('cabang_id', 'Anda tidak berhak menambahkan user di cabang ini.');
                     return;
                 }
             }
-
-            // C. Jika Audit membuat Audit lain, cabangnya harus irisan (opsional)
-            // Disini diasumsikan Audit mengelola staff, bukan sesama Audit.
         }
 
         // 4. Siapkan Data
@@ -186,7 +171,6 @@ class UserIndex extends Component
             $data['password'] = Hash::make($this->password);
         }
 
-        // Set Cabang ID (Kecuali role global)
         if (!in_array($this->role, ['superadmin', 'audit', 'distributor'])) {
             $data['cabang_id'] = $this->cabang_id;
         } else {
@@ -196,8 +180,9 @@ class UserIndex extends Component
         // 5. Eksekusi Simpan
         $user = User::updateOrCreate(['id' => $this->userId], $data);
 
-        // 6. Sync Multi Cabang (Jika user yang dibuat adalah Audit)
+        // 6. Sync Multi Cabang
         if ($this->role === 'audit') {
+            // Sync akan otomatis menghapus yang tidak dicentang dan menambah yang baru
             $user->branches()->sync($this->selected_branches);
         } else {
             $user->branches()->detach();
@@ -214,22 +199,17 @@ class UserIndex extends Component
         $this->resetInputFields();
     }
 
-    // === EDIT ===
+    // === EDIT (FIXED BUG "MALAH NAMBAH") ===
     public function edit($id)
     {
         $user = User::findOrFail($id);
         $currentUser = Auth::user();
 
-        // PROTEKSI AUDIT SAAT EDIT
         if ($currentUser->role === 'audit') {
-            // 1. Tidak boleh edit superadmin
             if ($user->role === 'superadmin') {
                 $this->dispatch('swal', ['title'=>'Akses Ditolak', 'text'=>'Anda tidak bisa mengedit Superadmin.', 'icon'=>'error']);
                 return;
             }
-
-            // 2. Tidak boleh edit user di luar cabang aksesnya
-            // Cek jika user punya cabang_id (Staff biasa)
             if ($user->cabang_id && !in_array($user->cabang_id, $currentUser->access_cabang_ids ?? [])) {
                 $this->dispatch('swal', ['title'=>'Akses Ditolak', 'text'=>'User ini diluar wilayah otorisasi Anda.', 'icon'=>'error']);
                 return;
@@ -246,7 +226,12 @@ class UserIndex extends Component
         $this->cabang_id = $user->cabang_id;
         $this->is_active = (bool) $user->is_active;
         
-        $this->selected_branches = $user->branches->pluck('id')->toArray();
+        // --- PERBAIKAN UTAMA DISINI ---
+        // Kita paksa konversi ID menjadi String agar cocok dengan AlpineJS
+        // Jika tidak di-cast string, [1, 2] vs "1" dianggap beda di JS, makanya nambah
+        $this->selected_branches = $user->branches->pluck('id')
+            ->map(fn($id) => (string) $id) 
+            ->toArray();
 
         $this->isEdit = true;
         $this->resetErrorBag();
@@ -260,11 +245,8 @@ class UserIndex extends Component
         $user = User::findOrFail($id);
         $currentUser = Auth::user();
         
-        // PROTEKSI AUDIT SAAT DELETE
         if ($currentUser->role === 'audit') {
             if ($user->role === 'superadmin') return;
-            
-            // Cek otorisasi cabang
             if ($user->cabang_id && !in_array($user->cabang_id, $currentUser->access_cabang_ids ?? [])) {
                 $this->dispatch('swal', ['title'=>'Gagal', 'text'=>'User diluar akses cabang Anda.', 'icon'=>'error']);
                 return;
@@ -283,11 +265,8 @@ class UserIndex extends Component
         $user = User::findOrFail($id);
         $currentUser = Auth::user();
         
-        // PROTEKSI AUDIT SAAT TOGGLE
         if ($currentUser->role === 'audit') {
             if ($user->role === 'superadmin') return;
-
-            // Cek otorisasi cabang
             if ($user->cabang_id && !in_array($user->cabang_id, $currentUser->access_cabang_ids ?? [])) {
                 $this->dispatch('swal', ['title'=>'Gagal', 'text'=>'User diluar akses cabang Anda.', 'icon'=>'error']);
                 return;
