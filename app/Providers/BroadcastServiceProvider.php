@@ -11,12 +11,14 @@ class BroadcastServiceProvider extends ServiceProvider
      * Bootstrap any application services.
      */
     public function boot(): void
-    {
-        // 1. Registrasi Route Auth dengan Middleware Web & Auth
-        // Ini menggantikan kode manual di web.php tadi
-        Broadcast::routes(['middleware' => ['web', 'auth']]);
+{
+    // Gunakan auth:sanctum jika pakai API, atau auth:web untuk session
+    Broadcast::routes([
+        'middleware' => ['web', 'auth'],
+        'prefix' => 'broadcasting',
+        'as' => 'broadcasting.'
+    ]);
 
-        // 2. Load File Channels
-        require base_path('routes/channels.php');
-    }
+    require base_path('routes/channels.php');
+}
 }

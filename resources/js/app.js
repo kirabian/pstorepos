@@ -1,2 +1,4 @@
+// Hanya import untuk umum
 import './bootstrap';
-import './login-notification'; // <-- Tambahkan baris ini
+
+// Import file auth conditionally nanti dari blade

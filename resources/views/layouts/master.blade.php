@@ -4,7 +4,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    @auth
+        <meta name="user-id" content="{{ Auth::id() }}">
+        <meta name="user-role" content="{{ Auth::user()->role }}">
+        <meta name="user-branches" content="{{ json_encode(Auth::user()->access_cabang_ids ?? []) }}">
+    @endauth
+
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    @auth
+        @vite('resources/js/bootstrap-auth.js')
+    @endauth
     <meta name="description" content="PSTORE Inventory - Premium Admin Dashboard System">
     <title>{{ $title ?? 'CORE | Premium Admin Dashboard' }}</title>
 
@@ -58,7 +69,7 @@
         /* Logic Konten */
         main {
             /* Hapus margin-top besar karena kita pakai sticky, bukan fixed */
-            padding-top: 1rem; 
+            padding-top: 1rem;
             transition: all 0.3s ease;
         }
 
@@ -129,13 +140,13 @@
 
         <div id="content">
             @auth @include('layouts.partials.navbar') @endauth
-            
+
             <main class="{{ Auth::check() ? 'p-3 p-md-5' : '' }} flex-grow-1 animate__animated animate__fadeIn">
                 <div class="{{ Auth::check() ? 'container-fluid' : '' }}">
                     {{ $slot }}
                 </div>
             </main>
-            
+
             @auth @include('layouts.partials.footer') @endauth
         </div>
     </div>
@@ -148,14 +159,14 @@
         document.addEventListener('DOMContentLoaded', function() {
             // --- LOGIC NAVBAR SCROLL (ISLAND EFFECT) ---
             const navbar = document.getElementById('main-navbar');
-            
-            if(navbar) {
+
+            if (navbar) {
                 if (window.scrollY > 10) {
                     navbar.classList.add('scrolled');
                 }
 
                 window.addEventListener('scroll', function() {
-                    if (window.scrollY > 10) { 
+                    if (window.scrollY > 10) {
                         navbar.classList.add('scrolled');
                     } else {
                         navbar.classList.remove('scrolled');
@@ -171,7 +182,7 @@
             if (toggleBtn && sidebar) {
                 toggleBtn.addEventListener('click', (e) => {
                     e.preventDefault();
-                    e.stopPropagation(); 
+                    e.stopPropagation();
 
                     if (window.innerWidth >= 992) {
                         // Desktop: Minimize Sidebar
@@ -201,7 +212,7 @@
             @auth
             let idleTimer;
             let isCurrentlyOffline = false;
-            const statusDelay = 10000; 
+            const statusDelay = 10000;
 
             function resetIdleTimer() {
                 if (isCurrentlyOffline) {
@@ -226,7 +237,7 @@
                     passive: true
                 })
             );
-            @endauth
+        @endauth
         });
 
         document.addEventListener('livewire:init', () => {
@@ -257,7 +268,20 @@
         });
     </script>
 
-   {{-- [PENTING] Masukkan Komponen Notifikasi Disini --}}
+    @auth
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Tunggu sampai user benar-benar terautentikasi
+                if (typeof window.axios !== 'undefined' && typeof window.Pusher !== 'undefined') {
+                    import('./bootstrap').then(module => {
+                        console.log('Echo initialized for authenticated user');
+                    });
+                }
+            });
+        </script>
+    @endauth
+
+    {{-- [PENTING] Masukkan Komponen Notifikasi Disini --}}
     @auth
         @include('partials.login-notification')
     @endauth
