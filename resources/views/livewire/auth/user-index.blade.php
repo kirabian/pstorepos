@@ -1,4 +1,8 @@
 <div wire:poll.10s class="min-vh-100 bg-light-subtle mobile-spacer">
+    
+    {{-- SweetAlert Script --}}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <div class="p-4 p-lg-5 animate__animated animate__fadeIn">
         
         {{-- HEADER SECTION --}}
@@ -66,7 +70,7 @@
                     <tbody class="border-top-0">
                         @forelse($users as $user)
                         <tr class="group-hover-bg transition-all cursor-pointer">
-                            {{-- KOLOM PROFILE & LAST SEEN --}}
+                            {{-- KOLOM PROFILE --}}
                             <td class="ps-5 py-4">
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="position-relative">
@@ -285,6 +289,7 @@
                                                 <option value="superadmin">SUPERADMIN (Full Access)</option>
                                                 <option value="audit">AUDIT (Multi-Branch Access)</option>
                                             @endif
+                                            {{-- Role Operasional --}}
                                             <option value="adminproduk">ADMIN PRODUK</option>
                                             <option value="analis">ANALIST DATA</option>
                                             <option value="leader">TEAM LEADER</option>
@@ -298,12 +303,13 @@
                                 @error('role') <span class="text-danger extra-small fw-bold ms-2">{{ $message }}</span> @enderror
                             </div>
 
-                            {{-- DYNAMIC LOCATION --}}
+                            {{-- DYNAMIC LOCATION (CABANG SINGLE) --}}
                             @if($role && !in_array($role, ['superadmin', 'audit', 'distributor']))
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="form-floating">
                                         <select class="form-select bg-warning-subtle border-0 text-dark fw-bold rounded-4" id="branchSelect" wire:model="cabang_id">
                                             <option value="">Select Branch Location</option>
+                                            {{-- DROPDOWN INI SUDAH DFILTER DARI BACKEND --}}
                                             @foreach($cabangs as $c)
                                                 <option value="{{ $c->id }}">{{ $c->nama_cabang }}</option>
                                             @endforeach
@@ -314,7 +320,7 @@
                                 </div>
                             @endif
 
-                            {{-- MULTI CABANG (AUDIT) - FIXED & PROFESSIONAL UI --}}
+                            {{-- MULTI CABANG (AUDIT ONLY) --}}
                             @if($role === 'audit')
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     
@@ -330,7 +336,7 @@
                                         }
                                     }">
                                         
-                                        {{-- Trigger Button --}}
+                                        {{-- Trigger --}}
                                         <div @click="open = !open" 
                                              class="form-control bg-light border-0 rounded-4 py-3 px-4 d-flex justify-content-between align-items-center cursor-pointer shadow-sm hover-bg-light transition-all">
                                             <div>
@@ -345,20 +351,19 @@
                                             </div>
                                         </div>
 
-                                        {{-- Dropdown Container (Relative Flow - Pushes content down) --}}
+                                        {{-- Dropdown --}}
                                         <div x-show="open" x-transition.opacity.duration.300ms
                                              class="mt-3 bg-white rounded-4 border border-light-subtle shadow-sm overflow-hidden" 
                                              style="display: none;">
                                             
-                                            {{-- Selection Header --}}
                                             <div class="p-3 bg-light border-bottom border-light-subtle d-flex justify-content-between align-items-center">
                                                 <span class="text-muted small fw-bold text-uppercase tracking-wide">Available Branches</span>
                                                 <span class="badge bg-dark text-white rounded-pill px-2 extra-small">Multiple Select</span>
                                             </div>
 
-                                            {{-- Scrollable List --}}
                                             <div class="custom-scrollbar" style="max-height: 250px; overflow-y: auto;">
                                                 <div class="p-2">
+                                                    {{-- INI JUGA MENGGUNAKAN $cabangs YANG SUDAH DFILTER --}}
                                                     @foreach($cabangs as $c)
                                                         <div @click="toggle('{{ $c->id }}')" 
                                                              class="d-flex align-items-center justify-content-between p-3 rounded-3 cursor-pointer mb-1 transition-all"
@@ -381,7 +386,7 @@
                                             </div>
                                         </div>
 
-                                        {{-- Selected Chips Summary --}}
+                                        {{-- Badges --}}
                                         <div class="d-flex flex-wrap gap-2 mt-3" x-show="selected.length > 0" x-transition>
                                             <template x-for="id in selected" :key="id">
                                                 <div class="badge bg-white text-dark border shadow-sm rounded-pill px-3 py-2 fw-bold extra-small d-flex align-items-center gap-2 animate__animated animate__fadeIn">
@@ -448,24 +453,16 @@
     @endteleport
 
     <style>
-        /* Mobile Spacer untuk mengatasi 'ketutupan' */
+        /* Styles Tetap Sama */
         @media (max-width: 991px) {
-            .mobile-spacer {
-                padding-top: 80px !important; 
-            }
+            .mobile-spacer { padding-top: 80px !important; }
         }
-
-        /* Typography */
         .fw-black { font-weight: 900; }
         .tracking-tight { letter-spacing: -0.025em; }
         .tracking-wide { letter-spacing: 0.025em; }
         .tracking-widest { letter-spacing: 0.1em; }
         .extra-small { font-size: 0.65rem; }
-        
-        /* Avatars */
         .avatar-circle-xl { width: 50px; height: 50px; border-radius: 50%; font-size: 1.25rem; border: 3px solid #fff; }
-        
-        /* Buttons */
         .btn-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid #f0f0f0; }
         .hover-lift:hover { transform: translateY(-2px); }
         .hover-primary:hover { background-color: #0d6efd; color: white; border-color: #0d6efd; }
@@ -473,29 +470,20 @@
         .hover-opacity:hover { opacity: 0.7; }
         .hover-scale:hover { transform: scale(1.02); }
         .hover-text-danger:hover { color: #dc3545 !important; }
-        
-        /* Shadows */
         .shadow-xl { box-shadow: 0 20px 40px -10px rgba(0,0,0,0.05); }
         .shadow-2xl { box-shadow: 0 30px 60px -12px rgba(0,0,0,0.15); }
         .shadow-danger { box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3); }
-        
-        /* Form */
         .form-control:focus, .form-select:focus { box-shadow: none; background-color: #fff !important; ring: 2px solid #000; }
         .form-floating > label { font-size: 0.85rem; font-weight: 600; }
         .rotate-180 { transform: rotate(180deg); }
         .hover-bg-light:hover { background-color: #f8f9fa; }
         .transform-scale { transform: scale(0.98); }
-        
-        /* Custom Scrollbar */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #999; }
-
-        /* Transitions */
         .transition-all { transition: all 0.3s ease; }
         .cursor-pointer { cursor: pointer; }
-
         @media (max-width: 768px) {
             .display-6 { font-size: 1.75rem; }
             .modal-body { padding: 1.5rem !important; }
@@ -509,6 +497,21 @@
         const modal = bootstrap.Modal.getInstance(document.getElementById('userModal'));
         if(modal) modal.hide();
         document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    });
+    
+    // Handler SweetAlert2
+    Livewire.on('swal', (data) => {
+        const payload = data[0]; 
+        Swal.fire({
+            title: payload.title,
+            text: payload.text,
+            icon: payload.icon,
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
     });
 </script>
 @endscript

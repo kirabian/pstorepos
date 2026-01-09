@@ -16,6 +16,7 @@
                 </a>
             </li>
 
+            {{-- KHUSUS SUPERADMIN: Distributor --}}
             @if (Auth::user()->role === 'superadmin')
                 <li class="mb-2">
                     <a href="{{ route('distributor.index') }}"
@@ -24,6 +25,10 @@
                         <span class="ms-3 sidebar-text text-nowrap">Distributors</span>
                     </a>
                 </li>
+            @endif
+
+            {{-- UPDATE: Manage Users (Bisa Diakses Superadmin & Audit) --}}
+            @if (in_array(Auth::user()->role, ['superadmin', 'audit']))
                 <li class="mb-2">
                     <a href="{{ route('user.index') }}"
                         class="nav-link p-3 rounded-4 d-flex align-items-center {{ request()->routeIs('user.*') ? 'bg-white text-black fw-bold shadow' : 'text-secondary' }}">
@@ -31,6 +36,10 @@
                         <span class="ms-3 sidebar-text text-nowrap">Manage Users</span>
                     </a>
                 </li>
+            @endif
+
+            {{-- KHUSUS SUPERADMIN: Master Data Lainnya --}}
+            @if (Auth::user()->role === 'superadmin')
                 <li class="mb-2">
                     <a href="{{ route('cabang.index') }}"
                         class="nav-link p-3 rounded-4 d-flex align-items-center {{ request()->routeIs('cabang.*') ? 'bg-white text-black fw-bold shadow' : 'text-secondary' }}">
@@ -68,7 +77,6 @@
                 <li class="mb-2">
                     <a href="{{ route('stok.index') }}"
                         class="nav-link p-3 rounded-4 d-flex align-items-center {{ request()->routeIs('stok.*') ? 'bg-white text-black fw-bold shadow' : 'text-secondary' }}">
-                        {{-- Icon diganti jadi fa-boxes --}}
                         <i class="fas fa-boxes fs-5 flex-shrink-0" style="width: 24px;"></i>
                         <span class="ms-3 sidebar-text text-nowrap">Stok (Inventory)</span>
                     </a>
