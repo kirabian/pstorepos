@@ -1,6 +1,5 @@
 <?php
 
-use App\Events\UserLoggedIn;
 use App\Livewire\Auth\Login;
 use App\Livewire\BarangKeluar\BarangKeluarIndex;
 use App\Livewire\BarangMasuk\BarangMasukIndex;
@@ -22,7 +21,6 @@ use App\Livewire\Tipe\TipeIndex;
 use App\Livewire\User\UserCreate;
 use App\Livewire\User\UserEdit;
 use App\Livewire\User\UserIndex;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -32,36 +30,6 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 Route::get('/login', Login::class)->name('login')->middleware('guest');
-
-// [PINDAHKAN KE SINI - AREA PUBLIK]
-// Agar bisa diakses CURL tanpa login terlebih dahulu
-Route::get('/debug-login/{id}', function ($id) {
-    // 1. Cari user
-    $user = User::find($id);
-
-    if (! $user) {
-        return response()->json(['error' => 'User not found'], 404);
-    }
-
-    // 2. Login paksa
-    Auth::login($user);
-
-    // 3. Update status online
-    $user->update([
-        'last_seen' => now(),
-        'is_online' => true,
-    ]);
-
-    // 4. Trigger Event Notifikasi
-    event(new UserLoggedIn($user));
-
-    return response()->json([
-        'status' => 'success',
-        'message' => 'Login Berhasil & Event Dikirim',
-        'user' => $user->nama_lengkap,
-        'role' => $user->role,
-    ]);
-});
 
 Route::post('/logout', function () {
     if (Auth::check()) {
@@ -88,6 +56,7 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     /* |--------------------------------------------------------------------------
     | MANAJEMEN USER (SUPERADMIN & AUDIT)
     |--------------------------------------------------------------------------
+    | Menggunakan middleware 'user.management' yang baru dibuat.
     */
     Route::prefix('users')->name('user.')->middleware('user.management')->group(function () {
         Route::get('/', UserIndex::class)->name('index');
@@ -99,7 +68,13 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     | AREA KHUSUS SUPERADMIN
     |--------------------------------------------------------------------------
     */
+    /* |--------------------------------------------------------------------------
+    | AREA KHUSUS SUPERADMIN
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('can:superadmin-only')->group(function () {
+
+        // HAPUS ->middleware('checkRole:superadmin') karena sudah ada di group middleware 'can'
         Route::get('/online-shops', OnlineShopIndex::class)->name('online-shop.index');
 
         // Manajemen Distributor
@@ -122,6 +97,7 @@ Route::middleware(['auth', 'active.user'])->group(function () {
         // Master Data Produk
         Route::get('/merk', MerkIndex::class)->name('merk.index');
         Route::get('/tipe', TipeIndex::class)->name('tipe.index');
+
     });
 
     /* |--------------------------------------------------------------------------
@@ -136,18 +112,5 @@ Route::middleware(['auth', 'active.user'])->group(function () {
 
     Route::get('/stock-opname', \App\Livewire\Gudang\StockOpnameIndex::class)
         ->name('stock-opname.index')
-        ->middleware('checkRole:gudang');
-
-    // Route Test Notifikasi (Ini tetap di dalam Auth karena butuh user yg sedang login)
-    Route::get('/test-notif', function () {
-        $user = Auth::user();
-        event(new UserLoggedIn($user));
-
-        return 'Notifikasi dikirim! Cek tab sebelah.';
-    });
-
-    Route::get('/test-broadcast', function () {
-        broadcast(new \App\Events\UserLoggedIn(\App\Models\User::first()));
-        return 'Event broadcasted!';
-    });
+        ->middleware('checkRole:gudang'); // Proteksi agar hanya role relevan yang bisa akses
 });

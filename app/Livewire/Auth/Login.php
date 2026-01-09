@@ -4,62 +4,43 @@ namespace App\Livewire\Auth;
 
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
-use App\Events\UserLoggedIn; // <--- PASTIKAN EVENT DI-IMPORT
+use Illuminate\Support\Facades\Cache; // Import Cache
 use Livewire\Attributes\Layout;
-use Illuminate\Support\Facades\Log;
 
 class Login extends Component
 {
     public $idlogin, $password;
 
+    // Pastikan menggunakan layout master
     #[Layout('layouts.master')]
     public function login()
     {
-        // 1. Validasi Input
         $this->validate([
             'idlogin' => 'required',
             'password' => 'required',
         ]);
 
-        // 2. Coba Login
         if (Auth::attempt(['idlogin' => $this->idlogin, 'password' => $this->password])) {
-            
             $user = Auth::user();
 
-            // 3. Cek Status Aktif (Security Check)
-            if (!$user->is_active) {
-                Auth::logout();
-                $this->addError('idlogin', 'Akun Anda dinonaktifkan. Hubungi Admin.');
-                return;
-            }
-
-            // 4. Set Status Online di Cache (Indikator Lampu Hijau)
-            $expiresAt = now()->addSeconds(60);
+            // --- LOGIKA BARU: Set Status Online ke Cache saat Login Berhasil ---
+            // Simpan selama 11 detik agar sinkron dengan middleware UserActivity
+            $expiresAt = now()->addSeconds(11);
             Cache::put('user-is-online-' . $user->id, true, $expiresAt);
             
-            // ======================================================
-            // 5. TRIGGER EVENT NOTIFIKASI REALTIME
-            // ======================================================
-           try {
-                // HAPUS IF INI SEMENTARA AGAR MUDAH DITEST
-                // if (!in_array($user->role, ['superadmin', 'audit'])) {
-                    UserLoggedIn::dispatch($user);
-                // }
-            } catch (\Exception $e) {
-                Log::error("Gagal broadcast: " . $e->getMessage());
-            }
-            // ======================================================
+            // Opsional: Update timestamp last_login_at jika kolomnya tersedia di database
+            $user->update(['last_login_at' => now()]);
+            // ------------------------------------------------------------------
 
-            // 6. Regenerate Session & Redirect
             session()->regenerate();
+
+            // Flash message untuk memberikan feedback sukses
             session()->flash('info', 'Selamat datang kembali, ' . $user->nama_lengkap);
 
             return redirect()->intended('/');
         }
 
-        // Jika Login Gagal
-        $this->addError('idlogin', 'ID Login atau Password salah.');
+        $this->addError('idlogin', 'ID Login atau Password tidak sesuai dengan record kami.');
     }
 
     public function render()
