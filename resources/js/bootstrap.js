@@ -8,7 +8,7 @@ import Pusher from 'pusher-js';
 
 window.Pusher = Pusher;
 
-// AKTIFKAN LOGGING (Supaya kelihatan errornya di Console)
+// Aktifkan log agar kita bisa lihat "Connected" nanti
 window.Pusher.logToConsole = true; 
 
 window.Echo = new Echo({
@@ -16,4 +16,5 @@ window.Echo = new Echo({
     key: import.meta.env.VITE_PUSHER_APP_KEY,
     cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
     forceTLS: true
+    // JANGAN ADA wsHost, wsPort, wssPort, atau enabledTransports DI SINI
 });
