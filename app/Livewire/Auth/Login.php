@@ -4,40 +4,48 @@ namespace App\Livewire\Auth;
 
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache; // Import Cache
+use Illuminate\Support\Facades\Cache;
+use App\Events\UserLoggedIn; // <--- IMPORT EVENT
 use Livewire\Attributes\Layout;
 
 class Login extends Component
 {
     public $idlogin, $password;
 
-    // Pastikan menggunakan layout master
     #[Layout('layouts.master')]
-   public function login()
+    public function login()
     {
         $this->validate([
             'idlogin' => 'required',
             'password' => 'required',
         ]);
 
-        // Cek kredensial
         if (Auth::attempt(['idlogin' => $this->idlogin, 'password' => $this->password])) {
             
             $user = Auth::user();
 
-            // Cek Status Aktif (Double Protection selain Middleware)
             if (!$user->is_active) {
                 Auth::logout();
                 $this->addError('idlogin', 'Akun Anda dinonaktifkan. Hubungi Admin.');
                 return;
             }
 
-            // Set Cache Online Status
-            $expiresAt = now()->addSeconds(60); // 60 detik
+            $expiresAt = now()->addSeconds(60);
             Cache::put('user-is-online-' . $user->id, true, $expiresAt);
             
-            // Update last login (Optional jika kolom ada)
-            // $user->update(['last_seen' => now()]);
+            // ======================================================
+            // TRIGGER EVENT NOTIFIKASI DISINI
+            // ======================================================
+            try {
+                // Jangan kirim notif jika yang login adalah Superadmin/Audit itu sendiri (opsional)
+                // Tapi biasanya admin ingin tau staff login.
+                if (!in_array($user->role, ['superadmin', 'audit'])) {
+                    UserLoggedIn::dispatch($user);
+                }
+            } catch (\Exception $e) {
+                // Silent fail jika websocket error, agar login tetap jalan
+            }
+            // ======================================================
 
             session()->regenerate();
             session()->flash('info', 'Selamat datang kembali, ' . $user->nama_lengkap);

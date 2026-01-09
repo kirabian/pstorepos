@@ -239,6 +239,13 @@
             });
         });
     </script>
+
+    {{-- [PENTING] Masukkan Komponen Notifikasi Disini --}}
+    @auth
+        @livewire('partials.login-notification')
+    @endauth
+
+    @livewireScripts
 </body>
 
 </html>
