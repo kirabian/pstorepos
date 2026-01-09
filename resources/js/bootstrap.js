@@ -8,13 +8,20 @@ import Pusher from 'pusher-js';
 
 window.Pusher = Pusher;
 
-// Aktifkan log agar kita bisa lihat "Connected" nanti
+// Aktifkan Log untuk Debugging
 window.Pusher.logToConsole = true; 
 
 window.Echo = new Echo({
     broadcaster: 'pusher',
     key: import.meta.env.VITE_PUSHER_APP_KEY,
     cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
-    forceTLS: true
-    // JANGAN ADA wsHost, wsPort, wssPort, atau enabledTransports DI SINI
+    forceTLS: true,
+    // --- TAMBAHAN PENTING ---
+    authEndpoint: '/broadcasting/auth', // Paksa jalur default Laravel
+    auth: {
+        headers: {
+            // Ambil token dari meta tag di head master.blade.php
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    }
 });
