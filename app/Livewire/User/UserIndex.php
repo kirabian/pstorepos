@@ -26,6 +26,9 @@ class UserIndex extends Component
     // Form Fields
     public $nama_lengkap, $idlogin, $email, $password, $tanggal_lahir, $role, $distributor_id, $cabang_id, $is_active = true;
     
+    // Logic Baru: Penempatan Kerja untuk Inventory Staff
+    public $placement_type = ''; // Values: 'distributor' atau 'cabang'
+
     // Khusus Audit: Multi Cabang Selection
     public $selected_branches = []; 
 
@@ -37,6 +40,28 @@ class UserIndex extends Component
     public function updatingSearch()
     {
         $this->resetPage();
+    }
+
+    // Reset input penempatan jika role berubah
+    public function updatedRole($value)
+    {
+        if ($value !== 'gudang') {
+            $this->placement_type = '';
+        }
+        
+        // Reset ID jika role berubah
+        if ($value === 'distributor') {
+            $this->cabang_id = null;
+        } elseif (in_array($value, ['adminproduk', 'analis', 'leader', 'sales', 'security'])) {
+            $this->distributor_id = null;
+        }
+    }
+
+    public function updatedPlacementType()
+    {
+        // Reset pilihan dropdown saat ganti radio button
+        $this->distributor_id = null;
+        $this->cabang_id = null;
     }
 
     // === READ (RENDER TABLE) ===
@@ -83,7 +108,7 @@ class UserIndex extends Component
 
         $distributors = Distributor::orderBy('nama_distributor', 'asc')->get();
 
-        return view('livewire.auth.user-index', [
+        return view('livewire.user.user-index', [
             'users' => $users,
             'cabangs' => $cabangs,
             'distributors' => $distributors
@@ -101,6 +126,7 @@ class UserIndex extends Component
         $this->role = '';
         $this->distributor_id = '';
         $this->cabang_id = '';
+        $this->placement_type = ''; // Reset placement
         $this->is_active = true; 
         $this->selected_branches = [];
         $this->userId = null;
@@ -122,16 +148,26 @@ class UserIndex extends Component
             'email'        => ['required', 'email', Rule::unique('users')->ignore($this->userId)],
         ];
 
+        // 2. Logic Validasi Berdasarkan Role & Placement
         if ($this->role === 'distributor') {
+            // Role Distributor Murni (Owner)
             $rules['distributor_id'] = 'required';
         }
-        
-        if (in_array($this->role, ['adminproduk', 'analis', 'leader', 'sales', 'gudang', 'security'])) {
+        elseif ($this->role === 'gudang') {
+            // Role Inventory Staff (Bisa di Distributor / Cabang)
+            $rules['placement_type'] = 'required|in:distributor,cabang';
+            
+            if ($this->placement_type === 'distributor') {
+                $rules['distributor_id'] = 'required';
+            } else {
+                $rules['cabang_id'] = 'required';
+            }
+        }
+        elseif (in_array($this->role, ['adminproduk', 'analis', 'leader', 'sales', 'security'])) {
+            // Role Cabang Lainnya
             $rules['cabang_id'] = 'required';
         }
-
-        if ($this->role === 'audit') {
-            // Jika Superadmin, wajib pilih. Jika Audit, validasi nanti (karena read only saat edit)
+        elseif ($this->role === 'audit') {
             if ($currentUser->role === 'superadmin') {
                 $rules['selected_branches'] = 'required|array|min:1';
             }
@@ -144,17 +180,6 @@ class UserIndex extends Component
         }
 
         $this->validate($rules);
-
-        // 2. PROTEKSI BACKEND ROLE (PENTING!)
-        // Jika sedang EDIT dan user BUKAN superadmin, Role tidak boleh berubah
-        if ($this->userId && $currentUser->role !== 'superadmin') {
-            $existingUser = User::find($this->userId);
-            if ($existingUser) {
-                // Paksa kembalikan role ke data asli di DB
-                // Ini mencegah user mengganti value via inspect element
-                $this->role = $existingUser->role; 
-            }
-        }
 
         // 3. SECURITY CHECK & PROTEKSI AUDIT
         if ($currentUser->role === 'audit') {
@@ -169,8 +194,6 @@ class UserIndex extends Component
                 }
             }
 
-            // PROTEKSI BACKEND: Jika Audit sedang mengedit User Audit lain, 
-            // Jangan biarkan dia mengubah 'selected_branches' karena UI dikunci.
             if ($this->isEdit && $this->role === 'audit') {
                 $existingUser = User::find($this->userId);
                 if ($existingUser) {
@@ -187,25 +210,41 @@ class UserIndex extends Component
             'tanggal_lahir'=> $this->tanggal_lahir,
             'role'         => $this->role,
             'is_active'    => $this->is_active,
-            'distributor_id' => ($this->role === 'distributor') ? $this->distributor_id : null,
         ];
+
+        // Logic Save ID berdasarkan Placement
+        if ($this->role === 'distributor') {
+            $data['distributor_id'] = $this->distributor_id;
+            $data['cabang_id'] = null;
+        } 
+        elseif ($this->role === 'gudang') {
+            if ($this->placement_type === 'distributor') {
+                $data['distributor_id'] = $this->distributor_id;
+                $data['cabang_id'] = null;
+            } else {
+                $data['cabang_id'] = $this->cabang_id;
+                $data['distributor_id'] = null;
+            }
+        }
+        elseif (in_array($this->role, ['superadmin', 'audit'])) {
+            $data['distributor_id'] = null;
+            $data['cabang_id'] = null;
+        }
+        else {
+            // Role operasional cabang biasa
+            $data['cabang_id'] = $this->cabang_id;
+            $data['distributor_id'] = null;
+        }
 
         if (!empty($this->password)) {
             $data['password'] = Hash::make($this->password);
         }
 
-        if (!in_array($this->role, ['superadmin', 'audit', 'distributor'])) {
-            $data['cabang_id'] = $this->cabang_id;
-        } else {
-            $data['cabang_id'] = null;
-        }
-
         // 5. Eksekusi Simpan
         $user = User::updateOrCreate(['id' => $this->userId], $data);
 
-        // 6. Sync Multi Cabang
+        // 6. Sync Multi Cabang Audit
         if ($this->role === 'audit') {
-            // Hanya Superadmin yang boleh mengubah coverage secara bebas
             if ($currentUser->role === 'superadmin' || !$this->isEdit) {
                 $user->branches()->sync($this->selected_branches);
             }
@@ -247,10 +286,22 @@ class UserIndex extends Component
         $this->email = $user->email;
         $this->tanggal_lahir = $user->tanggal_lahir;
         $this->role = $user->role;
-        $this->distributor_id = $user->distributor_id;
-        $this->cabang_id = $user->cabang_id;
         $this->is_active = (bool) $user->is_active;
         
+        // Load IDs
+        $this->distributor_id = $user->distributor_id;
+        $this->cabang_id = $user->cabang_id;
+
+        // Tentukan Placement Type saat Edit
+        $this->placement_type = '';
+        if ($user->role === 'gudang') {
+            if ($user->distributor_id) {
+                $this->placement_type = 'distributor';
+            } elseif ($user->cabang_id) {
+                $this->placement_type = 'cabang';
+            }
+        }
+
         $this->selected_branches = $user->branches->pluck('id')
             ->map(fn($id) => (string) $id) 
             ->toArray();

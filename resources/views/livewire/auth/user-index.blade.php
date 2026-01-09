@@ -141,6 +141,26 @@
                                             @endif
                                         </div>
                                     </div>
+                                @elseif($user->role === 'gudang')
+                                    {{-- DISPLAY LOKASI GUDANG (Distributor atau Cabang) --}}
+                                    @if($user->distributor_id)
+                                        <div class="d-flex align-items-center gap-2 text-primary fw-bold small">
+                                            <div class="bg-primary bg-opacity-10 p-1 rounded-circle"><i class="fas fa-truck"></i></div>
+                                            {{ $user->distributor->nama_distributor }} (Dist.)
+                                        </div>
+                                    @elseif($user->cabang_id)
+                                        <div class="d-flex align-items-center gap-2 text-dark fw-bold small">
+                                            <div class="bg-warning bg-opacity-10 text-warning p-1 rounded-circle"><i class="fas fa-warehouse"></i></div>
+                                            {{ $user->cabang->nama_cabang }} (Gudang)
+                                        </div>
+                                    @else
+                                        <span class="text-muted small italic">-</span>
+                                    @endif
+                                @elseif($user->role === 'distributor')
+                                    <div class="d-flex align-items-center gap-2 text-primary fw-bold small">
+                                        <div class="bg-primary bg-opacity-10 p-1 rounded-circle"><i class="fas fa-truck"></i></div>
+                                        {{ $user->distributor->nama_distributor ?? '-' }}
+                                    </div>
                                 @else
                                     <div class="d-flex align-items-center gap-2 text-dark fw-bold small">
                                         <div class="bg-warning bg-opacity-10 text-warning p-1 rounded-circle"><i class="fas fa-map-marker-alt"></i></div>
@@ -283,7 +303,6 @@
                             <div class="col-12">
                                 <div class="bg-dark p-1 rounded-4">
                                     <div class="form-floating">
-                                        {{-- LOGIKA DISABLE ROLE SAAT EDIT JIKA BUKAN SUPERADMIN --}}
                                         <select class="form-select border-0 bg-white text-dark fw-bold rounded-4" 
                                                 id="roleSelect" 
                                                 wire:model.live="role"
@@ -305,7 +324,6 @@
                                     </div>
                                 </div>
                                 
-                                {{-- PESAN INFO ROLE TERKUNCI --}}
                                 @if($isEdit && Auth::user()->role !== 'superadmin')
                                     <div class="text-danger extra-small fw-bold mt-2 d-flex align-items-center">
                                         <i class="fas fa-lock me-1"></i> Role terkunci. Hubungi Superadmin untuk mengubah jabatan.
@@ -315,17 +333,62 @@
                                 @error('role') <span class="text-danger extra-small fw-bold ms-2">{{ $message }}</span> @enderror
                             </div>
 
-                            {{-- DYNAMIC LOCATION (CABANG SINGLE) --}}
-                            @if($role && !in_array($role, ['superadmin', 'audit', 'distributor']))
+                            {{-- RADIO PILIHAN PENEMPATAN (KHUSUS INVENTORY STAFF) --}}
+                            @if($role === 'gudang')
+                                <div class="col-12 animate__animated animate__fadeIn">
+                                    <div class="p-4 bg-light border rounded-4">
+                                        <label class="d-block text-secondary small fw-bold text-uppercase mb-3">Penempatan Kerja</label>
+                                        <div class="d-flex gap-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="placement" id="plc_dist" value="distributor" wire:model.live="placement_type">
+                                                <label class="form-check-label fw-bold text-dark" for="plc_dist">
+                                                    <i class="fas fa-truck me-1"></i> Distributor
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="placement" id="plc_cabang" value="cabang" wire:model.live="placement_type">
+                                                <label class="form-check-label fw-bold text-dark" for="plc_cabang">
+                                                    <i class="fas fa-store me-1"></i> Cabang / Gudang
+                                                </label>
+                                            </div>
+                                        </div>
+                                        @error('placement_type') <span class="text-danger extra-small fw-bold mt-2 d-block">{{ $message }}</span> @enderror
+                                    </div>
+                                </div>
+                            @endif
+
+                            {{-- DYNAMIC DROPDOWNS --}}
+                            
+                            {{-- 1. Dropdown Distributor (Jika Role=Distributor ATAU (Role=Gudang & Placement=Distributor)) --}}
+                            @if($role === 'distributor' || ($role === 'gudang' && $placement_type === 'distributor'))
+                                <div class="col-12 animate__animated animate__fadeIn">
+                                    <div class="form-floating">
+                                        <select class="form-select bg-primary-subtle border-0 text-dark fw-bold rounded-4" wire:model="distributor_id">
+                                            <option value="">Pilih Distributor</option>
+                                            @foreach($distributors as $dist)
+                                                <option value="{{ $dist->id }}">{{ $dist->nama_distributor }}</option>
+                                            @endforeach
+                                        </select>
+                                        <label class="text-primary fw-bold">Lokasi Distributor</label>
+                                    </div>
+                                    @error('distributor_id') <span class="text-danger extra-small fw-bold ms-2">{{ $message }}</span> @enderror
+                                </div>
+                            @endif
+
+                            {{-- 2. Dropdown Cabang (Jika Role=Operasional ATAU (Role=Gudang & Placement=Cabang)) --}}
+                            @if(
+                                ($role && !in_array($role, ['superadmin', 'audit', 'distributor', 'gudang'])) || 
+                                ($role === 'gudang' && $placement_type === 'cabang')
+                            )
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="form-floating">
                                         <select class="form-select bg-warning-subtle border-0 text-dark fw-bold rounded-4" id="branchSelect" wire:model="cabang_id">
-                                            <option value="">Select Branch Location</option>
+                                            <option value="">Pilih Cabang / Gudang</option>
                                             @foreach($cabangs as $c)
                                                 <option value="{{ $c->id }}">{{ $c->nama_cabang }}</option>
                                             @endforeach
                                         </select>
-                                        <label for="branchSelect" class="text-dark fw-bold">Assigned Branch</label>
+                                        <label for="branchSelect" class="text-dark fw-bold">Lokasi Cabang</label>
                                     </div>
                                     @error('cabang_id') <span class="text-danger extra-small fw-bold ms-2">{{ $message }}</span> @enderror
                                 </div>
@@ -417,7 +480,6 @@
                                                 <div class="badge bg-white text-dark border shadow-sm rounded-pill px-3 py-2 fw-bold extra-small d-flex align-items-center gap-2 animate__animated animate__fadeIn">
                                                     <span class="bg-success rounded-circle" style="width: 6px; height: 6px;"></span>
                                                     <span x-text="document.querySelector(`[@click*='${id}'] span.fw-bold`)?.innerText || 'Branch ' + id"></span>
-                                                    
                                                     <template x-if="!isReadOnly">
                                                         <i class="fas fa-times ms-1 cursor-pointer text-muted hover-text-danger" @click.stop="toggle(id)"></i>
                                                     </template>
@@ -427,21 +489,6 @@
 
                                     </div>
                                     @error('selected_branches') <span class="text-danger extra-small fw-bold ms-2 mt-2 d-block">{{ $message }}</span> @enderror
-                                </div>
-                            @endif
-
-                            @if($role === 'distributor')
-                                <div class="col-12 animate__animated animate__fadeIn">
-                                    <div class="form-floating">
-                                        <select class="form-select bg-primary-subtle border-0 text-dark fw-bold rounded-4" wire:model="distributor_id">
-                                            <option value="">Select Partner</option>
-                                            @foreach($distributors as $dist)
-                                                <option value="{{ $dist->id }}">{{ $dist->nama_distributor }}</option>
-                                            @endforeach
-                                        </select>
-                                        <label class="text-primary fw-bold">Partner Affiliation</label>
-                                    </div>
-                                    @error('distributor_id') <span class="text-danger extra-small fw-bold ms-2">{{ $message }}</span> @enderror
                                 </div>
                             @endif
 
