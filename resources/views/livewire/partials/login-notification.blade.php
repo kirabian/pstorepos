@@ -1,90 +1,101 @@
-<div> {{-- 1. Root Element Wajib --}}
-    
-    {{-- Audio Element --}}
-    <audio id="loginSound" src="{{ asset('images/notif.mp3') }}" preload="auto"></audio>
+<div> {{-- Audio Element (Hidden) --}}
+    <audio id="loginSound" src="{{ asset('images/notif.mp3') }}" preload="auto" style="display: none;"></audio>
 
-    {{-- Data Channel (Hidden) --}}
-    <div id="notif-data" data-channels="{{ json_encode($channels) }}"></div>
+    {{-- Data Channel (Hidden Element untuk passing data ke JS) --}}
+    <div id="notification-channels-data" data-channels="{{ json_encode($channels) }}" style="display: none;"></div>
 
     {{-- Script JavaScript --}}
     <script>
         document.addEventListener('livewire:navigated', () => {
-            initializeNotification();
+            initLoginNotification();
         });
 
-        // Fallback untuk load pertama
+        // Fallback untuk load pertama kali (hard refresh)
         document.addEventListener('DOMContentLoaded', () => {
-            initializeNotification();
+            initLoginNotification();
         });
 
-        function initializeNotification() {
-            const dataEl = document.getElementById('notif-data');
+        function initLoginNotification() {
+            // Ambil elemen data
+            const dataEl = document.getElementById('notification-channels-data');
             if (!dataEl) return;
 
-            // Mencegah parsing error jika data kosong
-            let channels = [];
+            // Parse data channel dari atribut data-channels
+            let activeChannels = [];
             try {
-                channels = JSON.parse(dataEl.getAttribute('data-channels'));
+                const rawData = dataEl.getAttribute('data-channels');
+                if (rawData) {
+                    activeChannels = JSON.parse(rawData);
+                }
             } catch (e) {
-                console.error("Gagal parse channel notifikasi", e);
+                console.error("Gagal memparsing channel notifikasi:", e);
                 return;
             }
 
             const audioEl = document.getElementById('loginSound');
 
-            if (!channels || channels.length === 0) return;
-
-            // Cek Echo
+            // Cek apakah Echo sudah terload
             if (typeof window.Echo === 'undefined') {
-                console.error('Laravel Echo belum siap.');
+                console.warn('Laravel Echo belum siap/terload.');
                 return;
             }
 
-            console.log('Listening Channels:', channels);
+            if (activeChannels.length > 0) {
+                console.log('Mendengarkan Login Channel:', activeChannels);
 
-            channels.forEach(channelName => {
-                // Unsubscribe dulu
-                window.Echo.leave(channelName);
+                activeChannels.forEach((channelName) => {
+                    // Unsubscribe dulu untuk mencegah double listener
+                    window.Echo.leave(channelName);
 
-                window.Echo.private(channelName)
-                    .listen('.user.logged.in', (e) => {
-                        console.log('🔔 NOTIF MASUK:', e);
+                    // Subscribe ulang
+                    window.Echo.private(channelName)
+                        .listen('.user.logged.in', (e) => {
+                            console.log('🔔 NOTIFIKASI LOGIN:', e);
 
-                        // 1. Play Audio
-                        if (audioEl) {
-                            audioEl.currentTime = 0;
-                            audioEl.play().catch(err => console.log('Audio autoplay blocked'));
-                        }
+                            // 1. Play Audio
+                            if (audioEl) {
+                                audioEl.currentTime = 0;
+                                audioEl.play().catch(err => {
+                                    console.log('Autoplay audio diblokir browser (interaksi user diperlukan).');
+                                });
+                            }
 
-                        // 2. SweetAlert
-                        Swal.fire({
-                            title: 'User Login Terdeteksi!',
-                            html: `
-                                <div class="d-flex align-items-center gap-3 text-start">
-                                    <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
-                                        <i class="fas fa-user"></i>
-                                    </div>
-                                    <div>
-                                        <div class="fw-bold fs-5">${e.user_name}</div>
-                                        <div class="text-muted small text-uppercase">${e.user_role}</div>
-                                        <div class="text-primary small fw-bold"><i class="fas fa-map-marker-alt me-1"></i> ${e.location}</div>
-                                    </div>
-                                </div>
-                            `,
-                            position: 'top-end',
-                            icon: 'info',
-                            toast: true,
-                            showConfirmButton: false,
-                            timer: 5000,
-                            timerProgressBar: true,
-                            didOpen: (toast) => {
-                                toast.onmouseenter = Swal.stopTimer;
-                                toast.onmouseleave = Swal.resumeTimer;
+                            // 2. Tampilkan SweetAlert
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    title: 'User Login Terdeteksi!',
+                                    html: `
+                                        <div class="d-flex align-items-center gap-3 text-start">
+                                            <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold fs-5">${e.user_name}</div>
+                                                <div class="text-muted small text-uppercase">${e.user_role}</div>
+                                                <div class="text-primary small fw-bold"><i class="fas fa-map-marker-alt me-1"></i> ${e.location}</div>
+                                            </div>
+                                        </div>
+                                    `,
+                                    position: 'top-end',
+                                    icon: 'info',
+                                    toast: true,
+                                    showConfirmButton: false,
+                                    timer: 5000,
+                                    timerProgressBar: true,
+                                    background: '#fff',
+                                    customClass: {
+                                        popup: 'shadow-lg border-start border-5 border-primary rounded-3'
+                                    },
+                                    didOpen: (toast) => {
+                                        toast.onmouseenter = Swal.stopTimer;
+                                        toast.onmouseleave = Swal.resumeTimer;
+                                    }
+                                });
                             }
                         });
-                    });
-            });
+                });
+            }
         }
     </script>
 
-</div> {{-- Penutup Root Element --}}
+</div> 
