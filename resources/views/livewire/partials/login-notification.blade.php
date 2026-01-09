@@ -1,7 +1,7 @@
 <div>
     {{-- Audio Element (Hidden) --}}
     {{-- Menggunakan sound effect notifikasi pendek --}}
-    <audio id="loginSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_1720d209b0.mp3" preload="auto"></audio>
+    <audio id="loginSound" src="{{ asset('images/notif.mp3') }}" preload="auto"></audio>
 
     @if(count($channels) > 0)
         @script
