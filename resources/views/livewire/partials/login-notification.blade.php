@@ -1,4 +1,6 @@
-<div> {{-- Audio Element --}}
+<div> {{-- 1. Root Element Wajib --}}
+    
+    {{-- Audio Element --}}
     <audio id="loginSound" src="{{ asset('images/notif.mp3') }}" preload="auto"></audio>
 
     {{-- Data Channel (Hidden) --}}
@@ -85,4 +87,4 @@
         }
     </script>
 
-</div>
+</div> {{-- Penutup Root Element --}}
