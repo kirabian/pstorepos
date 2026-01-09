@@ -257,13 +257,10 @@
         });
     </script>
 
-    {{-- [PENTING] Masukkan Komponen Notifikasi Disini --}}
+   {{-- [PENTING] Masukkan Komponen Notifikasi Disini --}}
     @auth
-        @livewire('partials.login-notification')
+        @include('partials.login-notification')
     @endauth
-
-    {{-- Slot untuk script tambahan dari komponen Livewire --}}
-    @stack('scripts')
 
 </body>
 
