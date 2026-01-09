@@ -14,7 +14,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     @auth
-        @vite('resources/js/bootstrap-auth.js')
+        @vite('resources/js/bootstrap.js')
     @endauth
     <meta name="description" content="PSTORE Inventory - Premium Admin Dashboard System">
     <title>{{ $title ?? 'CORE | Premium Admin Dashboard' }}</title>
