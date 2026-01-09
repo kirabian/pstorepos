@@ -24,7 +24,7 @@ use App\Livewire\User\UserEdit;
 use App\Livewire\User\UserIndex;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Broadcast; // <--- 1. TARUH DI SINI
+use Illuminate\Support\Facades\Broadcast; // Import Facade Broadcast
 
 /*
 |--------------------------------------------------------------------------
@@ -56,7 +56,7 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     Route::get('/', Dashboard::class)->name('dashboard');
 
     /* |--------------------------------------------------------------------------
-    | MANAJEMEN USER (SUPERADMIN & AUDIT)
+    | MANAJEMEN USER
     |--------------------------------------------------------------------------
     */
     Route::prefix('users')->name('user.')->middleware('user.management')->group(function () {
@@ -73,31 +73,27 @@ Route::middleware(['auth', 'active.user'])->group(function () {
 
         Route::get('/online-shops', OnlineShopIndex::class)->name('online-shop.index');
 
-        // Manajemen Distributor
         Route::prefix('distributors')->name('distributor.')->group(function () {
             Route::get('/', DistributorIndex::class)->name('index');
             Route::get('/create', DistributorCreate::class)->name('create');
             Route::get('/{id}/edit', DistributorEdit::class)->name('edit');
         });
 
-        // Manajemen Cabang
         Route::get('/cabang', CabangIndex::class)->name('cabang.index');
         Route::get('/cabang/create', CabangCreate::class)->name('cabang.create');
         Route::get('/cabang/{id}/edit', CabangEdit::class)->name('cabang.edit');
 
-        // Manajemen Gudang
         Route::get('/gudang', GudangIndex::class)->name('gudang.index');
         Route::get('/gudang/create', GudangCreate::class)->name('gudang.create');
         Route::get('/gudang/{id}/edit', GudangEdit::class)->name('gudang.edit');
 
-        // Master Data Produk
         Route::get('/merk', MerkIndex::class)->name('merk.index');
         Route::get('/tipe', TipeIndex::class)->name('tipe.index');
 
     });
 
     /* |--------------------------------------------------------------------------
-    | OPERASIONAL / UMUM (Sales, Gudang, Audit, Admin Produk)
+    | OPERASIONAL UMUM
     |--------------------------------------------------------------------------
     */
     Route::get('/stok', StokIndex::class)->name('stok.index');
@@ -110,13 +106,22 @@ Route::middleware(['auth', 'active.user'])->group(function () {
         ->name('stock-opname.index')
         ->middleware('checkRole:gudang'); 
 
+    // Route Test Notifikasi
     Route::get('/test-notif', function () {
         $user = Auth::user();
+        // Kirim event
         event(new UserLoggedIn($user));
         return 'Notifikasi dikirim! Cek tab sebelah.';
     })->middleware('auth');
 });
 
-// <--- 2. TARUH DI PALING BAWAH (Di Luar Group Middleware Lain)
-// Manual override for Broadcast Auth
+// =========================================================================
+// FIX AUTH BROADCAST: REGISTRASI ROUTE & CHANNEL SECARA EKSPLISIT
+// =========================================================================
+
+// 1. Registrasi Route Auth (Override default)
 Broadcast::routes(['middleware' => ['web', 'auth']]);
+
+// 2. Load File Channels (WAJIB agar route auth tahu channel apa saja yang ada)
+// Tanpa baris ini, auth akan sukses (200) tapi return kosong karena channel tidak dikenali.
+require base_path('routes/channels.php');
