@@ -73,20 +73,24 @@ Route::middleware(['auth', 'active.user'])->group(function () {
 
         Route::get('/online-shops', OnlineShopIndex::class)->name('online-shop.index');
 
+        // Manajemen Distributor
         Route::prefix('distributors')->name('distributor.')->group(function () {
             Route::get('/', DistributorIndex::class)->name('index');
             Route::get('/create', DistributorCreate::class)->name('create');
             Route::get('/{id}/edit', DistributorEdit::class)->name('edit');
         });
 
+        // Manajemen Cabang
         Route::get('/cabang', CabangIndex::class)->name('cabang.index');
         Route::get('/cabang/create', CabangCreate::class)->name('cabang.create');
         Route::get('/cabang/{id}/edit', CabangEdit::class)->name('cabang.edit');
 
+        // Manajemen Gudang
         Route::get('/gudang', GudangIndex::class)->name('gudang.index');
         Route::get('/gudang/create', GudangCreate::class)->name('gudang.create');
         Route::get('/gudang/{id}/edit', GudangEdit::class)->name('gudang.edit');
 
+        // Master Data Produk
         Route::get('/merk', MerkIndex::class)->name('merk.index');
         Route::get('/tipe', TipeIndex::class)->name('tipe.index');
 
@@ -106,7 +110,7 @@ Route::middleware(['auth', 'active.user'])->group(function () {
         ->name('stock-opname.index')
         ->middleware('checkRole:gudang'); 
 
-    // Route Test Notifikasi
+    // Route Test Notifikasi Manual
     Route::get('/test-notif', function () {
         $user = Auth::user();
         // Kirim event
