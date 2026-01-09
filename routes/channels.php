@@ -26,6 +26,7 @@ Broadcast::channel('branch-notify.{branchId}', function (User $user, $branchId) 
     
     if ($user->role === 'audit') {
         // Cek apakah ID cabang ada di list akses audit
+        // Pastikan User Model punya accessor getAccessCabangIdsAttribute
         return in_array($branchId, $user->access_cabang_ids);
     }
 
