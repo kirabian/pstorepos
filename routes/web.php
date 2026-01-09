@@ -70,7 +70,7 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     */
     Route::middleware('can:superadmin-only')->group(function () {
 
-        Route::get('/online-shops', OnlineShopIndex::class)->name('online-shop.index')->middleware('checkRole:superadmin');
+        Route::get('/online-shops', OnlineShopIndex::class)->name('online-shop.index');
 
         // Manajemen Distributor
         Route::prefix('distributors')->name('distributor.')->group(function () {
