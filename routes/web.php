@@ -68,8 +68,13 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     | AREA KHUSUS SUPERADMIN
     |--------------------------------------------------------------------------
     */
+    /* |--------------------------------------------------------------------------
+    | AREA KHUSUS SUPERADMIN
+    |--------------------------------------------------------------------------
+    */
     Route::middleware('can:superadmin-only')->group(function () {
 
+        // HAPUS ->middleware('checkRole:superadmin') karena sudah ada di group middleware 'can'
         Route::get('/online-shops', OnlineShopIndex::class)->name('online-shop.index');
 
         // Manajemen Distributor
