@@ -7,9 +7,10 @@ use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow; // Wajib Now agar instan
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 class UserLoggedIn implements ShouldBroadcastNow
 {
@@ -39,22 +40,22 @@ class UserLoggedIn implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
+        // Debugging ke Laravel Log
+        Log::info('BROADCASTING EVENT: UserLoggedIn', ['channels' => 'superadmin-notify']);
+        
         $channels = [];
         $channels[] = new PrivateChannel('superadmin-notify');
 
         if ($this->cabang_id) {
             $channels[] = new PrivateChannel('branch-notify.' . $this->cabang_id);
         }
-        
-        // Debugging: Cek log laravel.log jika event ini terpanggil
-        \Illuminate\Support\Facades\Log::info('Broadcasting to channels:', $channels);
 
         return $channels;
     }
 
     public function broadcastAs()
     {
-        // Ganti nama jadi simpel tanpa titik
-        return 'UserLoginEvent';
+        // Nama event yang pasti
+        return 'login-event'; 
     }
 }
