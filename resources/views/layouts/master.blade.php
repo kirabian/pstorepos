@@ -5,19 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="description" content="PSTORE Inventory - Premium Admin Dashboard System">
+    <title>{{ $title ?? 'CORE | Premium Admin Dashboard' }}</title>
+
     @auth
         <meta name="user-id" content="{{ Auth::id() }}">
         <meta name="user-role" content="{{ Auth::user()->role }}">
         <meta name="user-branches" content="{{ json_encode(Auth::user()->access_cabang_ids ?? []) }}">
     @endauth
-
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-    @auth
-        @vite('resources/js/bootstrap.js')
-    @endauth
-    <meta name="description" content="PSTORE Inventory - Premium Admin Dashboard System">
-    <title>{{ $title ?? 'CORE | Premium Admin Dashboard' }}</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -126,6 +121,7 @@
     </style>
 
     @livewireStyles
+    {{-- HAPUS @vite('resources/js/bootstrap.js') KARENA SUDAH DI-LOAD OLEH APP.JS --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
@@ -237,7 +233,7 @@
                     passive: true
                 })
             );
-        @endauth
+            @endauth
         });
 
         document.addEventListener('livewire:init', () => {
@@ -268,22 +264,10 @@
         });
     </script>
 
-    @auth
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Tunggu sampai user benar-benar terautentikasi
-                if (typeof window.axios !== 'undefined' && typeof window.Pusher !== 'undefined') {
-                    import('./bootstrap').then(module => {
-                        console.log('Echo initialized for authenticated user');
-                    });
-                }
-            });
-        </script>
-    @endauth
-
     {{-- [PENTING] Masukkan Komponen Notifikasi Disini --}}
+    {{-- Gunakan @livewire agar komponen backend terhubung --}}
     @auth
-        @include('partials.login-notification')
+        @livewire('partials.login-notification')
     @endauth
 
 </body>
