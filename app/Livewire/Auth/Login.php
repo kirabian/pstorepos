@@ -11,7 +11,7 @@ class Login extends Component
 {
     public $idlogin, $password;
 
-    // Pastikan file resources/views/layouts/guest.blade.php sudah ada
+    // Menggunakan layout guest yang baru dibuat
     #[Layout('layouts.guest')] 
     public function login()
     {
