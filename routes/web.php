@@ -22,8 +22,10 @@ use App\Livewire\Tipe\TipeIndex;
 use App\Livewire\User\UserCreate;
 use App\Livewire\User\UserEdit;
 use App\Livewire\User\UserIndex;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+
 // Hapus: use Illuminate\Support\Facades\Broadcast; (Tidak perlu di sini lagi)
 
 /*
@@ -108,17 +110,47 @@ Route::middleware(['auth', 'active.user'])->group(function () {
 
     Route::get('/stock-opname', \App\Livewire\Gudang\StockOpnameIndex::class)
         ->name('stock-opname.index')
-        ->middleware('checkRole:gudang'); 
+        ->middleware('checkRole:gudang');
 
     // Route Test Notifikasi
     Route::get('/test-notif', function () {
         $user = Auth::user();
         event(new UserLoggedIn($user));
+
         return 'Notifikasi dikirim! Cek tab sebelah.';
     })->middleware('auth');
 
-    Route::get('/test-broadcast', function() {
-    broadcast(new \App\Events\UserLoggedIn(\App\Models\User::first()));
-    return "Event broadcasted!";
-});
+    Route::get('/test-broadcast', function () {
+        broadcast(new \App\Events\UserLoggedIn(\App\Models\User::first()));
+
+        return 'Event broadcasted!';
+    });
+
+    Route::get('/debug-login/{id}', function ($id) {
+        // 1. Cari user
+        $user = User::find($id);
+
+        if (! $user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        // 2. Login paksa
+        Auth::login($user);
+
+        // 3. Update status online (untuk testing middleware active.user)
+        $user->update([
+            'last_seen' => now(),
+            'is_online' => true,
+        ]);
+
+        // 4. Trigger Event Notifikasi
+        event(new UserLoggedIn($user));
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Login Berhasil & Event Dikirim',
+            'user' => $user->nama_lengkap,
+            'role' => $user->role,
+        ]);
+    });
 });
