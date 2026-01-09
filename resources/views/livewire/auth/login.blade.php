@@ -1,5 +1,4 @@
 <div class="main-auth-viewport"> 
-    {{-- Root element pembungkus utama (WAJIB HANYA SATU) --}}
     
     <div class="container-fluid h-100 d-flex align-items-center justify-content-center p-0">
         <div class="row w-100 justify-content-center m-0">
@@ -9,7 +8,6 @@
                     
                     <div class="text-center mb-5">
                         <div class="brand-display mb-4">
-                            {{-- Pastikan path image benar --}}
                             <img src="{{ asset('images/logo-pstore.png') }}" alt="PSTORE" class="img-fluid">
                         </div>
                         
@@ -17,8 +15,8 @@
                         <p class="text-secondary small fw-medium">Secure Gateway for PSTORE System</p>
                     </div>
 
-                    {{-- Form Handler --}}
-                    <form wire:submit="login">
+                    {{-- GUNAKAN wire:submit.prevent UNTUK MEMAKSA --}}
+                    <form wire:submit.prevent="login">
                         <div class="mb-4">
                             <label class="small fw-bold text-dark opacity-75 mb-2 px-1">ID LOGIN</label>
                             <input type="text" wire:model="idlogin" 
@@ -44,7 +42,6 @@
                         </div>
 
                         <button type="submit" class="btn btn-black-pstore w-100 py-3 fw-bold shadow-lg border-0 d-flex align-items-center justify-content-center" wire:loading.attr="disabled">
-                            {{-- Indikator Loading --}}
                             <span wire:loading.remove wire:target="login">MASUK SISTEM</span>
                             <span wire:loading wire:target="login" class="spinner-border spinner-border-sm me-2"></span>
                             <span wire:loading wire:target="login">MEMPROSES...</span>
@@ -62,7 +59,6 @@
         </div>
     </div>
 
-    {{-- Style DIPINDAHKAN KE SINI (DALAM DIV UTAMA) --}}
     <style>
         .main-auth-viewport {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;

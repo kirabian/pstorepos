@@ -9,41 +9,40 @@ use Livewire\Attributes\Layout;
 
 class Login extends Component
 {
-    public $idlogin, $password;
+    public $idlogin = '';
+    public $password = '';
 
-    // Menggunakan layout guest yang baru dibuat
     #[Layout('layouts.guest')] 
     public function login()
     {
-        // 1. Validasi Input
+        // --- DEBUG POINT ---
+        // Jika kode ini jalan, berarti Livewire normal.
+        // Hapus baris dd() ini jika sudah berhasil melihat pesan ini.
+        // dd('MASUK PAK EKO - Livewire Berjalan!'); 
+        // -------------------
+
         $this->validate([
             'idlogin' => 'required',
             'password' => 'required',
         ]);
 
-        // 2. Proses Login
         if (Auth::attempt(['idlogin' => $this->idlogin, 'password' => $this->password])) {
             $user = Auth::user();
 
-            // 3. Cek Status Aktif
             if (!$user->is_active) {
                 Auth::logout();
                 $this->addError('idlogin', 'Akun Anda dinonaktifkan.');
                 return;
             }
 
-            // 4. Set Cache Online (Indikator Lampu Hijau)
-            // Disimpan 60 detik agar sinkron dengan middleware
             $expiresAt = now()->addSeconds(60);
             Cache::put('user-is-online-' . $user->id, true, $expiresAt);
             
-            // 5. Regenerate Session & Redirect
             session()->regenerate();
             
             return redirect()->intended('/');
         }
 
-        // Jika Gagal
         $this->addError('idlogin', 'ID Login atau Password salah.');
     }
 
