@@ -109,4 +109,8 @@ Route::middleware(['auth', 'active.user'])->group(function () {
 
     Route::get('/barang-masuk', BarangMasukIndex::class)->name('barang-masuk.index');
     Route::get('/barang-keluar', BarangKeluarIndex::class)->name('barang-keluar.index');
+
+    Route::get('/stock-opname', \App\Livewire\Gudang\StockOpnameIndex::class)
+        ->name('stock-opname.index')
+        ->middleware('checkRole:gudang'); // Proteksi agar hanya role relevan yang bisa akses
 });

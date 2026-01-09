@@ -117,6 +117,18 @@
                 </a>
             </li>
 
+            {{-- MENU KHUSUS GUDANG (INVENTORY STAFF) --}}
+            {{-- HANYA ROLE GUDANG YANG BISA LIHAT --}}
+            @if (Auth::user()->role === 'gudang')
+                <li class="mb-2">
+                    <a href="{{ route('stock-opname.index') }}"
+                        class="nav-link p-3 rounded-4 d-flex align-items-center {{ request()->routeIs('stock-opname.*') ? 'bg-white text-black fw-bold shadow' : 'text-secondary' }}">
+                        <i class="fas fa-clipboard-check fs-5 flex-shrink-0" style="width: 24px;"></i>
+                        <span class="ms-3 sidebar-text text-nowrap">Stock Opname</span>
+                    </a>
+                </li>
+            @endif
+
             <li class="mt-4 mb-2 small text-uppercase text-muted fw-bold px-3 sidebar-text text-nowrap"
                 style="font-size: 0.65rem; letter-spacing: 1px;">Preference</li>
             <li>
