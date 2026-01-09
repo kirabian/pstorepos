@@ -7,12 +7,9 @@ use Illuminate\Support\ServiceProvider;
 
 class BroadcastServiceProvider extends ServiceProvider
 {
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        // Explicitly define middleware to ensure session/auth works
+        // Middleware 'web' dan 'auth' WAJIB agar Laravel tahu siapa yang login
         Broadcast::routes(['middleware' => ['web', 'auth']]);
 
         require base_path('routes/channels.php');
