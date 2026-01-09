@@ -22,10 +22,15 @@ class MerkIndex extends Component
     #[Rule('nullable|string')]
     public $deskripsi;
 
+    // Tambahan Property Kategori (Array karena checkbox)
+    #[Rule('required|array|min:1')]
+    public $kategori = []; 
+
     public function resetInputFields()
     {
         $this->nama = '';
         $this->deskripsi = '';
+        $this->kategori = []; // Reset array
         $this->merkId = null;
         $this->isEdit = false;
         $this->resetErrorBag();
@@ -33,22 +38,23 @@ class MerkIndex extends Component
 
     public function store()
     {
-        // Validasi Custom untuk Edit
+        // Validasi Custom untuk Edit (Unique ignore ID)
         $rules = [
             'nama' => 'required|min:2|unique:merks,nama,' . $this->merkId,
-            'deskripsi' => 'nullable|string'
+            'deskripsi' => 'nullable|string',
+            'kategori' => 'required|array|min:1' // Wajib pilih minimal 1
         ];
         
         $this->validate($rules);
 
         Merk::updateOrCreate(['id' => $this->merkId], [
             'nama' => $this->nama,
-            'deskripsi' => $this->deskripsi
+            'deskripsi' => $this->deskripsi,
+            'kategori' => $this->kategori // Simpan array langsung (Model sudah cast json)
         ]);
 
         $this->dispatch('close-modal');
         
-        // PENTING: Kirim event SweetAlert
         $this->dispatch('swal', [
             'title' => $this->merkId ? 'Berhasil Diperbarui!' : 'Berhasil Ditambahkan!',
             'text' => 'Data merk telah disimpan ke sistem.',
@@ -64,15 +70,14 @@ class MerkIndex extends Component
         $this->merkId = $id;
         $this->nama = $merk->nama;
         $this->deskripsi = $merk->deskripsi;
+        $this->kategori = $merk->kategori ?? []; // Load kategori dari DB
         $this->isEdit = true;
-        // Buka modal dari backend tidak perlu jika sudah pakai data-bs-toggle di tombol
     }
 
     public function delete($id)
     {
         Merk::find($id)->delete();
         
-        // PENTING: Kirim event SweetAlert Hapus
         $this->dispatch('swal', [
             'title' => 'Dihapus!',
             'text' => 'Data merk berhasil dihapus.',

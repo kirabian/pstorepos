@@ -17,7 +17,6 @@ class TipeIndex extends Component
     public $tipeId;
     public $isEdit = false;
 
-    // --- FORM PROPERTIES ---
     #[Rule('required|exists:merks,id')]
     public $merk_id;
 
@@ -25,15 +24,11 @@ class TipeIndex extends Component
     public $nama;
 
     #[Rule('required|in:imei,non_imei,jasa')]
-    public $jenis = 'imei'; // Default
+    public $jenis = 'imei';
 
-    // Property HP (Array)
     public $ram_storage = []; 
-
-    // Property Aksesoris/Jasa (String Manual)
     public $variasi_manual = ''; 
 
-    // Opsi RAM Predefined
     public $ramOptions = [
         '1/8', '1/16', '1/32', '2/16', '2/32', '2/64', '3/32', '3/64', '3/128', '3/256',
         '4/32', '4/64', '4/128', '4/256', '4/512', '6/64', '6/128', '6/256', '6/512',
@@ -42,12 +37,21 @@ class TipeIndex extends Component
         '24/512', '24/1024', '8', '16', '32', '64', '128', '256', '512', '2048'
     ];
 
-    // PENTING: Reset input saat jenis berubah
     public function updatedJenis()
     {
+        // 1. Reset variasi
         $this->ram_storage = [];
         $this->variasi_manual = '';
-        $this->dispatch('reset-select'); // Reset JS TomSelect
+        $this->dispatch('reset-select');
+        
+        // 2. Reset merk_id karena daftar merk berubah
+        // Jika merk yg dipilih sebelumnya TIDAK mendukung jenis baru, reset.
+        if ($this->merk_id) {
+            $merk = Merk::find($this->merk_id);
+            if ($merk && !in_array($this->jenis, $merk->kategori ?? [])) {
+                $this->merk_id = '';
+            }
+        }
     }
 
     public function resetInputFields()
@@ -75,14 +79,11 @@ class TipeIndex extends Component
 
         switch ($this->jenis) {
             case 'imei':
-                // Validasi HP: Wajib Array
                 $this->validate(['ram_storage' => 'required|array|min:1']);
                 $final_variasi = $this->ram_storage;
                 break;
             default:
-                // Validasi Lainnya: Wajib Text
                 $this->validate(['variasi_manual' => 'required|string|min:1']);
-                // Pecah string koma jadi array
                 $pecah = explode(',', $this->variasi_manual);
                 $final_variasi = array_map('trim', $pecah);
                 break;
@@ -92,7 +93,7 @@ class TipeIndex extends Component
             'merk_id' => $this->merk_id,
             'nama' => $this->nama,
             'jenis' => $this->jenis,
-            'ram_storage' => $final_variasi // Simpan JSON
+            'ram_storage' => $final_variasi
         ]);
 
         $this->dispatch('close-modal');
@@ -121,7 +122,6 @@ class TipeIndex extends Component
                 $this->dispatch('set-select-values', values: $this->ram_storage);
                 break;
             default:
-                // Gabung array jadi string untuk input text
                 $this->variasi_manual = implode(', ', $dataVarian);
                 break;
         }
@@ -145,11 +145,16 @@ class TipeIndex extends Component
             ->latest()
             ->paginate(10);
 
-        $merks = Merk::orderBy('nama', 'asc')->get();
+        // LOGIKA FILTER MERK BERDASARKAN KATEGORI
+        // Kita gunakan whereJsonContains karena kolom kategori di database adalah JSON
+        $merks = Merk::query()
+            ->whereJsonContains('kategori', $this->jenis)
+            ->orderBy('nama', 'asc')
+            ->get();
 
         return view('livewire.tipe.tipe-index', [
             'tipes' => $tipes,
-            'merks' => $merks
+            'merks' => $merks // Ini sekarang berisi merk yang sudah difilter
         ]);
     }
 }

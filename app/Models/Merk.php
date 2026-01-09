@@ -9,6 +9,15 @@ class Merk extends Model
 {
     use HasFactory;
 
-    protected $table = 'merks';
-    protected $fillable = ['nama', 'deskripsi'];
+    protected $fillable = ['nama', 'deskripsi', 'kategori'];
+
+    // PENTING: Cast kategori ke array agar bisa dibaca Livewire
+    protected $casts = [
+        'kategori' => 'array',
+    ];
+
+    public function tipes()
+    {
+        return $this->hasMany(Tipe::class);
+    }
 }

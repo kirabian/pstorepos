@@ -11,8 +11,6 @@
         .ts-dropdown, .ts-control { z-index: 1070 !important; }
         
         .badge-ram { background-color: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; font-weight: 500; font-size: 0.75rem; }
-        
-        /* Badge Jenis */
         .badge-jenis-imei { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
         .badge-jenis-non { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
         .badge-jenis-jasa { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
@@ -20,7 +18,6 @@
         .search-container { width: 100%; }
         @media (min-width: 768px) { .search-container { width: 300px; } }
         
-        /* Radio Button Style */
         .btn-check:checked + .btn-outline-custom { background-color: #212529; color: white; border-color: #212529; }
         .btn-outline-custom { border: 1px solid #dee2e6; color: #6c757d; transition: all 0.2s; }
         .btn-outline-custom:hover { background-color: #f8f9fa; }
@@ -118,6 +115,7 @@
                             <label class="form-label fw-bold small text-uppercase text-secondary mb-2">Jenis Barang <span class="text-danger">*</span></label>
                             <div class="row g-2">
                                 <div class="col-4">
+                                    {{-- WIRE:MODEL.LIVE PENTING DISINI UNTUK MEMICU RENDER ULANG DAFTAR MERK --}}
                                     <input type="radio" class="btn-check" name="jenis" id="opt_imei" value="imei" wire:model.live="jenis">
                                     <label class="btn btn-outline-custom w-100 py-2 rounded-3 text-center" for="opt_imei">
                                         <i class="fas fa-mobile-alt d-block mb-1 fs-5"></i> <span class="small fw-bold">HP/Unit</span>
@@ -141,11 +139,15 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-uppercase text-secondary">Merk / Kategori <span class="text-danger">*</span></label>
                             <select class="form-select rounded-3 py-2 @error('merk_id') is-invalid @enderror" wire:model="merk_id">
-                                <option value="">-- Pilih --</option>
+                                <option value="">-- Pilih Merk Sesuai Jenis --</option>
+                                {{-- DAFTAR MERK INI OTOMATIS BERUBAH SESUAI JENIS YANG DIPILIH --}}
                                 @foreach($merks as $m)
                                     <option value="{{ $m->id }}">{{ $m->nama }}</option>
                                 @endforeach
                             </select>
+                            @if($merks->isEmpty())
+                                <div class="form-text text-danger small">Tidak ada merk untuk kategori ini. Silakan tambah di menu Merk.</div>
+                            @endif
                             @error('merk_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
