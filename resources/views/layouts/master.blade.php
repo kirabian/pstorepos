@@ -4,21 +4,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="PSTORE Inventory - Premium Admin Dashboard System">
     <title>{{ $title ?? 'CORE | Premium Admin Dashboard' }}</title>
-
-    @auth
-        <meta name="user-id" content="{{ Auth::id() }}">
-        <meta name="user-role" content="{{ Auth::user()->role }}">
-    @endauth
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
@@ -27,6 +23,7 @@
         :root {
             --core-black: #09090b;
             --core-white: #ffffff;
+            /* Background Abu-abu Premium agar Navbar Putih terlihat Jelas */
             --core-bg: #f2f4f7;
             --core-gray-light: #f8f9fa;
             --core-gray-border: #eee;
@@ -58,11 +55,14 @@
             position: relative;
         }
 
+        /* Logic Konten */
         main {
-            padding-top: 1rem;
+            /* Hapus margin-top besar karena kita pakai sticky, bukan fixed */
+            padding-top: 1rem; 
             transition: all 0.3s ease;
         }
 
+        /* Overlay untuk Mobile */
         #sidebar-overlay {
             display: none;
             position: fixed;
@@ -81,6 +81,7 @@
             opacity: 1;
         }
 
+        /* Scrollbar Customization */
         ::-webkit-scrollbar {
             width: 5px;
             height: 5px;
@@ -94,6 +95,23 @@
             background: var(--core-black);
             border-radius: 10px;
         }
+
+        .shimmer {
+            background: #f6f7f8;
+            background-image: linear-gradient(90deg, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
+            background-size: 800px 100%;
+            animation: shim 1.2s infinite linear;
+        }
+
+        @keyframes shim {
+            0% {
+                background-position: -468px 0;
+            }
+
+            100% {
+                background-position: 468px 0;
+            }
+        }
     </style>
 
     @livewireStyles
@@ -106,35 +124,42 @@
     <div id="wrapper">
         @auth
             @include('layouts.partials.sidebar')
-            {{-- Komponen Status User (Online/Offline) --}}
-            @livewire('user-status-handler') 
+            @livewire('user-status-handler')
         @endauth
 
         <div id="content">
             @auth @include('layouts.partials.navbar') @endauth
-
+            
             <main class="{{ Auth::check() ? 'p-3 p-md-5' : '' }} flex-grow-1 animate__animated animate__fadeIn">
                 <div class="{{ Auth::check() ? 'container-fluid' : '' }}">
                     {{ $slot }}
                 </div>
             </main>
-
+            
             @auth @include('layouts.partials.footer') @endauth
         </div>
     </div>
 
+    @livewireScripts
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- Navbar Scroll Effect ---
+            // --- LOGIC NAVBAR SCROLL (ISLAND EFFECT) ---
             const navbar = document.getElementById('main-navbar');
-            if (navbar) {
-                if (window.scrollY > 10) navbar.classList.add('scrolled');
+            
+            if(navbar) {
+                if (window.scrollY > 10) {
+                    navbar.classList.add('scrolled');
+                }
+
                 window.addEventListener('scroll', function() {
-                    if (window.scrollY > 10) navbar.classList.add('scrolled');
-                    else navbar.classList.remove('scrolled');
+                    if (window.scrollY > 10) { 
+                        navbar.classList.add('scrolled');
+                    } else {
+                        navbar.classList.remove('scrolled');
+                    }
                 });
             }
 
@@ -146,10 +171,13 @@
             if (toggleBtn && sidebar) {
                 toggleBtn.addEventListener('click', (e) => {
                     e.preventDefault();
-                    e.stopPropagation();
+                    e.stopPropagation(); 
+
                     if (window.innerWidth >= 992) {
+                        // Desktop: Minimize Sidebar
                         sidebar.classList.toggle('minimized');
                     } else {
+                        // Mobile: Show Off-Canvas
                         sidebar.classList.toggle('show-mobile');
                         if (overlay) overlay.classList.toggle('show');
                     }
@@ -170,11 +198,10 @@
                 }
             });
 
-            // --- User Idle/Active Detection ---
             @auth
             let idleTimer;
             let isCurrentlyOffline = false;
-            const statusDelay = 10000;
+            const statusDelay = 10000; 
 
             function resetIdleTimer() {
                 if (isCurrentlyOffline) {
@@ -182,7 +209,9 @@
                     Livewire.dispatch('setUserOnline');
                     isCurrentlyOffline = false;
                 }
+
                 clearTimeout(idleTimer);
+
                 idleTimer = setTimeout(() => {
                     console.log('Status: Diam terdeteksi, mengirim sinyal offline...');
                     Livewire.dispatch('setUserOffline');
@@ -191,15 +220,16 @@
             }
 
             resetIdleTimer();
+
             ['mousemove', 'mousedown', 'keypress', 'touchstart', 'scroll', 'click'].forEach(evt =>
-                window.addEventListener(evt, resetIdleTimer, { passive: true })
+                window.addEventListener(evt, resetIdleTimer, {
+                    passive: true
+                })
             );
             @endauth
         });
 
-        // --- Global Livewire Listeners ---
         document.addEventListener('livewire:init', () => {
-            // Listener untuk notifikasi barang (contoh)
             Livewire.on('echo:pstore-channel,inventory.updated', (event) => {
                 setTimeout(() => {
                     let alertEl = document.querySelector('.alert');
@@ -210,7 +240,7 @@
                 }, 7000);
             });
 
-            // Listener Global SweetAlert
+            // Global SweetAlert Listener
             Livewire.on('swal', (data) => {
                 const payload = data[0];
                 Swal.fire({
@@ -227,109 +257,24 @@
         });
     </script>
 
-    {{-- ================================================================= --}}
-    {{-- LOGIKA NOTIFIKASI LOGIN REALTIME (TANPA COMPONENT LIVEWIRE LAGI) --}}
-    {{-- ================================================================= --}}
-    @php
-        $authUser = auth()->user();
-        $notifChannels = [];
-
-        if ($authUser) {
-            // Channel untuk Superadmin
-            if ($authUser->role === 'superadmin') {
-                $notifChannels[] = 'superadmin-notify';
-            }
-            // Channel untuk Audit (Berdasarkan Cabang)
-            if ($authUser->role === 'audit' && isset($authUser->access_cabang_ids)) {
-                foreach ($authUser->access_cabang_ids as $branchId) {
-                     $notifChannels[] = 'branch-notify.' . $branchId;
-                }
-            }
-        }
-    @endphp
-
-    @if(!empty($notifChannels))
-        {{-- Elemen Audio & Data --}}
-        <audio id="loginSound" src="{{ asset('images/notif.mp3') }}" preload="auto" style="display: none;"></audio>
-        <div id="login-notification-data" data-channels="{{ json_encode($notifChannels) }}"></div>
-
-        <script>
-            // Fungsi inisialisasi notifikasi
-            function initLoginNotificationSystem() {
-                const dataEl = document.getElementById('login-notification-data');
-                if (!dataEl) return;
-
-                let activeChannels = [];
-                try {
-                    activeChannels = JSON.parse(dataEl.getAttribute('data-channels'));
-                } catch (e) { console.error('Gagal parse channel', e); return; }
-
-                const audioEl = document.getElementById('loginSound');
-
-                // Pastikan Echo sudah ada
-                if (typeof window.Echo === 'undefined') {
-                    console.warn('Laravel Echo belum dimuat. Menunggu...');
-                    return;
-                }
-
-                console.log('Mendengarkan Channel Notifikasi:', activeChannels);
-
-                activeChannels.forEach(channelName => {
-                    // Bersihkan listener lama untuk mencegah duplikasi
-                    window.Echo.leave(channelName);
-
-                    // Listen ke Private Channel
-                    window.Echo.private(channelName)
-                        .listen('UserLoggedIn', (e) => { // Pastikan nama event sesuai class PHP: UserLoggedIn
-                            console.log('🔔 NOTIFIKASI LOGIN:', e);
-
-                            // 1. Play Audio
-                            if (audioEl) {
-                                audioEl.currentTime = 0;
-                                audioEl.play().catch(err => console.warn('Audio autoplay diblokir:', err));
-                            }
-
-                            // 2. Tampilkan SweetAlert
-                            if (typeof Swal !== 'undefined') {
-                                Swal.fire({
-                                    title: 'User Login Terdeteksi!',
-                                    html: `
-                                        <div class="d-flex align-items-center gap-3 text-start">
-                                            <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
-                                                <i class="fas fa-user"></i>
-                                            </div>
-                                            <div>
-                                                <div class="fw-bold fs-5">${e.user_name}</div>
-                                                <div class="text-muted small text-uppercase">${e.user_role}</div>
-                                                <div class="text-primary small fw-bold"><i class="fas fa-map-marker-alt me-1"></i> ${e.location || 'Lokasi tidak diketahui'}</div>
-                                            </div>
-                                        </div>
-                                    `,
-                                    position: 'top-end',
-                                    icon: 'info',
-                                    toast: true,
-                                    showConfirmButton: false,
-                                    timer: 6000,
-                                    timerProgressBar: true,
-                                    didOpen: (toast) => {
-                                        toast.addEventListener('mouseenter', Swal.stopTimer)
-                                        toast.addEventListener('mouseleave', Swal.resumeTimer)
-                                    }
-                                });
-                            }
-                        });
+    @auth
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tunggu sampai user benar-benar terautentikasi
+            if (typeof window.axios !== 'undefined' && typeof window.Pusher !== 'undefined') {
+                import('./bootstrap').then(module => {
+                    console.log('Echo initialized for authenticated user');
                 });
             }
+        });
+    </script>
+    @endauth
 
-            // Jalankan saat load awal
-            document.addEventListener('DOMContentLoaded', () => {
-                // Beri sedikit delay agar Echo selesai inisialisasi di app.js
-                setTimeout(initLoginNotificationSystem, 1000);
-            });
-        </script>
-    @endif
+   {{-- [PENTING] Masukkan Komponen Notifikasi Disini --}}
+    @auth
+        @include('partials.login-notification')
+    @endauth
 
-    @livewireScripts
 </body>
 
 </html>
