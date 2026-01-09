@@ -1,5 +1,6 @@
 <?php
 
+use App\Events\UserLoggedIn;
 use App\Livewire\Auth\Login;
 use App\Livewire\BarangKeluar\BarangKeluarIndex;
 use App\Livewire\BarangMasuk\BarangMasukIndex;
@@ -113,4 +114,15 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     Route::get('/stock-opname', \App\Livewire\Gudang\StockOpnameIndex::class)
         ->name('stock-opname.index')
         ->middleware('checkRole:gudang'); // Proteksi agar hanya role relevan yang bisa akses
+
+    Route::get('/test-notif', function () {
+        // Ambil user yang sedang login (Superadmin)
+        $user = Auth::user();
+
+        // Kirim event seolah-olah user ini baru login
+        // Pastikan event ini terkirim ke 'superadmin-notify'
+        event(new UserLoggedIn($user));
+
+        return 'Notifikasi dikirim! Cek tab sebelah.';
+    })->middleware('auth');
 });

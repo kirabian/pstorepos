@@ -8,7 +8,9 @@ import Pusher from 'pusher-js';
 
 window.Pusher = Pusher;
 
-// Konfigurasi untuk Pusher Cloud (bukan Reverb)
+// AKTIFKAN LOGGING (Supaya kelihatan errornya di Console)
+window.Pusher.logToConsole = true; 
+
 window.Echo = new Echo({
     broadcaster: 'pusher',
     key: import.meta.env.VITE_PUSHER_APP_KEY,
