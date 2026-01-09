@@ -21,20 +21,18 @@
 
     <style>
         :root {
-            --core-black: #09090b;
-            --core-white: #ffffff;
-            /* Background Abu-abu Premium agar Navbar Putih terlihat Jelas */
-            --core-bg: #f2f4f7;
+            --core-black: #000;
+            --core-white: #fff;
             --core-gray-light: #f8f9fa;
             --core-gray-border: #eee;
         }
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--core-bg);
+            background-color: var(--core-white);
             color: var(--core-black);
             margin: 0;
-            overflow-x: hidden;
+            overflow-x: hidden; /* Mencegah scroll horizontal di HP */
             font-display: swap;
         }
 
@@ -49,17 +47,9 @@
             width: 100%;
             display: flex;
             flex-direction: column;
-            background-color: var(--core-bg);
+            background-color: var(--core-white);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            min-width: 0;
-            position: relative;
-        }
-
-        /* Logic Konten */
-        main {
-            /* Hapus margin-top besar karena kita pakai sticky, bukan fixed */
-            padding-top: 1rem; 
-            transition: all 0.3s ease;
+            min-width: 0; /* Mencegah flex item overflow */
         }
 
         /* Overlay untuk Mobile */
@@ -71,7 +61,7 @@
             width: 100vw;
             height: 100vh;
             background: rgba(0, 0, 0, 0.5);
-            z-index: 1045;
+            z-index: 1045; /* Di bawah Sidebar (1050) tapi di atas Navbar (1040) */
             opacity: 0;
             transition: opacity 0.3s ease-in-out;
         }
@@ -144,24 +134,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- LOGIC NAVBAR SCROLL (ISLAND EFFECT) ---
-            const navbar = document.getElementById('main-navbar');
-            
-            if(navbar) {
-                if (window.scrollY > 10) {
-                    navbar.classList.add('scrolled');
-                }
-
-                window.addEventListener('scroll', function() {
-                    if (window.scrollY > 10) { 
-                        navbar.classList.add('scrolled');
-                    } else {
-                        navbar.classList.remove('scrolled');
-                    }
-                });
-            }
-
-            // --- Sidebar Toggle Logic ---
+            // Sidebar Toggle Logic Responsive
             const toggleBtn = document.getElementById('sidebarToggle'),
                 sidebar = document.getElementById('sidebar'),
                 overlay = document.getElementById('sidebar-overlay');
@@ -169,19 +142,20 @@
             if (toggleBtn && sidebar) {
                 toggleBtn.addEventListener('click', (e) => {
                     e.preventDefault();
-                    e.stopPropagation(); 
+                    e.stopPropagation(); // Mencegah bubbling
 
                     if (window.innerWidth >= 992) {
-                        // Desktop: Minimize Sidebar
+                        // Logic Desktop (Minimize)
                         sidebar.classList.toggle('minimized');
                     } else {
-                        // Mobile: Show Off-Canvas
+                        // Logic Mobile (Off-Canvas)
                         sidebar.classList.toggle('show-mobile');
                         if (overlay) overlay.classList.toggle('show');
                     }
                 });
             }
 
+            // Tutup sidebar saat overlay diklik (Mobile Only)
             if (overlay) {
                 overlay.addEventListener('click', () => {
                     if (sidebar) sidebar.classList.remove('show-mobile');
@@ -189,6 +163,7 @@
                 });
             }
 
+            // Tutup sidebar saat resize dari Mobile ke Desktop untuk reset state
             window.addEventListener('resize', () => {
                 if (window.innerWidth >= 992) {
                     if (sidebar) sidebar.classList.remove('show-mobile');
@@ -199,7 +174,7 @@
             @auth
             let idleTimer;
             let isCurrentlyOffline = false;
-            const statusDelay = 10000; 
+            const statusDelay = 10000; // 10 Detik
 
             function resetIdleTimer() {
                 if (isCurrentlyOffline) {
