@@ -8,7 +8,7 @@
             </h1>
             <div class="d-flex align-items-center gap-2 text-secondary fw-bold small text-uppercase tracking-wider">
                 <span class="badge bg-dark text-white rounded-pill px-3 py-2">
-                    ROLE: {{ strtoupper(Auth::user()->role) }}
+                    ROLE: {{ strtoupper(str_replace('_', ' ', Auth::user()->role)) }}
                 </span>
                 
                 @if($mode === 'distributor')
@@ -38,11 +38,11 @@
     {{-- CONDITIONAL DASHBOARD CONTENT --}}
 
     {{-- ========================================== --}}
-    {{-- 1. DASHBOARD TIPE DISTRIBUTOR --}}
+    {{-- SCENARIO A: DASHBOARD TIPE DISTRIBUTOR --}}
     {{-- ========================================== --}}
     @if($mode === 'distributor')
         
-        {{-- Statistic Cards --}}
+        {{-- Statistic Cards Distributor --}}
         <div class="row g-4 mb-5">
             @foreach($stats as $stat)
             <div class="col-12 col-md-6 col-xl-3">
@@ -69,7 +69,7 @@
             @endforeach
         </div>
 
-        {{-- Main Operational Area --}}
+        {{-- Main Operational Area (Distributor Fokus ke Pengiriman) --}}
         <div class="row g-4">
             <div class="col-lg-8">
                 <div class="card border-0 shadow-sm rounded-5 overflow-hidden h-100">
@@ -123,8 +123,8 @@
                             <h4 class="fw-bold mb-2">Buat Distribusi Baru</h4>
                             <p class="text-white-50 small mb-0">Kirim stok ke cabang-cabang yang membutuhkan supply.</p>
                         </div>
-                        <button class="btn btn-white text-dark fw-bold rounded-pill py-3 w-100 hover-scale">
-                            Input Barang Keluar
+                        <button class="btn btn-white text-dark fw-bold rounded-pill py-3 w-100 hover-scale shadow-lg">
+                            <i class="fas fa-box me-2"></i> Input Barang Keluar
                         </button>
                     </div>
                     {{-- Abstract BG --}}
@@ -135,15 +135,16 @@
         </div>
 
     {{-- ========================================== --}}
-    {{-- 2. DASHBOARD TIPE GUDANG (WAREHOUSE) --}}
+    {{-- SCENARIO B: DASHBOARD TIPE GUDANG (WAREHOUSE) --}}
     {{-- ========================================== --}}
     @elseif($mode === 'gudang')
 
-        {{-- Statistic Cards --}}
+        {{-- Statistic Cards Gudang (Bottom Border Accent) --}}
         <div class="row g-4 mb-5">
             @foreach($stats as $stat)
             <div class="col-12 col-md-6 col-xl-3">
-                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden hover-lift transition-all" style="border-bottom: 4px solid var(--bs-{{ $stat['color'] }}) !important;">
+                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden hover-lift transition-all" 
+                     style="border-bottom: 4px solid var(--bs-{{ $stat['color'] }}) !important;">
                     <div class="card-body p-4">
                         <div class="d-flex align-items-center gap-3 mb-3">
                             <div class="bg-light p-2 rounded-3 text-{{ $stat['color'] }}">
@@ -165,7 +166,7 @@
 
         {{-- Warehouse Operations Grid --}}
         <div class="row g-4">
-            {{-- Quick Actions --}}
+            {{-- Quick Actions Grid --}}
             <div class="col-12">
                 <div class="d-flex flex-wrap gap-3">
                     <button class="btn btn-white border shadow-sm rounded-4 py-3 px-4 d-flex align-items-center gap-3 flex-fill hover-bg-light transition-all">
@@ -174,7 +175,7 @@
                         </div>
                         <div class="text-start">
                             <h6 class="fw-bold text-dark mb-0">Barang Masuk</h6>
-                            <small class="text-muted">Input stok baru</small>
+                            <small class="text-muted">Input stok fisik baru</small>
                         </div>
                     </button>
                     <button class="btn btn-white border shadow-sm rounded-4 py-3 px-4 d-flex align-items-center gap-3 flex-fill hover-bg-light transition-all">
@@ -192,7 +193,7 @@
                         </div>
                         <div class="text-start">
                             <h6 class="fw-bold text-dark mb-0">Stock Opname</h6>
-                            <small class="text-muted">Cek fisik barang</small>
+                            <small class="text-muted">Cek fisik rutin</small>
                         </div>
                     </button>
                     <button class="btn btn-white border shadow-sm rounded-4 py-3 px-4 d-flex align-items-center gap-3 flex-fill hover-bg-light transition-all">
@@ -201,7 +202,7 @@
                         </div>
                         <div class="text-start">
                             <h6 class="fw-bold text-dark mb-0">Cetak Label</h6>
-                            <small class="text-muted">Barcode Management</small>
+                            <small class="text-muted">Manajemen Barcode</small>
                         </div>
                     </button>
                 </div>
@@ -291,7 +292,7 @@
         </div>
 
     {{-- ========================================== --}}
-    {{-- 3. DEFAULT DASHBOARD (FALLBACK/ADMIN) --}}
+    {{-- SCENARIO C: DEFAULT DASHBOARD (FALLBACK/ADMIN) --}}
     {{-- ========================================== --}}
     @else
         <div class="card border-0 shadow-sm rounded-5 p-5 text-center">
