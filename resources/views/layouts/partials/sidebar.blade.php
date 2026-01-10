@@ -1,279 +1,429 @@
-<!DOCTYPE html>
-<html lang="en">
+<nav id="sidebar" class="d-flex flex-column shadow-lg sidebar-premium"
+    style="min-width: 280px; max-width: 280px; min-height: 100vh; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1050;">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="description" content="PSTORE Inventory - Premium Admin Dashboard System">
-    <title>{{ $title ?? 'CORE | Premium Admin Dashboard' }}</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
-
-    <style>
-        /* --- UPDATED COLOR PALETTE --- */
-        :root {
-            --core-black: #222831;         /* Palette Dark Charcoal */
-            --core-dark-secondary: #393E46; /* Palette Dark Slate Grey */
-            --core-accent: #00ADB5;        /* Palette Teal */
-            --core-white: #ffffff;         /* Pure White (for specific elements) */
-            --core-gray-light: #EEEEEE;    /* Palette Light Grey (Main Background) */
-            --core-gray-border: #EEEEEE;   /* Palette Light Grey (Borders) */
-        }
-
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--core-gray-light); /* Updated background color */
-            color: var(--core-black);
-            margin: 0;
-            overflow-x: hidden; /* Mencegah scroll horizontal di HP */
-            font-display: swap;
-        }
-
-        #wrapper {
-            display: flex;
-            width: 100%;
-            min-height: 100vh;
-            position: relative;
-        }
-
-        #content {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            background-color: var(--core-gray-light); /* Updated background color */
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            min-width: 0; /* Mencegah flex item overflow */
-            position: relative;
-        }
-
-        /* --- LOGIKA NAVBAR SCROLL EFFECT --- */
-        #main-navbar {
-            position: sticky;
-            top: 0;
-            z-index: 1040;
-            width: 100%;
-            /* Using rgba(238, 238, 238, 0.95) for #EEEEEE with opacity */
-            background: rgba(238, 238, 238, 0.95); 
-            border-bottom: 1px solid rgba(34, 40, 49, 0.05); /* Subtle border using palette black */
-            padding: 0.75rem 1.5rem;
-            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); /* Animasi halus */
-            backdrop-filter: blur(10px);
-        }
-
-        /* Class ini ditambahkan via JS saat scroll */
-        #main-navbar.scrolled {
-            top: 20px; /* Turun sedikit dari atas */
-            width: 95%; /* Mengecil lebarnya */
-            margin-left: auto;
-            margin-right: auto;
-            
-            /* Visual Effect Floating */
-            border-radius: 50px;
-            /* Using rgba(238, 238, 238, 0.85) for #EEEEEE with opacity */
-            background: rgba(238, 238, 238, 0.85) !important;
-            border: 1px solid rgba(238, 238, 238, 0.5);
-            box-shadow: 0 10px 30px -10px rgba(34, 40, 49, 0.1); /* Shadow using palette black rgb */
-            padding: 0.5rem 1.5rem;
-        }
-
-        /* Responsive Navbar Effect */
-        @media (max-width: 991.98px) {
-            #main-navbar { padding: 0.5rem 1rem; }
-            #main-navbar.scrolled { width: 92%; top: 15px; }
-        }
-        /* --- END NAVBAR EFFECT --- */
-
-        /* Overlay untuk Mobile */
-        #sidebar-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(34, 40, 49, 0.5); /* Palette black with opacity */
-            z-index: 1045; /* Di bawah Sidebar (1050) tapi di atas Navbar (1040) */
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-        }
-
-        #sidebar-overlay.show {
-            display: block;
-            opacity: 1;
-        }
-
-        /* Scrollbar Customization */
-        ::-webkit-scrollbar {
-            width: 5px;
-            height: 5px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--core-gray-light);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--core-black); /* Using palette black #222831 */
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--core-accent); /* Hover color teal #00ADB5 */
-        }
-
-        .shimmer {
-            background: #f6f7f8;
-            background-image: linear-gradient(90deg, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
-            background-size: 800px 100%;
-            animation: shim 1.2s infinite linear;
-        }
-
-        @keyframes shim {
-            0% { background-position: -468px 0; }
-            100% { background-position: 468px 0; }
-        }
-    </style>
-
-    @livewireStyles
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-
-<body>
-    <div id="sidebar-overlay"></div>
-
-    <div id="wrapper">
-        @auth
-            @include('layouts.partials.sidebar')
-            @livewire('user-status-handler')
-        @endauth
-
-        <div id="content">
-            @auth @include('layouts.partials.navbar') @endauth
-            
-            <main class="{{ Auth::check() ? 'p-3 p-md-5' : '' }} flex-grow-1 animate__animated animate__fadeIn">
-                <div class="{{ Auth::check() ? 'container-fluid' : '' }}">
-                    {{ $slot }}
-                </div>
-            </main>
-            
-            @auth @include('layouts.partials.footer') @endauth
+    <div class="p-4 pt-5 flex-grow-0">
+        <div class="d-flex align-items-center mb-4 sidebar-logo-container px-2 justify-content-start">
+            <img src="{{ asset('images/logo-pstore.png') }}" alt="PSTORE Navigation Logo" width="140" height="35"
+                class="sidebar-logo-img invert-logo" style="height: 35px; width: auto; object-fit: contain;">
         </div>
+        <div class="sidebar-divider mx-2"></div>
     </div>
 
-    @livewireScripts
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
+    <div class="px-3 flex-grow-1 overflow-hidden overflow-y-auto custom-scrollbar">
+        <ul class="list-unstyled components mb-5">
             
-            // --- LOGIC NAVBAR SCROLL ---
-            const navbar = document.getElementById('main-navbar');
-            if(navbar) {
-                function checkScroll() {
-                    // Jika scroll lebih dari 20px, tambahkan class .scrolled
-                    if (window.scrollY > 20) {
-                        navbar.classList.add('scrolled');
-                    } else {
-                        navbar.classList.remove('scrolled');
-                    }
-                }
-                
-                // Event listener saat user scroll
-                window.addEventListener('scroll', checkScroll);
-                // Cek saat pertama kali load (handle refresh saat posisi di bawah)
-                checkScroll();
-            }
-            // --- END LOGIC NAVBAR ---
+            {{-- DASHBOARD --}}
+            <li class="mb-2">
+                <a href="/"
+                    class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->is('/') ? 'active' : '' }}">
+                    <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                        <i class="fas fa-th-large fs-5"></i>
+                    </div>
+                    <span class="ms-3 sidebar-text text-nowrap fw-medium">Overview</span>
+                </a>
+            </li>
 
-            // Sidebar Toggle Logic Responsive
-            const toggleBtn = document.getElementById('sidebarToggle'),
-                sidebar = document.getElementById('sidebar'),
-                overlay = document.getElementById('sidebar-overlay');
+            {{-- KHUSUS SUPERADMIN: Distributor --}}
+            @if (Auth::user()->role === 'superadmin')
+                <li class="mb-1">
+                    <div class="sidebar-header mt-3 mb-2 px-3 sidebar-text">
+                        <span class="text-uppercase fw-bold text-muted" style="font-size: 0.65rem; letter-spacing: 1.5px;">Master Data</span>
+                    </div>
+                </li>
+                <li class="mb-2">
+                    <a href="{{ route('distributor.index') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('distributor.*') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-truck fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Distributors</span>
+                    </a>
+                </li>
 
-            if (toggleBtn && sidebar) {
-                toggleBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation(); // Mencegah bubbling
+                <li class="mb-2">
+                    <a href="{{ route('online-shop.index') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('online-shop.*') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-shopping-bag fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Online Shops</span>
+                    </a>
+                </li>
+            @endif
 
-                    if (window.innerWidth >= 992) {
-                        // Logic Desktop (Minimize)
-                        sidebar.classList.toggle('minimized');
-                    } else {
-                        // Logic Mobile (Off-Canvas)
-                        sidebar.classList.toggle('show-mobile');
-                        if (overlay) overlay.classList.toggle('show');
-                    }
-                });
-            }
+            {{-- UPDATE: Manage Users (Bisa Diakses Superadmin & Audit) --}}
+            @if (in_array(Auth::user()->role, ['superadmin', 'audit']))
+                <li class="mb-2">
+                    <a href="{{ route('user.index') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('user.*') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-user-shield fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Manage Users</span>
+                    </a>
+                </li>
+            @endif
 
-            // Tutup sidebar saat overlay diklik (Mobile Only)
-            if (overlay) {
-                overlay.addEventListener('click', () => {
-                    if (sidebar) sidebar.classList.remove('show-mobile');
-                    overlay.classList.remove('show');
-                });
-            }
+            {{-- KHUSUS SUPERADMIN: Master Data Lainnya --}}
+            @if (Auth::user()->role === 'superadmin')
+                <li class="mb-2">
+                    <a href="{{ route('cabang.index') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('cabang.*') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-store fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Branches</span>
+                    </a>
+                </li>
 
-            // Tutup sidebar saat resize dari Mobile ke Desktop untuk reset state
-            window.addEventListener('resize', () => {
-                if (window.innerWidth >= 992) {
-                    if (sidebar) sidebar.classList.remove('show-mobile');
-                    if (overlay) overlay.classList.remove('show');
-                }
-            });
+                <li class="mb-2">
+                    <a href="{{ route('gudang.index') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('gudang.*') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-warehouse fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Warehouses</span>
+                    </a>
+                </li>
 
-            @auth
-            let idleTimer;
-            let isCurrentlyOffline = false;
-            const statusDelay = 10000; // 10 Detik
+                <li class="mb-2">
+                    <a href="{{ route('merk.index') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('merk.*') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-tags fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Merk (Brands)</span>
+                    </a>
+                </li>
+                <li class="mb-2">
+                    <a href="{{ route('tipe.index') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('tipe.*') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-mobile-alt fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Tipe (Models)</span>
+                    </a>
+                </li>
+            @endif
 
-            function resetIdleTimer() {
-                if (isCurrentlyOffline) {
-                    console.log('User kembali aktif, mengirim sinyal online...');
-                    Livewire.dispatch('setUserOnline');
-                    isCurrentlyOffline = false;
-                }
+            {{-- MENU KHUSUS ADMIN PRODUK --}}
+            @if (Auth::user()->role === 'adminproduk')
+                <li class="mb-1">
+                    <div class="sidebar-header mt-3 mb-2 px-3 sidebar-text">
+                        <span class="text-uppercase fw-bold text-muted" style="font-size: 0.65rem; letter-spacing: 1.5px;">Inventory</span>
+                    </div>
+                </li>
+                <li class="mb-2">
+                    <a href="{{ route('stok.index') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('stok.*') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-boxes fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Stok (Inventory)</span>
+                    </a>
+                </li>
+            @endif
 
-                clearTimeout(idleTimer);
+            {{-- OPERATIONAL MENU (Available for All) --}}
+            @if(in_array(Auth::user()->role, ['superadmin', 'adminproduk', 'gudang', 'audit'])) 
+             <li class="mb-1">
+                <div class="sidebar-header mt-3 mb-2 px-3 sidebar-text">
+                    <span class="text-uppercase fw-bold text-muted" style="font-size: 0.65rem; letter-spacing: 1.5px;">Operations</span>
+                </div>
+            </li>
+            @endif
 
-                idleTimer = setTimeout(() => {
-                    console.log('Status: Diam terdeteksi, mengirim sinyal offline...');
-                    Livewire.dispatch('setUserOffline');
-                    isCurrentlyOffline = true;
-                }, statusDelay);
-            }
+            <li class="mb-2">
+                <a href="{{ route('lacak.imei') }}"
+                    class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('lacak.imei') ? 'active' : '' }}">
+                    <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                        <i class="fas fa-barcode fs-5"></i>
+                    </div>
+                    <span class="ms-3 sidebar-text text-nowrap fw-medium">Lacak IMEI</span>
+                </a>
+            </li>
 
-            resetIdleTimer();
+            {{-- MENU BARANG MASUK --}}
+            <li class="mb-2">
+                <a href="{{ route('barang-masuk.index') }}"
+                    class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('barang-masuk.*') ? 'active' : '' }}">
+                    <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                        <i class="fas fa-arrow-circle-down fs-5"></i>
+                    </div>
+                    <span class="ms-3 sidebar-text text-nowrap fw-medium">Barang Masuk</span>
+                </a>
+            </li>
 
-            ['mousemove', 'mousedown', 'keypress', 'touchstart', 'scroll', 'click'].forEach(evt =>
-                window.addEventListener(evt, resetIdleTimer, {
-                    passive: true
-                })
-            );
-            @endauth
-        });
+            {{-- MENU BARANG KELUAR --}}
+            <li class="mb-2">
+                <a href="{{ route('barang-keluar.index') }}"
+                    class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('barang-keluar.*') ? 'active' : '' }}">
+                    <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                        <i class="fas fa-arrow-circle-up fs-5"></i>
+                    </div>
+                    <span class="ms-3 sidebar-text text-nowrap fw-medium">Barang Keluar</span>
+                </a>
+            </li>
 
-        document.addEventListener('livewire:init', () => {
-            Livewire.on('echo:pstore-channel,inventory.updated', (event) => {
-                setTimeout(() => {
-                    let alertEl = document.querySelector('.alert');
-                    if (alertEl) {
-                        alertEl.classList.add('animate__fadeOutRight');
-                        setTimeout(() => alertEl.remove(), 1000);
-                    }
-                }, 7000);
-            });
-        });
-    </script>
-</body>
+            {{-- MENU KHUSUS GUDANG (INVENTORY STAFF) --}}
+            @if (Auth::user()->role === 'gudang')
+                <li class="mb-2">
+                    <a href="{{ route('stock-opname.index') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('stock-opname.*') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-clipboard-check fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Stock Opname</span>
+                    </a>
+                </li>
+            @endif
 
-</html>
+            <li class="mt-4 mb-2 small text-uppercase text-muted fw-bold px-3 sidebar-text"
+                style="font-size: 0.65rem; letter-spacing: 1.5px;">Preference</li>
+            <li>
+                <a href="#" class="nav-link p-3 rounded-3 d-flex align-items-center text-secondary">
+                    <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                        <i class="fas fa-sliders-h fs-5"></i>
+                    </div>
+                    <span class="ms-3 sidebar-text text-nowrap fw-medium">Settings</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="p-3 mb-2 mt-auto">
+        <div class="glass-card rounded-4 p-3 user-card position-relative overflow-hidden">
+            <div class="glow-effect"></div>
+            
+            <div class="d-flex align-items-center mb-3 user-info-wrapper position-relative" style="z-index: 2;">
+                <div class="position-relative flex-shrink-0">
+                    <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->nama_lengkap) }}&background=DFD0B8&color=222831&bold=true"
+                        class="rounded-circle border border-2 border-white shadow-sm" width="42" height="42"
+                        alt="User Avatar">
+                    <span class="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle"
+                        style="width: 10px; height: 10px;"></span>
+                </div>
+                <div class="ms-3 overflow-hidden sidebar-text">
+                    <p class="mb-0 fw-bold text-truncate text-white" style="font-size: 0.9rem; color: #DFD0B8 !important;">
+                        {{ Auth::user()->nama_lengkap }}</p>
+                    <p class="mb-0 text-white-50 text-truncate text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px; color: #948979 !important;">
+                        {{ str_replace('_', ' ', Auth::user()->role) }}</p>
+                </div>
+            </div>
+            
+            <form method="POST" action="{{ route('logout') }}" id="logout-form" class="position-relative" style="z-index: 2;"> 
+                @csrf
+                <button type="submit"
+                    class="btn btn-logout w-100 btn-sm rounded-3 py-2 fw-semibold d-flex align-items-center justify-content-center logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> <span class="ms-2 sidebar-text">Log Out</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<style>
+    /* --- THEME COLORS & BASICS --- */
+    /* Palette Code:
+       #222831 -> Dark Background
+       #393E46 -> Secondary Background
+       #948979 -> Taupe Accent
+       #DFD0B8 -> Cream Text
+    */
+
+    .sidebar-premium {
+        /* Gradient from #222831 to #393E46 */
+        background: linear-gradient(180deg, #222831 0%, #393E46 100%);
+        color: #DFD0B8;
+        border-right: 1px solid #393E46;
+    }
+
+    .invert-logo {
+        filter: brightness(0) invert(1);
+        opacity: 0.95;
+    }
+
+    .sidebar-divider {
+        height: 1px;
+        /* Using Taupe #948979 for divider */
+        background: linear-gradient(90deg, rgba(148, 137, 121, 0) 0%, rgba(148, 137, 121, 0.5) 50%, rgba(148, 137, 121, 0) 100%);
+        margin-top: 10px;
+    }
+
+    /* --- NAVIGATION ITEMS --- */
+    #sidebar .nav-link {
+        color: #DFD0B8; /* Cream Text */
+        opacity: 0.8;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        border: 1px solid transparent;
+        margin-bottom: 4px;
+    }
+
+    /* Icon Wrapper Fixed Width for Alignment */
+    .icon-wrapper {
+        width: 24px;
+        height: 24px;
+        flex-shrink: 0;
+        color: #948979; /* Icon Taupe Color by default */
+        transition: color 0.3s ease;
+    }
+    
+    #sidebar .nav-link:hover .icon-wrapper,
+    #sidebar .nav-link.active .icon-wrapper {
+        color: inherit;
+    }
+
+    /* Hover State */
+    #sidebar .nav-link:hover:not(.active) {
+        color: #DFD0B8;
+        opacity: 1;
+        /* Background Hover: #393E46 */
+        background: rgba(57, 62, 70, 0.8);
+        border: 1px solid rgba(148, 137, 121, 0.2);
+        transform: translateX(5px);
+    }
+
+    /* Active State */
+    #sidebar .nav-link.active {
+        /* Active Background: Cream #DFD0B8 */
+        background-color: #DFD0B8;
+        /* Active Text: Dark #222831 */
+        color: #222831;
+        opacity: 1;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        font-weight: 700 !important;
+        border: 1px solid #DFD0B8;
+    }
+    
+    #sidebar .nav-link.active i {
+        transform: scale(1.1);
+        transition: transform 0.2s;
+        color: #222831;
+    }
+
+    /* Headers / Label */
+    .text-muted {
+        color: #948979 !important; /* Taupe for labels */
+    }
+
+    /* --- SCROLLBAR CUSTOMIZATION --- */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(148, 137, 121, 0.3); /* Taupe transparent */
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(148, 137, 121, 0.6);
+    }
+
+    /* --- USER CARD GLASSMORPHISM --- */
+    .glass-card {
+        /* Background #393E46 with opacity */
+        background: rgba(57, 62, 70, 0.4);
+        border: 1px solid rgba(148, 137, 121, 0.3);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
+    .btn-logout {
+        border: 1px solid rgba(148, 137, 121, 0.4);
+        color: #DFD0B8;
+        background: transparent;
+        transition: all 0.2s ease;
+    }
+
+    .btn-logout:hover {
+        background: #948979; /* Taupe Hover */
+        border-color: #948979;
+        color: #222831;
+        box-shadow: 0 4px 10px rgba(148, 137, 121, 0.2);
+    }
+
+    /* --- RESPONSIVE LOGIC (DESKTOP) --- */
+    @media (min-width: 992px) {
+        #sidebar {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+        }
+
+        #sidebar.minimized {
+            min-width: 85px !important;
+            max-width: 85px !important;
+        }
+
+        #sidebar.minimized .sidebar-text, 
+        #sidebar.minimized .sidebar-header,
+        #sidebar.minimized .sidebar-divider {
+            display: none !important;
+        }
+
+        #sidebar.minimized .sidebar-logo-container {
+            justify-content: center !important;
+            padding: 0 !important;
+        }
+
+        #sidebar.minimized .sidebar-logo-img {
+            height: 24px !important;
+            width: auto;
+        }
+
+        #sidebar.minimized .nav-link {
+            justify-content: center !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        #sidebar.minimized .nav-link:hover {
+            transform: none; /* Disable shift on minimize */
+            background: rgba(57, 62, 70, 0.8);
+        }
+
+        #sidebar.minimized .user-info-wrapper {
+            justify-content: center !important;
+            margin-bottom: 10px !important;
+        }
+        
+        #sidebar.minimized .user-card {
+            padding: 10px !important;
+            background: transparent;
+            border: none;
+        }
+
+        #sidebar.minimized .logout-btn {
+            border: none !important;
+            background: transparent !important;
+            color: #948979 !important;
+        }
+        
+        #sidebar.minimized .logout-btn:hover {
+            background: rgba(148, 137, 121, 0.1) !important;
+            color: #DFD0B8 !important;
+        }
+
+        #sidebar.minimized .logout-btn span {
+            display: none;
+        }
+    }
+
+    /* --- RESPONSIVE LOGIC (MOBILE) --- */
+    @media (max-width: 991.98px) {
+        #sidebar {
+            position: fixed !important;
+            left: 0; top: 0; bottom: 0;
+            transform: translateX(-100%);
+            z-index: 1050;
+            width: 280px;
+        }
+
+        #sidebar.show-mobile {
+            transform: translateX(0);
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+        }
+    }
+</style>
