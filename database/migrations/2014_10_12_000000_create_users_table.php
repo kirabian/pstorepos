@@ -20,7 +20,7 @@ return new class extends Migration
     $table->date('tanggal_lahir'); // Field ultah
     $table->enum('role', [
         'superadmin', 'adminproduk', 'analis', 'audit', 'security', 'leader', 'sales',
-        'distributor', 'gudang', 'toko_offline', 'toko_online'
+        'distributor', 'inventory_staff', 'gudang', 'toko_offline', 'toko_online'
     ]);
     $table->rememberToken();
     $table->timestamps();

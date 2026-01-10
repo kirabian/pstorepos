@@ -141,8 +141,8 @@
                                             @endif
                                         </div>
                                     </div>
-                                @elseif($user->role === 'gudang')
-                                    {{-- DISPLAY LOKASI GUDANG (Distributor atau Gudang Fisik) --}}
+                                @elseif($user->role === 'inventory_staff')
+                                    {{-- DISPLAY LOKASI INVENTORY STAFF (Distributor atau Gudang Fisik) --}}
                                     @if($user->distributor_id)
                                         <div class="d-flex align-items-center gap-2 text-primary fw-bold small">
                                             <div class="bg-primary bg-opacity-10 p-1 rounded-circle"><i class="fas fa-truck"></i></div>
@@ -310,7 +310,7 @@
                                             <option value="analis">ANALIST DATA</option>
                                             <option value="leader">TEAM LEADER</option>
                                             <option value="sales">SALES / CASHIER</option>
-                                            <option value="gudang">INVENTORY STAFF</option>
+                                            <option value="inventory_staff">INVENTORY STAFF (Staff Gudang)</option>
                                             <option value="security">SECURITY</option>
                                         </select>
                                         <label for="roleSelect" class="text-dark fw-bold">User Role</label>
@@ -327,7 +327,7 @@
                             </div>
 
                             {{-- RADIO PILIHAN PENEMPATAN (KHUSUS INVENTORY STAFF) --}}
-                            @if($role === 'gudang')
+                            @if($role === 'inventory_staff')
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="p-4 bg-light border rounded-4">
                                         <label class="d-block text-secondary small fw-bold text-uppercase mb-3">Penempatan Inventory</label>
@@ -353,7 +353,7 @@
                             {{-- DYNAMIC DROPDOWNS --}}
                             
                             {{-- 1. Dropdown Distributor --}}
-                            @if($role === 'distributor' || ($role === 'gudang' && $placement_type === 'distributor'))
+                            @if($role === 'distributor' || ($role === 'inventory_staff' && $placement_type === 'distributor'))
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="form-floating">
                                         <select class="form-select bg-primary-subtle border-0 text-dark fw-bold rounded-4" wire:model="distributor_id">
@@ -369,7 +369,7 @@
                             @endif
 
                             {{-- 2. Dropdown Gudang Fisik (NEW) --}}
-                            @if($role === 'gudang' && $placement_type === 'gudang')
+                            @if($role === 'inventory_staff' && $placement_type === 'gudang')
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="form-floating">
                                         <select class="form-select bg-info-subtle border-0 text-dark fw-bold rounded-4" wire:model="gudang_id">
@@ -384,8 +384,8 @@
                                 </div>
                             @endif
 
-                            {{-- 3. Dropdown Cabang (Tidak Muncul jika Role = Gudang/Distributor) --}}
-                            @if($role && !in_array($role, ['superadmin', 'audit', 'distributor', 'gudang']))
+                            {{-- 3. Dropdown Cabang --}}
+                            @if($role && !in_array($role, ['superadmin', 'audit', 'distributor', 'inventory_staff']))
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="form-floating">
                                         <select class="form-select bg-warning-subtle border-0 text-dark fw-bold rounded-4" id="branchSelect" wire:model="cabang_id">
