@@ -13,6 +13,11 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'nama_lengkap',
         'idlogin',
@@ -20,11 +25,12 @@ class User extends Authenticatable
         'password',
         'tanggal_lahir',
         'role',
+        // PASTIKAN KETIGA ID INI ADA
         'distributor_id',
         'cabang_id',
+        'gudang_id', 
         'last_seen',
         'is_active',
-        // Tambahan Kolom Tema
         'theme_mode',
         'theme_color',
     ];
@@ -38,6 +44,7 @@ class User extends Authenticatable
         'password' => 'hashed',
         'last_seen' => 'datetime',
         'is_active' => 'boolean',
+        'tanggal_lahir' => 'date',
     ];
 
     public function cabang()
@@ -94,6 +101,7 @@ class User extends Authenticatable
         $label = match ($timezone) {
             'Asia/Makassar' => 'WITA',
             'Asia/Jayapura' => 'WIT',
+            'Asia/Jakarta' => 'WIB',
             default => 'WIB'
         };
 

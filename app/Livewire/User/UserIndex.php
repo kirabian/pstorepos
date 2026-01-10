@@ -31,9 +31,9 @@ class UserIndex extends Component
     public $distributor_id, $cabang_id, $gudang_id; 
 
     // Logic Penempatan Kerja untuk Inventory Staff
-    public $placement_type = ''; // 'distributor' atau 'gudang'
+    public $placement_type = ''; // Values: 'distributor' atau 'gudang'
 
-    // Khusus Audit
+    // Khusus Audit: Multi Cabang Selection
     public $selected_branches = []; 
 
     protected $updatesQueryString = ['search'];
@@ -46,40 +46,39 @@ class UserIndex extends Component
         $this->resetPage();
     }
 
-    // Reset Logic saat Role Berubah
+    // Logic Reset Field Saat Role Berubah
     public function updatedRole($value)
     {
-        // Jika bukan Inventory Staff, reset placement
+        // Jika bukan Inventory Staff, reset pilihan penempatan & ID terkait
         if ($value !== 'inventory_staff') {
             $this->placement_type = '';
             $this->gudang_id = null;
             $this->distributor_id = null;
         }
         
-        // Reset spesifik ID jika role bukan terkait
-        if ($value === 'distributor') {
-            $this->cabang_id = null;
-            $this->gudang_id = null;
-        } elseif (in_array($value, ['adminproduk', 'analis', 'leader', 'sales', 'security'])) {
+        // Reset ID jika pindah ke role operasional cabang biasa
+        if (in_array($value, ['adminproduk', 'analis', 'leader', 'sales', 'security'])) {
             $this->distributor_id = null;
             $this->gudang_id = null;
         }
     }
 
+    // Logic Reset Dropdown saat Radio Button Berubah
     public function updatedPlacementType()
     {
-        // Reset dropdown saat radio button berubah agar data bersih
         $this->distributor_id = null;
         $this->gudang_id = null;
         $this->cabang_id = null;
     }
 
+    // === READ (RENDER TABLE) ===
     public function render()
     {
         $currentUser = Auth::user();
         
         $query = User::with(['distributor', 'cabang', 'gudang', 'branches']);
 
+        // 1. Filter Search
         if ($this->search) {
             $query->where(function($q) {
                 $q->where('nama_lengkap', 'like', '%' . $this->search . '%')
@@ -89,24 +88,29 @@ class UserIndex extends Component
             });
         }
 
+        // 2. LOGIKA PROTEKSI DATA AUDIT
         if ($currentUser->role === 'audit') {
             $myBranchIds = $currentUser->access_cabang_ids ?? []; 
+            
             $query->where(function($q) use ($myBranchIds) {
                 $q->whereIn('cabang_id', $myBranchIds)
                   ->orWhereHas('branches', function($sq) use ($myBranchIds) {
                       $sq->whereIn('cabangs.id', $myBranchIds);
                   });
             });
+            
             $query->where('role', '!=', 'superadmin');
         }
 
         $users = $query->latest()->paginate(10);
 
+        // 3. LOGIKA DROPDOWN DATA
         if ($currentUser->role === 'superadmin') {
             $cabangs = Cabang::orderBy('nama_cabang', 'asc')->get();
         } else {
             $cabangs = Cabang::whereIn('id', $currentUser->access_cabang_ids ?? [])
-                             ->orderBy('nama_cabang', 'asc')->get();
+                             ->orderBy('nama_cabang', 'asc')
+                             ->get();
         }
 
         $distributors = Distributor::orderBy('nama_distributor', 'asc')->get();
@@ -120,6 +124,7 @@ class UserIndex extends Component
         ]);
     }
 
+    // === RESET FORM ===
     public function resetInputFields()
     {
         $this->nama_lengkap = '';
@@ -128,9 +133,11 @@ class UserIndex extends Component
         $this->password = '';
         $this->tanggal_lahir = '';
         $this->role = '';
+        
         $this->distributor_id = '';
         $this->cabang_id = '';
         $this->gudang_id = '';
+        
         $this->placement_type = ''; 
         $this->is_active = true; 
         $this->selected_branches = [];
@@ -139,11 +146,12 @@ class UserIndex extends Component
         $this->resetErrorBag();
     }
 
+    // === CREATE / UPDATE (STORE) ===
     public function store()
     {
         $currentUser = Auth::user();
 
-        // 1. Validasi Dasar
+        // 1. Rules Dasar
         $rules = [
             'nama_lengkap' => 'required',
             'tanggal_lahir' => 'required|date',
@@ -152,27 +160,25 @@ class UserIndex extends Component
             'email'        => ['required', 'email', Rule::unique('users')->ignore($this->userId)],
         ];
 
-        // 2. Logic Validasi Inventory Staff (FIXED)
+        // 2. Logic Validasi Inventory Staff
         if ($this->role === 'inventory_staff') {
-            // Wajib pilih jenis penempatan
             $rules['placement_type'] = 'required|in:distributor,gudang';
             
-            // Validasi dinamis berdasarkan pilihan radio
             if ($this->placement_type === 'distributor') {
                 $rules['distributor_id'] = 'required';
-            } elseif ($this->placement_type === 'gudang') {
+            } else {
                 $rules['gudang_id'] = 'required';
             }
         }
-        // Validasi Role Lain
-        elseif ($this->role === 'distributor') {
-            $rules['distributor_id'] = 'required';
-        }
+        // Validasi Role Lain (Operasional Cabang)
         elseif (in_array($this->role, ['adminproduk', 'analis', 'leader', 'sales', 'security'])) {
             $rules['cabang_id'] = 'required';
         }
-        elseif ($this->role === 'audit' && $currentUser->role === 'superadmin') {
-            $rules['selected_branches'] = 'required|array|min:1';
+        // Validasi Audit Superadmin
+        elseif ($this->role === 'audit') {
+            if ($currentUser->role === 'superadmin') {
+                $rules['selected_branches'] = 'required|array|min:1';
+            }
         }
 
         if (!$this->userId) {
@@ -183,7 +189,20 @@ class UserIndex extends Component
 
         $this->validate($rules);
 
-        // 3. Persiapan Data
+        // 3. Security Check Audit
+        if ($currentUser->role === 'audit') {
+            if ($this->role === 'superadmin') {
+                abort(403, 'Anda tidak memiliki akses membuat Superadmin.');
+            }
+            if ($this->cabang_id) {
+                if (!in_array($this->cabang_id, $currentUser->access_cabang_ids ?? [])) {
+                    $this->addError('cabang_id', 'Anda tidak berhak menambahkan user di cabang ini.');
+                    return;
+                }
+            }
+        }
+
+        // 4. Siapkan Data
         $data = [
             'nama_lengkap' => $this->nama_lengkap,
             'idlogin'      => $this->idlogin,
@@ -193,25 +212,25 @@ class UserIndex extends Component
             'is_active'    => $this->is_active,
         ];
 
-        // Reset ID agar bersih sebelum di-set ulang
+        // Reset semua ID lokasi agar bersih
         $data['distributor_id'] = null;
         $data['cabang_id'] = null;
         $data['gudang_id'] = null;
 
-        // 4. Logic Penyimpanan ID (FIXED)
+        // Logic Assignment ID (FIXED)
         if ($this->role === 'inventory_staff') {
             if ($this->placement_type === 'distributor') {
                 $data['distributor_id'] = $this->distributor_id;
-                // Role tetap inventory_staff, tapi punya akses distributor
-            } elseif ($this->placement_type === 'gudang') {
-                $data['gudang_id'] = $this->gudang_id;
-                // Role tetap inventory_staff, tapi punya akses gudang
+            } else {
+                // INI YANG SEBELUMNYA GAGAL KARENA MODEL TIDAK FILLABLE
+                $data['gudang_id'] = $this->gudang_id; 
             }
         }
-        elseif ($this->role === 'distributor') {
-            $data['distributor_id'] = $this->distributor_id;
+        elseif (in_array($this->role, ['superadmin', 'audit'])) {
+            // Role global/multi-cabang tidak simpan ID spesifik disini
         }
-        elseif (in_array($this->role, ['adminproduk', 'analis', 'leader', 'sales', 'security'])) {
+        else {
+            // Role operasional cabang
             $data['cabang_id'] = $this->cabang_id;
         }
 
@@ -219,10 +238,10 @@ class UserIndex extends Component
             $data['password'] = Hash::make($this->password);
         }
 
-        // 5. Eksekusi
+        // 5. Eksekusi Simpan
         $user = User::updateOrCreate(['id' => $this->userId], $data);
 
-        // Sync Audit Branches
+        // 6. Sync Multi Cabang Audit
         if ($this->role === 'audit') {
             if ($currentUser->role === 'superadmin' || !$this->isEdit) {
                 $user->branches()->sync($this->selected_branches);
@@ -231,28 +250,31 @@ class UserIndex extends Component
             $user->branches()->detach();
         }
 
+        // 7. Selesai
         $this->dispatch('close-modal');
         $this->dispatch('swal', [
             'title' => 'Berhasil!',
-            'text' => 'Data user tersimpan dengan role & lokasi yang benar.',
+            'text' => 'Data user telah disimpan.',
             'icon' => 'success'
         ]);
         
         $this->resetInputFields();
     }
 
+    // === EDIT ===
     public function edit($id)
     {
         $user = User::findOrFail($id);
         $currentUser = Auth::user();
 
+        // Validasi Akses Audit saat Edit
         if ($currentUser->role === 'audit') {
             if ($user->role === 'superadmin') {
-                $this->dispatch('swal', ['title'=>'Akses Ditolak', 'text'=>'Restricted Access.', 'icon'=>'error']);
+                $this->dispatch('swal', ['title'=>'Akses Ditolak', 'text'=>'Anda tidak bisa mengedit Superadmin.', 'icon'=>'error']);
                 return;
             }
             if ($user->cabang_id && !in_array($user->cabang_id, $currentUser->access_cabang_ids ?? [])) {
-                $this->dispatch('swal', ['title'=>'Akses Ditolak', 'text'=>'Diluar Wilayah Anda.', 'icon'=>'error']);
+                $this->dispatch('swal', ['title'=>'Akses Ditolak', 'text'=>'User ini diluar wilayah otorisasi Anda.', 'icon'=>'error']);
                 return;
             }
         }
@@ -265,11 +287,12 @@ class UserIndex extends Component
         $this->role = $user->role;
         $this->is_active = (bool) $user->is_active;
         
+        // Load IDs
         $this->distributor_id = $user->distributor_id;
         $this->cabang_id = $user->cabang_id;
         $this->gudang_id = $user->gudang_id;
 
-        // Populate Placement Type saat Edit
+        // Tentukan Placement Type saat Edit untuk Inventory Staff
         $this->placement_type = '';
         if ($user->role === 'inventory_staff') {
             if ($user->distributor_id) {
@@ -279,24 +302,50 @@ class UserIndex extends Component
             }
         }
 
-        $this->selected_branches = $user->branches->pluck('id')->map(fn($id)=>(string)$id)->toArray();
+        $this->selected_branches = $user->branches->pluck('id')
+            ->map(fn($id) => (string) $id) 
+            ->toArray();
 
         $this->isEdit = true;
         $this->resetErrorBag();
     }
 
+    // === DELETE ===
     public function delete($id)
     {
         if ($id === auth()->id()) return;
+        
         $user = User::findOrFail($id);
+        $currentUser = Auth::user();
+        
+        if ($currentUser->role === 'audit') {
+            if ($user->role === 'superadmin') return;
+            if ($user->cabang_id && !in_array($user->cabang_id, $currentUser->access_cabang_ids ?? [])) {
+                $this->dispatch('swal', ['title'=>'Gagal', 'text'=>'User diluar akses cabang Anda.', 'icon'=>'error']);
+                return;
+            }
+        }
+
         $user->delete();
         $this->dispatch('swal', ['title'=>'Terhapus!', 'text'=>'User berhasil dihapus.', 'icon'=>'success']);
     }
     
+    // === TOGGLE STATUS ===
     public function toggleStatus($id)
     {
         if ($id === auth()->id()) return; 
+
         $user = User::findOrFail($id);
+        $currentUser = Auth::user();
+        
+        if ($currentUser->role === 'audit') {
+            if ($user->role === 'superadmin') return;
+            if ($user->cabang_id && !in_array($user->cabang_id, $currentUser->access_cabang_ids ?? [])) {
+                $this->dispatch('swal', ['title'=>'Gagal', 'text'=>'User diluar akses cabang Anda.', 'icon'=>'error']);
+                return;
+            }
+        }
+
         $user->is_active = !$user->is_active;
         $user->save();
     }
