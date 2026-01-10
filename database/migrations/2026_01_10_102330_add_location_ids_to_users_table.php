@@ -12,12 +12,30 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Menambahkan kolom baru setelah kolom 'is_active' agar rapi
-            $table->foreignId('cabang_id')->nullable()->after('is_active');
-            $table->foreignId('distributor_id')->nullable()->after('cabang_id');
-            $table->foreignId('gudang_id')->nullable()->after('distributor_id'); // Ini yang bikin error tadi
             
-            $table->timestamp('last_seen')->nullable()->after('gudang_id');
+            // 1. Cek & Buat cabang_id
+            if (!Schema::hasColumn('users', 'cabang_id')) {
+                $table->foreignId('cabang_id')->nullable()->after('is_active');
+            }
+
+            // 2. Cek & Buat distributor_id
+            if (!Schema::hasColumn('users', 'distributor_id')) {
+                // Taruh setelah cabang_id jika ada, atau setelah is_active
+                $after = Schema::hasColumn('users', 'cabang_id') ? 'cabang_id' : 'is_active';
+                $table->foreignId('distributor_id')->nullable()->after($after);
+            }
+
+            // 3. Cek & Buat gudang_id (Ini yang sebelumnya error missing)
+            if (!Schema::hasColumn('users', 'gudang_id')) {
+                $after = Schema::hasColumn('users', 'distributor_id') ? 'distributor_id' : 'is_active';
+                $table->foreignId('gudang_id')->nullable()->after($after);
+            }
+
+            // 4. Cek & Buat last_seen
+            if (!Schema::hasColumn('users', 'last_seen')) {
+                $after = Schema::hasColumn('users', 'gudang_id') ? 'gudang_id' : 'is_active';
+                $table->timestamp('last_seen')->nullable()->after($after);
+            }
         });
     }
 
@@ -27,13 +45,18 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Hapus kolom jika di-rollback
-            $table->dropColumn([
-                'cabang_id', 
-                'distributor_id', 
-                'gudang_id', 
-                'last_seen'
-            ]);
+            if (Schema::hasColumn('users', 'cabang_id')) {
+                $table->dropColumn('cabang_id');
+            }
+            if (Schema::hasColumn('users', 'distributor_id')) {
+                $table->dropColumn('distributor_id');
+            }
+            if (Schema::hasColumn('users', 'gudang_id')) {
+                $table->dropColumn('gudang_id');
+            }
+            if (Schema::hasColumn('users', 'last_seen')) {
+                $table->dropColumn('last_seen');
+            }
         });
     }
 };
