@@ -39,56 +39,70 @@
 </nav>
 
 <style>
-    /* PERBAIKAN UTAMA:
-       Gunakan 'sticky' agar navbar tetap di dalam flow content (sebelah kanan sidebar),
-       bukan 'fixed' yang membuatnya menimpa seluruh layar.
-    */
+    /* Base Style Navbar */
     #main-navbar {
-        position: sticky;
+        position: sticky; /* Tetap sticky agar ikut flow content */
         top: 0;
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(8px);
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-        padding: 0.75rem 1.0rem;
         z-index: 1040;
         width: 100%;
-        transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); 
+        background: rgba(255, 255, 255, 0.95);
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 0.75rem 1.5rem;
+        /* Transisi Properti agar animasi smooth */
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        backdrop-filter: blur(10px);
     }
 
-    /* Style Saat Discroll (Island Effect - Web Version) */
+    /* Style Saat Scrolled (Efek Island / Melayang) */
     #main-navbar.scrolled {
-        width: 95%; /* Tidak full width, memberi efek mengambang */
-        top: 15px; /* Jarak dari atas */
-        margin: 0 auto; /* Posisi tengah relatif terhadap content */
+        /* Ubah posisi top agar turun sedikit */
+        top: 20px; 
         
+        /* Kecilkan width agar terlihat "lepas" dari pinggir */
+        width: 95%; 
+        
+        /* Margin auto untuk menengahkan navbar di dalam container induknya */
+        margin-left: auto;
+        margin-right: auto;
+        
+        /* styling visual */
         border-radius: 50px;
-        border: 1px solid rgba(255, 255, 255, 0.6);
-        
-        background: rgba(255, 255, 255, 0.9) !important; 
-        backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
-        
-        box-shadow: 
-            0 10px 25px -5px rgba(0, 0, 0, 0.05),
-            0 8px 10px -6px rgba(0, 0, 0, 0.01);
-            
-        padding: 0.6rem 1.5rem;
+        background: rgba(255, 255, 255, 0.85) !important;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+        padding: 0.5rem 1.5rem;
     }
 
-    /* Responsive untuk Mobile */
+    /* Responsif Mobile */
     @media (max-width: 991.98px) {
         #main-navbar {
-            position: fixed; /* Di HP boleh fixed karena sidebar offcanvas */
-            top: 0;
-            left: 0;
-            right: 0;
+            padding: 0.5rem 1rem;
         }
         
         #main-navbar.scrolled {
-            width: 92%;
+            width: 92%; /* Sedikit lebih lebar di HP */
             top: 15px;
-            padding: 0.5rem 1rem;
-            border-radius: 25px;
         }
     }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const navbar = document.getElementById('main-navbar');
+        
+        // Fungsi untuk mengecek posisi scroll
+        function checkScroll() {
+            if (window.scrollY > 20) { // Jika discroll lebih dari 20px
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        }
+
+        // Jalankan saat dicroll
+        window.addEventListener('scroll', checkScroll);
+        
+        // Jalankan saat load (barangkali user refresh saat posisi di bawah)
+        checkScroll();
+    });
+</script>

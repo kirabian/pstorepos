@@ -10,11 +10,8 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
@@ -24,7 +21,6 @@
             --core-black: #000;
             --core-white: #fff;
             --core-gray-light: #f8f9fa;
-            --core-gray-border: #eee;
         }
 
         body {
@@ -32,8 +28,7 @@
             background-color: var(--core-white);
             color: var(--core-black);
             margin: 0;
-            overflow-x: hidden; /* Mencegah scroll horizontal di HP */
-            font-display: swap;
+            overflow-x: hidden;
         }
 
         #wrapper {
@@ -49,59 +44,27 @@
             flex-direction: column;
             background-color: var(--core-white);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            min-width: 0; /* Mencegah flex item overflow */
+            min-width: 0;
+            position: relative; /* Penting untuk navbar sticky */
         }
 
-        /* Overlay untuk Mobile */
+        /* Overlay Mobile */
         #sidebar-overlay {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
+            top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.5);
-            z-index: 1045; /* Di bawah Sidebar (1050) tapi di atas Navbar (1040) */
+            z-index: 1045;
             opacity: 0;
             transition: opacity 0.3s ease-in-out;
         }
+        #sidebar-overlay.show { display: block; opacity: 1; }
 
-        #sidebar-overlay.show {
-            display: block;
-            opacity: 1;
-        }
-
-        /* Scrollbar Customization */
-        ::-webkit-scrollbar {
-            width: 5px;
-            height: 5px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--core-gray-light);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--core-black);
-            border-radius: 10px;
-        }
-
-        .shimmer {
-            background: #f6f7f8;
-            background-image: linear-gradient(90deg, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
-            background-size: 800px 100%;
-            animation: shim 1.2s infinite linear;
-        }
-
-        @keyframes shim {
-            0% {
-                background-position: -468px 0;
-            }
-
-            100% {
-                background-position: 468px 0;
-            }
-        }
+        /* Scrollbar Halus */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #999; }
     </style>
 
     @livewireStyles
@@ -114,11 +77,16 @@
     <div id="wrapper">
         @auth
             @include('layouts.partials.sidebar')
-            @livewire('user-status-handler')
+            
+            @if(class_exists('App\Livewire\UserStatusHandler'))
+                @livewire('user-status-handler')
+            @endif
         @endauth
 
         <div id="content">
-            @auth @include('layouts.partials.navbar') @endauth
+            @auth 
+                @include('layouts.partials.navbar') 
+            @endauth
             
             <main class="{{ Auth::check() ? 'p-3 p-md-5' : '' }} flex-grow-1 animate__animated animate__fadeIn">
                 <div class="{{ Auth::check() ? 'container-fluid' : '' }}">
@@ -126,7 +94,9 @@
                 </div>
             </main>
             
-            @auth @include('layouts.partials.footer') @endauth
+            @auth 
+                @include('layouts.partials.footer') 
+            @endauth
         </div>
     </div>
 
@@ -134,28 +104,24 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Sidebar Toggle Logic Responsive
-            const toggleBtn = document.getElementById('sidebarToggle'),
-                sidebar = document.getElementById('sidebar'),
-                overlay = document.getElementById('sidebar-overlay');
+            // Logic Sidebar Toggle & Mobile Overlay
+            const toggleBtn = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
 
             if (toggleBtn && sidebar) {
                 toggleBtn.addEventListener('click', (e) => {
                     e.preventDefault();
-                    e.stopPropagation(); // Mencegah bubbling
-
+                    e.stopPropagation();
                     if (window.innerWidth >= 992) {
-                        // Logic Desktop (Minimize)
                         sidebar.classList.toggle('minimized');
                     } else {
-                        // Logic Mobile (Off-Canvas)
                         sidebar.classList.toggle('show-mobile');
                         if (overlay) overlay.classList.toggle('show');
                     }
                 });
             }
 
-            // Tutup sidebar saat overlay diklik (Mobile Only)
             if (overlay) {
                 overlay.addEventListener('click', () => {
                     if (sidebar) sidebar.classList.remove('show-mobile');
@@ -163,57 +129,13 @@
                 });
             }
 
-            // Tutup sidebar saat resize dari Mobile ke Desktop untuk reset state
             window.addEventListener('resize', () => {
                 if (window.innerWidth >= 992) {
                     if (sidebar) sidebar.classList.remove('show-mobile');
                     if (overlay) overlay.classList.remove('show');
                 }
             });
-
-            @auth
-            let idleTimer;
-            let isCurrentlyOffline = false;
-            const statusDelay = 10000; // 10 Detik
-
-            function resetIdleTimer() {
-                if (isCurrentlyOffline) {
-                    console.log('User kembali aktif, mengirim sinyal online...');
-                    Livewire.dispatch('setUserOnline');
-                    isCurrentlyOffline = false;
-                }
-
-                clearTimeout(idleTimer);
-
-                idleTimer = setTimeout(() => {
-                    console.log('Status: Diam terdeteksi, mengirim sinyal offline...');
-                    Livewire.dispatch('setUserOffline');
-                    isCurrentlyOffline = true;
-                }, statusDelay);
-            }
-
-            resetIdleTimer();
-
-            ['mousemove', 'mousedown', 'keypress', 'touchstart', 'scroll', 'click'].forEach(evt =>
-                window.addEventListener(evt, resetIdleTimer, {
-                    passive: true
-                })
-            );
-            @endauth
-        });
-
-        document.addEventListener('livewire:init', () => {
-            Livewire.on('echo:pstore-channel,inventory.updated', (event) => {
-                setTimeout(() => {
-                    let alertEl = document.querySelector('.alert');
-                    if (alertEl) {
-                        alertEl.classList.add('animate__fadeOutRight');
-                        setTimeout(() => alertEl.remove(), 1000);
-                    }
-                }, 7000);
-            });
         });
     </script>
 </body>
-
 </html>
