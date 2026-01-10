@@ -120,7 +120,7 @@ class UserIndex extends Component
         $distributors = Distributor::orderBy('nama_distributor', 'asc')->get();
         $gudangs = Gudang::orderBy('nama_gudang', 'asc')->get();
 
-        return view('livewire.user.user-index', [
+        return view('livewire.auth.user-index', [
             'users' => $users,
             'cabangs' => $cabangs,
             'distributors' => $distributors,
