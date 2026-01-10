@@ -3,7 +3,7 @@
 
     <div class="p-4 pt-5 flex-grow-0">
         <div class="d-flex align-items-center mb-4 sidebar-logo-container px-2 justify-content-start">
-            <img src="{{ asset('images/logo-pstore.png') }}" alt="PSTORE Navigation Logo" width="140" height="35"
+            <img src="{{ asset('images/logo-pstore.png') }}" alt="PSTORE" width="140" height="35"
                 class="sidebar-logo-img invert-logo" style="height: 35px; width: auto; object-fit: contain;">
         </div>
         <div class="sidebar-divider mx-2"></div>
@@ -14,7 +14,8 @@
             
             {{-- DASHBOARD --}}
             <li class="mb-2">
-                <a href="/" class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->is('/') ? 'active' : '' }}">
+                <a href="/"
+                    class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->is('/') ? 'active' : '' }}">
                     <div class="icon-wrapper d-flex justify-content-center align-items-center">
                         <i class="fas fa-th-large fs-5"></i>
                     </div>
@@ -52,7 +53,7 @@
                 </li>
             @endif
 
-            {{-- INVENTORY & OPERATIONS --}}
+            {{-- OPERATIONS --}}
             @if(in_array(Auth::user()->role, ['superadmin', 'adminproduk', 'gudang', 'audit'])) 
              <li class="mb-1">
                 <div class="sidebar-header mt-3 mb-2 px-3 sidebar-text">
@@ -77,14 +78,12 @@
                 </a>
             </li>
 
-            {{-- --- THEME CUSTOMIZER (Integrated here) --- --}}
+            {{-- THEME CUSTOMIZER --}}
             <li class="mt-4 mb-2 small text-uppercase text-muted fw-bold px-3 sidebar-text"
                 style="font-size: 0.65rem; letter-spacing: 1.5px;">Customization</li>
-            
             <li class="sidebar-text mb-4">
                 @livewire('theme-settings')
             </li>
-            {{-- --- END THEME CUSTOMIZER --- --}}
 
             <li class="mb-2">
                 <a href="#" class="nav-link p-3 rounded-3 d-flex align-items-center text-secondary">
@@ -97,10 +96,10 @@
         </ul>
     </div>
 
+    {{-- USER PROFILE --}}
     <div class="p-3 mb-2 mt-auto">
         <div class="glass-card rounded-4 p-3 user-card position-relative overflow-hidden">
             <div class="glow-effect"></div>
-            
             <div class="d-flex align-items-center mb-3 user-info-wrapper position-relative" style="z-index: 2;">
                 <div class="position-relative flex-shrink-0">
                     <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->nama_lengkap) }}&background={{ str_replace('#', '', Auth::user()->theme_color == 'teal' ? '00ADB5' : (Auth::user()->theme_color == 'red' ? 'EF4444' : '00ADB5')) }}&color=fff&bold=true"
@@ -110,7 +109,7 @@
                         style="width: 10px; height: 10px;"></span>
                 </div>
                 <div class="ms-3 overflow-hidden sidebar-text">
-                    <p class="mb-0 fw-bold text-truncate" style="font-size: 0.9rem; color: var(--ps-sidebar-text) !important;">
+                    <p class="mb-0 fw-bold text-truncate" style="font-size: 0.9rem; color: var(--sidebar-text) !important;">
                         {{ Auth::user()->nama_lengkap }}</p>
                     <p class="mb-0 text-white-50 text-truncate text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px; color: var(--ps-accent) !important;">
                         {{ str_replace('_', ' ', Auth::user()->role) }}</p>
@@ -129,121 +128,31 @@
 </nav>
 
 <style>
-    /* --- SIDEBAR PALETTE IMPLEMENTATION --- */
-    
+    /* Styling Sidebar Khusus */
     .sidebar-premium {
-        /* Sidebar selalu menggunakan tema gelap agar elegan, tapi accent berubah */
-        background: linear-gradient(180deg, var(--ps-sidebar-bg) 0%, #111 100%);
-        color: var(--ps-sidebar-text);
+        background: linear-gradient(180deg, var(--sidebar-bg) 0%, #111 100%);
+        color: var(--sidebar-text);
         border-right: 1px solid rgba(var(--ps-accent-rgb), 0.1);
     }
-
-    .invert-logo {
-        filter: brightness(0) invert(1);
-        opacity: 0.95;
-    }
-
-    .sidebar-divider {
-        height: 1px;
-        background: linear-gradient(90deg, transparent 0%, rgba(var(--ps-accent-rgb), 0.5) 50%, transparent 100%);
-        margin-top: 10px;
-    }
-
-    /* Navigation Items */
-    #sidebar .nav-link {
-        color: rgba(255,255,255,0.7); /* Sidebar text selalu light on dark */
-        opacity: 0.8;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        border: 1px solid transparent;
-        margin-bottom: 4px;
-    }
-
-    /* Icon Wrapper */
-    .icon-wrapper {
-        width: 24px;
-        height: 24px;
-        flex-shrink: 0;
-        color: var(--ps-accent);
-        transition: color 0.3s ease;
-    }
+    .invert-logo { filter: brightness(0) invert(1); opacity: 0.95; }
+    .sidebar-divider { height: 1px; background: linear-gradient(90deg, transparent 0%, rgba(var(--ps-accent-rgb), 0.5) 50%, transparent 100%); margin-top: 10px; }
     
-    #sidebar .nav-link:hover .icon-wrapper,
-    #sidebar .nav-link.active .icon-wrapper {
-        color: #222831; /* Icon dark on active */
-    }
-
-    /* Hover State */
-    #sidebar .nav-link:hover:not(.active) {
-        color: #FFFFFF;
-        opacity: 1;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(var(--ps-accent-rgb), 0.3);
-        transform: translateX(5px);
-    }
-
-    /* Active State */
-    #sidebar .nav-link.active {
-        background-color: var(--ps-accent);
-        color: #222831; /* Dark Text */
-        opacity: 1;
-        box-shadow: 0 4px 12px rgba(var(--ps-accent-rgb), 0.4);
-        font-weight: 700 !important;
-        border: 1px solid var(--ps-accent);
-    }
+    #sidebar .nav-link { color: rgba(255,255,255,0.7); opacity: 0.8; transition: all 0.3s ease; border: 1px solid transparent; margin-bottom: 4px; }
+    .icon-wrapper { width: 24px; height: 24px; flex-shrink: 0; color: var(--ps-accent); transition: color 0.3s ease; }
     
-    #sidebar .nav-link.active i {
-        transform: scale(1.1);
-        transition: transform 0.2s;
-        color: #222831;
-    }
+    #sidebar .nav-link:hover .icon-wrapper, #sidebar .nav-link.active .icon-wrapper { color: #222831; }
+    #sidebar .nav-link:hover:not(.active) { color: #FFFFFF; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(var(--ps-accent-rgb), 0.3); transform: translateX(5px); }
+    #sidebar .nav-link.active { background-color: var(--ps-accent); color: #222831; box-shadow: 0 4px 12px rgba(var(--ps-accent-rgb), 0.4); font-weight: 700; border: 1px solid var(--ps-accent); }
+    
+    .glass-card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(var(--ps-accent-rgb), 0.2); backdrop-filter: blur(10px); }
+    .btn-logout { border: 1px solid rgba(var(--ps-accent-rgb), 0.4); color: #EEEEEE; background: transparent; transition: all 0.2s ease; }
+    .btn-logout:hover { background: var(--ps-accent); color: #222831; box-shadow: 0 4px 10px rgba(var(--ps-accent-rgb), 0.3); }
 
-    /* Labels */
-    .text-muted {
-        color: var(--ps-accent) !important;
-        opacity: 0.8;
-    }
-
-    /* Scrollbar */
-    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(var(--ps-accent-rgb), 0.3);
-        border-radius: 10px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--ps-accent); }
-
-    /* Glass Card */
-    .glass-card {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(var(--ps-accent-rgb), 0.2);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-    }
-
-    /* Logout Button */
-    .btn-logout {
-        border: 1px solid rgba(var(--ps-accent-rgb), 0.4);
-        color: #EEEEEE;
-        background: transparent;
-        transition: all 0.2s ease;
-    }
-
-    .btn-logout:hover {
-        background: var(--ps-accent);
-        border-color: var(--ps-accent);
-        color: #222831;
-        box-shadow: 0 4px 10px rgba(var(--ps-accent-rgb), 0.3);
-    }
-
-    /* Responsive Minimize */
+    /* Responsive Logic */
     @media (min-width: 992px) {
         #sidebar { position: sticky; top: 0; height: 100vh; }
         #sidebar.minimized { min-width: 85px !important; max-width: 85px !important; }
-        #sidebar.minimized .sidebar-text, 
-        #sidebar.minimized .sidebar-header,
-        #sidebar.minimized .sidebar-divider,
-        #sidebar.minimized .text-uppercase { display: none !important; }
-        
+        #sidebar.minimized .sidebar-text, #sidebar.minimized .sidebar-header, #sidebar.minimized .sidebar-divider, #sidebar.minimized .text-uppercase { display: none !important; }
         #sidebar.minimized .sidebar-logo-container { justify-content: center !important; padding: 0 !important; }
         #sidebar.minimized .sidebar-logo-img { height: 24px !important; width: auto; }
         #sidebar.minimized .nav-link { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
@@ -254,7 +163,6 @@
         #sidebar.minimized .logout-btn:hover { background: rgba(var(--ps-accent-rgb), 0.1) !important; color: #EEEEEE !important; }
         #sidebar.minimized .logout-btn span { display: none; }
     }
-
     @media (max-width: 991.98px) {
         #sidebar { position: fixed !important; left: 0; top: 0; bottom: 0; transform: translateX(-100%); z-index: 1050; width: 280px; }
         #sidebar.show-mobile { transform: translateX(0); box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5); }
