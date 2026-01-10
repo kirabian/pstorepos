@@ -197,16 +197,19 @@
             
             <div class="d-flex align-items-center mb-3 user-info-wrapper position-relative" style="z-index: 2;">
                 <div class="position-relative flex-shrink-0">
-                    <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->nama_lengkap) }}&background=DFD0B8&color=222831&bold=true"
+                    {{-- Avatar uses new palette: Teal Background with Dark Text --}}
+                    <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->nama_lengkap) }}&background=00ADB5&color=222831&bold=true"
                         class="rounded-circle border border-2 border-white shadow-sm" width="42" height="42"
                         alt="User Avatar">
                     <span class="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle"
                         style="width: 10px; height: 10px;"></span>
                 </div>
                 <div class="ms-3 overflow-hidden sidebar-text">
-                    <p class="mb-0 fw-bold text-truncate text-white" style="font-size: 0.9rem; color: #DFD0B8 !important;">
+                    {{-- User Name: Light Gray (#EEEEEE) --}}
+                    <p class="mb-0 fw-bold text-truncate text-white" style="font-size: 0.9rem; color: #EEEEEE !important;">
                         {{ Auth::user()->nama_lengkap }}</p>
-                    <p class="mb-0 text-white-50 text-truncate text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px; color: #948979 !important;">
+                    {{-- User Role: Teal Accent (#00ADB5) --}}
+                    <p class="mb-0 text-white-50 text-truncate text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px; color: #00ADB5 !important;">
                         {{ str_replace('_', ' ', Auth::user()->role) }}</p>
                 </div>
             </div>
@@ -223,18 +226,18 @@
 </nav>
 
 <style>
-    /* --- THEME COLORS & BASICS --- */
+    /* --- THEME COLORS & BASICS (UPDATED PALETTE) --- */
     /* Palette Code:
        #222831 -> Dark Background
-       #393E46 -> Secondary Background
-       #948979 -> Taupe Accent
-       #DFD0B8 -> Cream Text
+       #393E46 -> Secondary Background / Hover
+       #00ADB5 -> Teal Accent (Active, Icons, Borders)
+       #EEEEEE -> Light Text
     */
 
     .sidebar-premium {
         /* Gradient from #222831 to #393E46 */
         background: linear-gradient(180deg, #222831 0%, #393E46 100%);
-        color: #DFD0B8;
+        color: #EEEEEE;
         border-right: 1px solid #393E46;
     }
 
@@ -245,65 +248,66 @@
 
     .sidebar-divider {
         height: 1px;
-        /* Using Taupe #948979 for divider */
-        background: linear-gradient(90deg, rgba(148, 137, 121, 0) 0%, rgba(148, 137, 121, 0.5) 50%, rgba(148, 137, 121, 0) 100%);
+        /* Using Teal #00ADB5 (rgb: 0, 173, 181) for divider with opacity */
+        background: linear-gradient(90deg, rgba(0, 173, 181, 0) 0%, rgba(0, 173, 181, 0.5) 50%, rgba(0, 173, 181, 0) 100%);
         margin-top: 10px;
     }
 
     /* --- NAVIGATION ITEMS --- */
     #sidebar .nav-link {
-        color: #DFD0B8; /* Cream Text */
+        color: #EEEEEE; /* Light Gray Text */
         opacity: 0.8;
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         border: 1px solid transparent;
         margin-bottom: 4px;
     }
 
-    /* Icon Wrapper Fixed Width for Alignment */
+    /* Icon Wrapper */
     .icon-wrapper {
         width: 24px;
         height: 24px;
         flex-shrink: 0;
-        color: #948979; /* Icon Taupe Color by default */
+        color: #00ADB5; /* Teal Accent for Icons */
         transition: color 0.3s ease;
     }
     
     #sidebar .nav-link:hover .icon-wrapper,
     #sidebar .nav-link.active .icon-wrapper {
-        color: inherit;
+        color: inherit; /* Follows parent color on active/hover */
     }
 
     /* Hover State */
     #sidebar .nav-link:hover:not(.active) {
-        color: #DFD0B8;
+        color: #FFFFFF;
         opacity: 1;
         /* Background Hover: #393E46 */
-        background: rgba(57, 62, 70, 0.8);
-        border: 1px solid rgba(148, 137, 121, 0.2);
+        background: rgba(57, 62, 70, 0.9);
+        border: 1px solid rgba(0, 173, 181, 0.3); /* Subtle Teal Border */
         transform: translateX(5px);
     }
 
     /* Active State */
     #sidebar .nav-link.active {
-        /* Active Background: Cream #DFD0B8 */
-        background-color: #DFD0B8;
-        /* Active Text: Dark #222831 */
+        /* Active Background: Teal #00ADB5 */
+        background-color: #00ADB5;
+        /* Active Text: Dark #222831 for High Contrast */
         color: #222831;
         opacity: 1;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 4px 12px rgba(0, 173, 181, 0.3);
         font-weight: 700 !important;
-        border: 1px solid #DFD0B8;
+        border: 1px solid #00ADB5;
     }
     
     #sidebar .nav-link.active i {
         transform: scale(1.1);
         transition: transform 0.2s;
-        color: #222831;
+        color: #222831; /* Icon dark on active */
     }
 
     /* Headers / Label */
     .text-muted {
-        color: #948979 !important; /* Taupe for labels */
+        color: #00ADB5 !important; /* Teal for labels */
+        opacity: 0.8;
     }
 
     /* --- SCROLLBAR CUSTOMIZATION --- */
@@ -314,34 +318,34 @@
         background: transparent;
     }
     .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(148, 137, 121, 0.3); /* Taupe transparent */
+        background: rgba(0, 173, 181, 0.3); /* Teal transparent */
         border-radius: 10px;
     }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: rgba(148, 137, 121, 0.6);
+        background: rgba(0, 173, 181, 0.8);
     }
 
     /* --- USER CARD GLASSMORPHISM --- */
     .glass-card {
         /* Background #393E46 with opacity */
         background: rgba(57, 62, 70, 0.4);
-        border: 1px solid rgba(148, 137, 121, 0.3);
+        border: 1px solid rgba(0, 173, 181, 0.2);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
     }
 
     .btn-logout {
-        border: 1px solid rgba(148, 137, 121, 0.4);
-        color: #DFD0B8;
+        border: 1px solid rgba(0, 173, 181, 0.4);
+        color: #EEEEEE;
         background: transparent;
         transition: all 0.2s ease;
     }
 
     .btn-logout:hover {
-        background: #948979; /* Taupe Hover */
-        border-color: #948979;
-        color: #222831;
-        box-shadow: 0 4px 10px rgba(148, 137, 121, 0.2);
+        background: #00ADB5; /* Teal Hover */
+        border-color: #00ADB5;
+        color: #222831; /* Dark Text */
+        box-shadow: 0 4px 10px rgba(0, 173, 181, 0.3);
     }
 
     /* --- RESPONSIVE LOGIC (DESKTOP) --- */
@@ -398,12 +402,12 @@
         #sidebar.minimized .logout-btn {
             border: none !important;
             background: transparent !important;
-            color: #948979 !important;
+            color: #00ADB5 !important;
         }
         
         #sidebar.minimized .logout-btn:hover {
-            background: rgba(148, 137, 121, 0.1) !important;
-            color: #DFD0B8 !important;
+            background: rgba(0, 173, 181, 0.1) !important;
+            color: #EEEEEE !important;
         }
 
         #sidebar.minimized .logout-btn span {
