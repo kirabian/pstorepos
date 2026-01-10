@@ -17,12 +17,23 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
 
     <style>
+        /* Import Palette Variables Locally or match them manually if app layout is not extended */
+        :root {
+            --ps-dark: #222831;
+            --ps-secondary: #393E46;
+            --ps-accent: #00ADB5;
+            --ps-light: #EEEEEE;
+        }
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #f2f4f7;
+            background-color: var(--ps-light); /* Palette Light Grey */
             margin: 0;
             overflow: hidden;
+            color: var(--ps-dark);
         }
+        
+        /* Optional: Add accents to specific elements if used in slot */
+        .text-accent { color: var(--ps-accent); }
     </style>
 
     {{-- HANYA LOAD CSS, JANGAN LOAD JS APP.JS DULU --}}

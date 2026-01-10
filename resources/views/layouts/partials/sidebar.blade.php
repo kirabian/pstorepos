@@ -197,7 +197,7 @@
             
             <div class="d-flex align-items-center mb-3 user-info-wrapper position-relative" style="z-index: 2;">
                 <div class="position-relative flex-shrink-0">
-                    {{-- Avatar uses new palette: Teal Background with Dark Text --}}
+                    {{-- Gunakan CSS variable var(--ps-accent) untuk background avatar --}}
                     <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->nama_lengkap) }}&background=00ADB5&color=222831&bold=true"
                         class="rounded-circle border border-2 border-white shadow-sm" width="42" height="42"
                         alt="User Avatar">
@@ -205,11 +205,9 @@
                         style="width: 10px; height: 10px;"></span>
                 </div>
                 <div class="ms-3 overflow-hidden sidebar-text">
-                    {{-- User Name: Light Gray (#EEEEEE) --}}
-                    <p class="mb-0 fw-bold text-truncate text-white" style="font-size: 0.9rem; color: #EEEEEE !important;">
+                    <p class="mb-0 fw-bold text-truncate" style="font-size: 0.9rem; color: var(--ps-light) !important;">
                         {{ Auth::user()->nama_lengkap }}</p>
-                    {{-- User Role: Teal Accent (#00ADB5) --}}
-                    <p class="mb-0 text-white-50 text-truncate text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px; color: #00ADB5 !important;">
+                    <p class="mb-0 text-truncate text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px; color: var(--ps-accent) !important;">
                         {{ str_replace('_', ' ', Auth::user()->role) }}</p>
                 </div>
             </div>
@@ -226,19 +224,13 @@
 </nav>
 
 <style>
-    /* --- THEME COLORS & BASICS (UPDATED PALETTE) --- */
-    /* Palette Code:
-       #222831 -> Dark Background
-       #393E46 -> Secondary Background / Hover
-       #00ADB5 -> Teal Accent (Active, Icons, Borders)
-       #EEEEEE -> Light Text
-    */
-
+    /* --- SIDEBAR PALETTE IMPLEMENTATION --- */
+    
     .sidebar-premium {
-        /* Gradient from #222831 to #393E46 */
-        background: linear-gradient(180deg, #222831 0%, #393E46 100%);
-        color: #EEEEEE;
-        border-right: 1px solid #393E46;
+        /* Gradient from Dark (#222831) to Secondary (#393E46) */
+        background: linear-gradient(180deg, var(--ps-dark) 0%, var(--ps-secondary) 100%);
+        color: var(--ps-light);
+        border-right: 1px solid var(--ps-secondary);
     }
 
     .invert-logo {
@@ -248,14 +240,13 @@
 
     .sidebar-divider {
         height: 1px;
-        /* Using Teal #00ADB5 (rgb: 0, 173, 181) for divider with opacity */
-        background: linear-gradient(90deg, rgba(0, 173, 181, 0) 0%, rgba(0, 173, 181, 0.5) 50%, rgba(0, 173, 181, 0) 100%);
+        background: linear-gradient(90deg, transparent 0%, rgba(0, 173, 181, 0.5) 50%, transparent 100%);
         margin-top: 10px;
     }
 
-    /* --- NAVIGATION ITEMS --- */
+    /* Navigation Items */
     #sidebar .nav-link {
-        color: #EEEEEE; /* Light Gray Text */
+        color: var(--ps-light);
         opacity: 0.8;
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         border: 1px solid transparent;
@@ -267,167 +258,98 @@
         width: 24px;
         height: 24px;
         flex-shrink: 0;
-        color: #00ADB5; /* Teal Accent for Icons */
+        color: var(--ps-accent); /* Teal Icon */
         transition: color 0.3s ease;
     }
     
     #sidebar .nav-link:hover .icon-wrapper,
     #sidebar .nav-link.active .icon-wrapper {
-        color: inherit; /* Follows parent color on active/hover */
+        color: var(--ps-dark); /* Dark Icon on Active/Hover */
     }
 
     /* Hover State */
     #sidebar .nav-link:hover:not(.active) {
-        color: #FFFFFF;
+        color: var(--ps-white);
         opacity: 1;
-        /* Background Hover: #393E46 */
         background: rgba(57, 62, 70, 0.9);
-        border: 1px solid rgba(0, 173, 181, 0.3); /* Subtle Teal Border */
+        border: 1px solid rgba(0, 173, 181, 0.3);
         transform: translateX(5px);
     }
 
     /* Active State */
     #sidebar .nav-link.active {
-        /* Active Background: Teal #00ADB5 */
-        background-color: #00ADB5;
-        /* Active Text: Dark #222831 for High Contrast */
-        color: #222831;
+        background-color: var(--ps-accent); /* Teal Background */
+        color: var(--ps-dark); /* Dark Text */
         opacity: 1;
         box-shadow: 0 4px 12px rgba(0, 173, 181, 0.3);
         font-weight: 700 !important;
-        border: 1px solid #00ADB5;
+        border: 1px solid var(--ps-accent);
     }
     
     #sidebar .nav-link.active i {
         transform: scale(1.1);
         transition: transform 0.2s;
-        color: #222831; /* Icon dark on active */
+        color: var(--ps-dark);
     }
 
-    /* Headers / Label */
+    /* Labels */
     .text-muted {
-        color: #00ADB5 !important; /* Teal for labels */
+        color: var(--ps-accent) !important;
         opacity: 0.8;
     }
 
-    /* --- SCROLLBAR CUSTOMIZATION --- */
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 4px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
-    }
+    /* Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(0, 173, 181, 0.3); /* Teal transparent */
+        background: rgba(0, 173, 181, 0.3);
         border-radius: 10px;
     }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: rgba(0, 173, 181, 0.8);
-    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0, 173, 181, 0.8); }
 
-    /* --- USER CARD GLASSMORPHISM --- */
+    /* Glass Card */
     .glass-card {
-        /* Background #393E46 with opacity */
         background: rgba(57, 62, 70, 0.4);
         border: 1px solid rgba(0, 173, 181, 0.2);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
     }
 
+    /* Logout Button */
     .btn-logout {
         border: 1px solid rgba(0, 173, 181, 0.4);
-        color: #EEEEEE;
+        color: var(--ps-light);
         background: transparent;
         transition: all 0.2s ease;
     }
 
     .btn-logout:hover {
-        background: #00ADB5; /* Teal Hover */
-        border-color: #00ADB5;
-        color: #222831; /* Dark Text */
+        background: var(--ps-accent);
+        border-color: var(--ps-accent);
+        color: var(--ps-dark);
         box-shadow: 0 4px 10px rgba(0, 173, 181, 0.3);
     }
 
-    /* --- RESPONSIVE LOGIC (DESKTOP) --- */
+    /* Responsive Minimize */
     @media (min-width: 992px) {
-        #sidebar {
-            position: sticky;
-            top: 0;
-            height: 100vh;
-        }
-
-        #sidebar.minimized {
-            min-width: 85px !important;
-            max-width: 85px !important;
-        }
-
+        #sidebar { position: sticky; top: 0; height: 100vh; }
+        #sidebar.minimized { min-width: 85px !important; max-width: 85px !important; }
         #sidebar.minimized .sidebar-text, 
         #sidebar.minimized .sidebar-header,
-        #sidebar.minimized .sidebar-divider {
-            display: none !important;
-        }
-
-        #sidebar.minimized .sidebar-logo-container {
-            justify-content: center !important;
-            padding: 0 !important;
-        }
-
-        #sidebar.minimized .sidebar-logo-img {
-            height: 24px !important;
-            width: auto;
-        }
-
-        #sidebar.minimized .nav-link {
-            justify-content: center !important;
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-        }
-
-        #sidebar.minimized .nav-link:hover {
-            transform: none; /* Disable shift on minimize */
-            background: rgba(57, 62, 70, 0.8);
-        }
-
-        #sidebar.minimized .user-info-wrapper {
-            justify-content: center !important;
-            margin-bottom: 10px !important;
-        }
-        
-        #sidebar.minimized .user-card {
-            padding: 10px !important;
-            background: transparent;
-            border: none;
-        }
-
-        #sidebar.minimized .logout-btn {
-            border: none !important;
-            background: transparent !important;
-            color: #00ADB5 !important;
-        }
-        
-        #sidebar.minimized .logout-btn:hover {
-            background: rgba(0, 173, 181, 0.1) !important;
-            color: #EEEEEE !important;
-        }
-
-        #sidebar.minimized .logout-btn span {
-            display: none;
-        }
+        #sidebar.minimized .sidebar-divider { display: none !important; }
+        #sidebar.minimized .sidebar-logo-container { justify-content: center !important; padding: 0 !important; }
+        #sidebar.minimized .sidebar-logo-img { height: 24px !important; width: auto; }
+        #sidebar.minimized .nav-link { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
+        #sidebar.minimized .nav-link:hover { transform: none; background: rgba(57, 62, 70, 0.8); }
+        #sidebar.minimized .user-info-wrapper { justify-content: center !important; margin-bottom: 10px !important; }
+        #sidebar.minimized .user-card { padding: 10px !important; background: transparent; border: none; }
+        #sidebar.minimized .logout-btn { border: none !important; background: transparent !important; color: var(--ps-accent) !important; }
+        #sidebar.minimized .logout-btn:hover { background: rgba(0, 173, 181, 0.1) !important; color: var(--ps-light) !important; }
+        #sidebar.minimized .logout-btn span { display: none; }
     }
 
-    /* --- RESPONSIVE LOGIC (MOBILE) --- */
     @media (max-width: 991.98px) {
-        #sidebar {
-            position: fixed !important;
-            left: 0; top: 0; bottom: 0;
-            transform: translateX(-100%);
-            z-index: 1050;
-            width: 280px;
-        }
-
-        #sidebar.show-mobile {
-            transform: translateX(0);
-            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
-        }
+        #sidebar { position: fixed !important; left: 0; top: 0; bottom: 0; transform: translateX(-100%); z-index: 1050; width: 280px; }
+        #sidebar.show-mobile { transform: translateX(0); box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5); }
     }
 </style>
