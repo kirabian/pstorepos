@@ -7,113 +7,91 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\User;
-use App\Models\Stok; // Asumsi ada model Stok
-use App\Models\StokHistory; // Asumsi ada model History
+use App\Models\Stok;
+use App\Models\Cabang;
+use App\Models\Distributor;
+use App\Models\Gudang;
 
 #[Layout('layouts.master')]
-#[Title('Dashboard Operasional')]
+#[Title('Dashboard Sistem')]
 class Dashboard extends Component
 {
     public function render()
     {
         $user = Auth::user();
+        $viewData = []; // Wadah data yang akan dikirim ke view
 
-        // Init Variable View Data
-        $viewData = [
-            'mode' => 'general',
-            'location_name' => 'General Area',
-            'stats' => [],
-            'activities' => []
-        ];
+        // ==========================================================
+        // 1. LOGIKA UNTUK SUPERADMIN
+        // ==========================================================
+        if ($user->role === 'superadmin') {
+            $viewData = [
+                'total_user' => User::count(),
+                'total_cabang' => Cabang::count(),
+                'total_distributor' => Distributor::count(),
+                'active_users' => User::where('is_active', 1)->count(),
+            ];
+            return view('livewire.dashboards.superadmin', $viewData);
+        }
 
-        // ==========================================
-        // 1. LOGIKA UNTUK ROLE: INVENTORY STAFF (GUDANG)
-        // ==========================================
-        if ($user->role === 'gudang') {
+        // ==========================================================
+        // 2. LOGIKA UNTUK INVENTORY STAFF (CABANG DUA ARAH)
+        // ==========================================================
+        elseif ($user->role === 'inventory_staff') {
             
-            // KASUS A: STAFF PENEMPATAN DISTRIBUTOR
+            // KASUS A: STAFF YANG DITEMPATKAN DI DISTRIBUTOR
             if ($user->distributor_id) {
-                $viewData['mode'] = 'distributor';
-                $viewData['location_name'] = $user->distributor->nama_distributor ?? 'Distributor Utama';
-                
-                // Data Statistik Khusus Distributor (Fokus: Supply Chain & Distribusi ke Cabang)
-                $viewData['stats'] = [
-                    [
-                        'label' => 'Total Supply Masuk',
-                        'value' => '1,240', // Ganti: BarangMasuk::where('distributor_id', $user->distributor_id)->sum('qty')
-                        'icon' => 'fa-truck-loading',
-                        'color' => 'primary',
-                        'trend' => '+12% minggu ini'
-                    ],
-                    [
-                        'label' => 'Distribusi ke Cabang',
-                        'value' => '85', // Ganti: Pengiriman::where('distributor_id',...)->count()
-                        'icon' => 'fa-paper-plane',
-                        'color' => 'info',
-                        'trend' => '5 Pengiriman Pending'
-                    ],
-                    [
-                        'label' => 'Total SKU Unit',
-                        'value' => '450',
-                        'icon' => 'fa-boxes-stacked',
-                        'color' => 'warning',
-                        'trend' => 'Stok Aman'
-                    ],
-                    [
-                        'label' => 'Cabang Terhubung',
-                        'value' => '12',
-                        'icon' => 'fa-network-wired',
-                        'color' => 'success',
-                        'trend' => 'Active Connection'
-                    ]
+                $viewData = [
+                    'lokasi' => $user->distributor->nama_distributor,
+                    'barang_masuk' => 150, // Ganti Query Real
+                    'barang_keluar' => 80, // Ganti Query Real
+                    'perlu_packing' => 12,
                 ];
+                return view('livewire.dashboards.inventory-distributor', $viewData);
             } 
-            // KASUS B: STAFF PENEMPATAN GUDANG FISIK (WAREHOUSE)
+            
+            // KASUS B: STAFF YANG DITEMPATKAN DI GUDANG FISIK
             elseif ($user->gudang_id) {
-                $viewData['mode'] = 'gudang';
-                $viewData['location_name'] = $user->gudang->nama_gudang ?? 'Gudang Penyimpanan';
-
-                // Data Statistik Khusus Gudang (Fokus: Fisik Barang, Rak, Opname)
-                $viewData['stats'] = [
-                    [
-                        'label' => 'Kapasitas Rak',
-                        'value' => '85%',
-                        'icon' => 'fa-warehouse',
-                        'color' => 'danger',
-                        'trend' => 'Hampir Penuh'
-                    ],
-                    [
-                        'label' => 'Barang Retur',
-                        'value' => '24', // Ganti: Stok::where('kondisi', 'rusak')->count()
-                        'icon' => 'fa-rotate-left',
-                        'color' => 'warning',
-                        'trend' => 'Perlu QC Ulang'
-                    ],
-                    [
-                        'label' => 'Stock Opname',
-                        'value' => 'Verified',
-                        'icon' => 'fa-clipboard-check',
-                        'color' => 'success',
-                        'trend' => 'Last: Hari ini 08:00'
-                    ],
-                    [
-                        'label' => 'Total Item Fisik',
-                        'value' => '5,600',
-                        'icon' => 'fa-box-open',
-                        'color' => 'primary',
-                        'trend' => '+200 unit baru'
-                    ]
+                $viewData = [
+                    'lokasi' => $user->gudang->nama_gudang,
+                    'total_sku' => 4500,
+                    'stock_low' => 25,
+                    'jadwal_opname' => 'Hari Ini, 14:00',
                 ];
+                return view('livewire.dashboards.inventory-gudang', $viewData);
             }
         }
-        
-        // ==========================================
-        // 2. LOGIKA UNTUK SUPERADMIN / ROLE LAIN
-        // ==========================================
-        else {
-            $viewData['mode'] = 'admin'; // Fallback
+
+        // ==========================================================
+        // 3. LOGIKA UNTUK OWNER DISTRIBUTOR (ROLE: DISTRIBUTOR)
+        // ==========================================================
+        elseif ($user->role === 'distributor') {
+            $viewData = [
+                'nama_distributor' => $user->distributor->nama_distributor ?? 'Unit Distributor',
+                'omset_bulan_ini' => 'Rp 2.500.000.000',
+                'cabang_terlayan' => 15,
+            ];
+            return view('livewire.dashboards.owner-distributor', $viewData);
         }
 
-        return view('livewire.dashboard', $viewData);
+        // ==========================================================
+        // 4. LOGIKA UNTUK SALES / CASHIER
+        // ==========================================================
+        elseif ($user->role === 'sales') {
+            $viewData = [
+                'cabang' => $user->cabang->nama_cabang ?? 'PStore Pusat',
+                'penjualan_hari_ini' => 12,
+                'target_bulan' => 85, // Persen
+            ];
+            return view('livewire.dashboards.sales', $viewData);
+        }
+
+        // ==========================================================
+        // 5. LOGIKA UNTUK ROLE LAINNYA (FALLBACK)
+        // ==========================================================
+        // Admin Produk, Analis, Security, Leader, Toko Offline, Toko Online
+        return view('livewire.dashboards.general-fallback', [
+            'role_name' => str_replace('_', ' ', strtoupper($user->role))
+        ]);
     }
 }
