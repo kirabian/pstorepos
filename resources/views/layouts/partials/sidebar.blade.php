@@ -14,8 +14,7 @@
             
             {{-- DASHBOARD --}}
             <li class="mb-2">
-                <a href="/"
-                    class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->is('/') ? 'active' : '' }}">
+                <a href="/" class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->is('/') ? 'active' : '' }}">
                     <div class="icon-wrapper d-flex justify-content-center align-items-center">
                         <i class="fas fa-th-large fs-5"></i>
                     </div>
@@ -23,7 +22,7 @@
                 </a>
             </li>
 
-            {{-- KHUSUS SUPERADMIN: Distributor --}}
+            {{-- MASTER DATA --}}
             @if (Auth::user()->role === 'superadmin')
                 <li class="mb-1">
                     <div class="sidebar-header mt-3 mb-2 px-3 sidebar-text">
@@ -31,100 +30,29 @@
                     </div>
                 </li>
                 <li class="mb-2">
-                    <a href="{{ route('distributor.index') }}"
-                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('distributor.*') ? 'active' : '' }}">
-                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                            <i class="fas fa-truck fs-5"></i>
-                        </div>
+                    <a href="{{ route('distributor.index') }}" class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('distributor.*') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center"><i class="fas fa-truck fs-5"></i></div>
                         <span class="ms-3 sidebar-text text-nowrap fw-medium">Distributors</span>
                     </a>
                 </li>
-
                 <li class="mb-2">
-                    <a href="{{ route('online-shop.index') }}"
-                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('online-shop.*') ? 'active' : '' }}">
-                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                            <i class="fas fa-shopping-bag fs-5"></i>
-                        </div>
+                    <a href="{{ route('online-shop.index') }}" class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('online-shop.*') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center"><i class="fas fa-shopping-bag fs-5"></i></div>
                         <span class="ms-3 sidebar-text text-nowrap fw-medium">Online Shops</span>
                     </a>
                 </li>
             @endif
 
-            {{-- UPDATE: Manage Users (Bisa Diakses Superadmin & Audit) --}}
             @if (in_array(Auth::user()->role, ['superadmin', 'audit']))
                 <li class="mb-2">
-                    <a href="{{ route('user.index') }}"
-                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('user.*') ? 'active' : '' }}">
-                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                            <i class="fas fa-user-shield fs-5"></i>
-                        </div>
+                    <a href="{{ route('user.index') }}" class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('user.*') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center"><i class="fas fa-user-shield fs-5"></i></div>
                         <span class="ms-3 sidebar-text text-nowrap fw-medium">Manage Users</span>
                     </a>
                 </li>
             @endif
 
-            {{-- KHUSUS SUPERADMIN: Master Data Lainnya --}}
-            @if (Auth::user()->role === 'superadmin')
-                <li class="mb-2">
-                    <a href="{{ route('cabang.index') }}"
-                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('cabang.*') ? 'active' : '' }}">
-                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                            <i class="fas fa-store fs-5"></i>
-                        </div>
-                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Branches</span>
-                    </a>
-                </li>
-
-                <li class="mb-2">
-                    <a href="{{ route('gudang.index') }}"
-                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('gudang.*') ? 'active' : '' }}">
-                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                            <i class="fas fa-warehouse fs-5"></i>
-                        </div>
-                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Warehouses</span>
-                    </a>
-                </li>
-
-                <li class="mb-2">
-                    <a href="{{ route('merk.index') }}"
-                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('merk.*') ? 'active' : '' }}">
-                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                            <i class="fas fa-tags fs-5"></i>
-                        </div>
-                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Merk (Brands)</span>
-                    </a>
-                </li>
-                <li class="mb-2">
-                    <a href="{{ route('tipe.index') }}"
-                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('tipe.*') ? 'active' : '' }}">
-                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                            <i class="fas fa-mobile-alt fs-5"></i>
-                        </div>
-                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Tipe (Models)</span>
-                    </a>
-                </li>
-            @endif
-
-            {{-- MENU KHUSUS ADMIN PRODUK --}}
-            @if (Auth::user()->role === 'adminproduk')
-                <li class="mb-1">
-                    <div class="sidebar-header mt-3 mb-2 px-3 sidebar-text">
-                        <span class="text-uppercase fw-bold text-muted" style="font-size: 0.65rem; letter-spacing: 1.5px;">Inventory</span>
-                    </div>
-                </li>
-                <li class="mb-2">
-                    <a href="{{ route('stok.index') }}"
-                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('stok.*') ? 'active' : '' }}">
-                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                            <i class="fas fa-boxes fs-5"></i>
-                        </div>
-                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Stok (Inventory)</span>
-                    </a>
-                </li>
-            @endif
-
-            {{-- OPERATIONAL MENU (Available for All) --}}
+            {{-- INVENTORY & OPERATIONS --}}
             @if(in_array(Auth::user()->role, ['superadmin', 'adminproduk', 'gudang', 'audit'])) 
              <li class="mb-1">
                 <div class="sidebar-header mt-3 mb-2 px-3 sidebar-text">
@@ -133,59 +61,37 @@
             </li>
             @endif
 
-            <li class="mb-2">
-                <a href="{{ route('lacak.imei') }}"
-                    class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('lacak.imei') ? 'active' : '' }}">
-                    <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                        <i class="fas fa-barcode fs-5"></i>
-                    </div>
-                    <span class="ms-3 sidebar-text text-nowrap fw-medium">Lacak IMEI</span>
-                </a>
-            </li>
-
-            {{-- MENU BARANG MASUK --}}
-            <li class="mb-2">
-                <a href="{{ route('barang-masuk.index') }}"
-                    class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('barang-masuk.*') ? 'active' : '' }}">
-                    <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                        <i class="fas fa-arrow-circle-down fs-5"></i>
-                    </div>
-                    <span class="ms-3 sidebar-text text-nowrap fw-medium">Barang Masuk</span>
-                </a>
-            </li>
-
-            {{-- MENU BARANG KELUAR --}}
-            <li class="mb-2">
-                <a href="{{ route('barang-keluar.index') }}"
-                    class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('barang-keluar.*') ? 'active' : '' }}">
-                    <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                        <i class="fas fa-arrow-circle-up fs-5"></i>
-                    </div>
-                    <span class="ms-3 sidebar-text text-nowrap fw-medium">Barang Keluar</span>
-                </a>
-            </li>
-
-            {{-- MENU KHUSUS GUDANG (INVENTORY STAFF) --}}
-            @if (Auth::user()->role === 'gudang')
+            @if (Auth::user()->role === 'adminproduk')
                 <li class="mb-2">
-                    <a href="{{ route('stock-opname.index') }}"
-                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('stock-opname.*') ? 'active' : '' }}">
-                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                            <i class="fas fa-clipboard-check fs-5"></i>
-                        </div>
-                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Stock Opname</span>
+                    <a href="{{ route('stok.index') }}" class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('stok.*') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center"><i class="fas fa-boxes fs-5"></i></div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Stok (Inventory)</span>
                     </a>
                 </li>
             @endif
 
+            <li class="mb-2">
+                <a href="{{ route('lacak.imei') }}" class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('lacak.imei') ? 'active' : '' }}">
+                    <div class="icon-wrapper d-flex justify-content-center align-items-center"><i class="fas fa-barcode fs-5"></i></div>
+                    <span class="ms-3 sidebar-text text-nowrap fw-medium">Lacak IMEI</span>
+                </a>
+            </li>
+
+            {{-- --- THEME CUSTOMIZER (Integrated here) --- --}}
             <li class="mt-4 mb-2 small text-uppercase text-muted fw-bold px-3 sidebar-text"
-                style="font-size: 0.65rem; letter-spacing: 1.5px;">Preference</li>
-            <li>
+                style="font-size: 0.65rem; letter-spacing: 1.5px;">Customization</li>
+            
+            <li class="sidebar-text mb-4">
+                @livewire('theme-settings')
+            </li>
+            {{-- --- END THEME CUSTOMIZER --- --}}
+
+            <li class="mb-2">
                 <a href="#" class="nav-link p-3 rounded-3 d-flex align-items-center text-secondary">
                     <div class="icon-wrapper d-flex justify-content-center align-items-center">
                         <i class="fas fa-sliders-h fs-5"></i>
                     </div>
-                    <span class="ms-3 sidebar-text text-nowrap fw-medium">Settings</span>
+                    <span class="ms-3 sidebar-text text-nowrap fw-medium">Global Settings</span>
                 </a>
             </li>
         </ul>
@@ -197,17 +103,16 @@
             
             <div class="d-flex align-items-center mb-3 user-info-wrapper position-relative" style="z-index: 2;">
                 <div class="position-relative flex-shrink-0">
-                    {{-- Gunakan CSS variable var(--ps-accent) untuk background avatar --}}
-                    <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->nama_lengkap) }}&background=00ADB5&color=222831&bold=true"
+                    <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->nama_lengkap) }}&background={{ str_replace('#', '', Auth::user()->theme_color == 'teal' ? '00ADB5' : (Auth::user()->theme_color == 'red' ? 'EF4444' : '00ADB5')) }}&color=fff&bold=true"
                         class="rounded-circle border border-2 border-white shadow-sm" width="42" height="42"
                         alt="User Avatar">
                     <span class="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle"
                         style="width: 10px; height: 10px;"></span>
                 </div>
                 <div class="ms-3 overflow-hidden sidebar-text">
-                    <p class="mb-0 fw-bold text-truncate" style="font-size: 0.9rem; color: var(--ps-light) !important;">
+                    <p class="mb-0 fw-bold text-truncate" style="font-size: 0.9rem; color: var(--ps-sidebar-text) !important;">
                         {{ Auth::user()->nama_lengkap }}</p>
-                    <p class="mb-0 text-truncate text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px; color: var(--ps-accent) !important;">
+                    <p class="mb-0 text-white-50 text-truncate text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px; color: var(--ps-accent) !important;">
                         {{ str_replace('_', ' ', Auth::user()->role) }}</p>
                 </div>
             </div>
@@ -227,10 +132,10 @@
     /* --- SIDEBAR PALETTE IMPLEMENTATION --- */
     
     .sidebar-premium {
-        /* Gradient from Dark (#222831) to Secondary (#393E46) */
-        background: linear-gradient(180deg, var(--ps-dark) 0%, var(--ps-secondary) 100%);
-        color: var(--ps-light);
-        border-right: 1px solid var(--ps-secondary);
+        /* Sidebar selalu menggunakan tema gelap agar elegan, tapi accent berubah */
+        background: linear-gradient(180deg, var(--ps-sidebar-bg) 0%, #111 100%);
+        color: var(--ps-sidebar-text);
+        border-right: 1px solid rgba(var(--ps-accent-rgb), 0.1);
     }
 
     .invert-logo {
@@ -240,13 +145,13 @@
 
     .sidebar-divider {
         height: 1px;
-        background: linear-gradient(90deg, transparent 0%, rgba(0, 173, 181, 0.5) 50%, transparent 100%);
+        background: linear-gradient(90deg, transparent 0%, rgba(var(--ps-accent-rgb), 0.5) 50%, transparent 100%);
         margin-top: 10px;
     }
 
     /* Navigation Items */
     #sidebar .nav-link {
-        color: var(--ps-light);
+        color: rgba(255,255,255,0.7); /* Sidebar text selalu light on dark */
         opacity: 0.8;
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         border: 1px solid transparent;
@@ -258,30 +163,30 @@
         width: 24px;
         height: 24px;
         flex-shrink: 0;
-        color: var(--ps-accent); /* Teal Icon */
+        color: var(--ps-accent);
         transition: color 0.3s ease;
     }
     
     #sidebar .nav-link:hover .icon-wrapper,
     #sidebar .nav-link.active .icon-wrapper {
-        color: var(--ps-dark); /* Dark Icon on Active/Hover */
+        color: #222831; /* Icon dark on active */
     }
 
     /* Hover State */
     #sidebar .nav-link:hover:not(.active) {
-        color: var(--ps-white);
+        color: #FFFFFF;
         opacity: 1;
-        background: rgba(57, 62, 70, 0.9);
-        border: 1px solid rgba(0, 173, 181, 0.3);
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(var(--ps-accent-rgb), 0.3);
         transform: translateX(5px);
     }
 
     /* Active State */
     #sidebar .nav-link.active {
-        background-color: var(--ps-accent); /* Teal Background */
-        color: var(--ps-dark); /* Dark Text */
+        background-color: var(--ps-accent);
+        color: #222831; /* Dark Text */
         opacity: 1;
-        box-shadow: 0 4px 12px rgba(0, 173, 181, 0.3);
+        box-shadow: 0 4px 12px rgba(var(--ps-accent-rgb), 0.4);
         font-weight: 700 !important;
         border: 1px solid var(--ps-accent);
     }
@@ -289,7 +194,7 @@
     #sidebar .nav-link.active i {
         transform: scale(1.1);
         transition: transform 0.2s;
-        color: var(--ps-dark);
+        color: #222831;
     }
 
     /* Labels */
@@ -302,23 +207,23 @@
     .custom-scrollbar::-webkit-scrollbar { width: 4px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(0, 173, 181, 0.3);
+        background: rgba(var(--ps-accent-rgb), 0.3);
         border-radius: 10px;
     }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0, 173, 181, 0.8); }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--ps-accent); }
 
     /* Glass Card */
     .glass-card {
-        background: rgba(57, 62, 70, 0.4);
-        border: 1px solid rgba(0, 173, 181, 0.2);
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(var(--ps-accent-rgb), 0.2);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
     }
 
     /* Logout Button */
     .btn-logout {
-        border: 1px solid rgba(0, 173, 181, 0.4);
-        color: var(--ps-light);
+        border: 1px solid rgba(var(--ps-accent-rgb), 0.4);
+        color: #EEEEEE;
         background: transparent;
         transition: all 0.2s ease;
     }
@@ -326,8 +231,8 @@
     .btn-logout:hover {
         background: var(--ps-accent);
         border-color: var(--ps-accent);
-        color: var(--ps-dark);
-        box-shadow: 0 4px 10px rgba(0, 173, 181, 0.3);
+        color: #222831;
+        box-shadow: 0 4px 10px rgba(var(--ps-accent-rgb), 0.3);
     }
 
     /* Responsive Minimize */
@@ -336,15 +241,17 @@
         #sidebar.minimized { min-width: 85px !important; max-width: 85px !important; }
         #sidebar.minimized .sidebar-text, 
         #sidebar.minimized .sidebar-header,
-        #sidebar.minimized .sidebar-divider { display: none !important; }
+        #sidebar.minimized .sidebar-divider,
+        #sidebar.minimized .text-uppercase { display: none !important; }
+        
         #sidebar.minimized .sidebar-logo-container { justify-content: center !important; padding: 0 !important; }
         #sidebar.minimized .sidebar-logo-img { height: 24px !important; width: auto; }
         #sidebar.minimized .nav-link { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
-        #sidebar.minimized .nav-link:hover { transform: none; background: rgba(57, 62, 70, 0.8); }
+        #sidebar.minimized .nav-link:hover { transform: none; background: rgba(255, 255, 255, 0.1); }
         #sidebar.minimized .user-info-wrapper { justify-content: center !important; margin-bottom: 10px !important; }
         #sidebar.minimized .user-card { padding: 10px !important; background: transparent; border: none; }
         #sidebar.minimized .logout-btn { border: none !important; background: transparent !important; color: var(--ps-accent) !important; }
-        #sidebar.minimized .logout-btn:hover { background: rgba(0, 173, 181, 0.1) !important; color: var(--ps-light) !important; }
+        #sidebar.minimized .logout-btn:hover { background: rgba(var(--ps-accent-rgb), 0.1) !important; color: #EEEEEE !important; }
         #sidebar.minimized .logout-btn span { display: none; }
     }
 

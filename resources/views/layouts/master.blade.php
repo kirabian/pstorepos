@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="{{ Auth::user()->theme_mode === 'dark' ? 'dark' : 'light' }}">
 
 <head>
     <meta charset="UTF-8">
@@ -19,27 +19,74 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
 
+    @php
+        // DEFINISI WARNA ACCENT
+        $colors = [
+            'teal'   => '0, 173, 181',   // #00ADB5
+            'purple' => '139, 92, 246',  // #8B5CF6
+            'blue'   => '59, 130, 246',  // #3B82F6
+            'green'  => '16, 185, 129',  // #10B981
+            'yellow' => '245, 158, 11',  // #F59E0B
+            'red'    => '239, 68, 68',   // #EF4444
+            'pink'   => '236, 72, 153',  // #EC4899
+            'orange' => '249, 115, 22',  // #F97316
+        ];
+
+        $userMode = Auth::user()->theme_mode ?? 'system';
+        $userColorKey = Auth::user()->theme_color ?? 'teal';
+        $accentRGB = $colors[$userColorKey] ?? $colors['teal'];
+    @endphp
+
     <style>
-        /* --- GLOBAL COLOR PALETTE DEFINITION --- */
         :root {
-            /* Palette Code from Image */
-            --ps-dark: #222831;       /* Dark Navy Background */
-            --ps-secondary: #393E46;  /* Dark Grey / Hover */
-            --ps-accent: #00ADB5;     /* Teal / Cyan Accent */
-            --ps-light: #EEEEEE;      /* Light Grey / Text */
-            
-            /* Helper Colors */
-            --ps-white: #ffffff;
-            --ps-body-bg: #EEEEEE;    /* Menggunakan Light Grey Palette untuk background body */
+            /* --- DYNAMIC ACCENT COLOR --- */
+            --ps-accent-rgb: {{ $accentRGB }};
+            --ps-accent: rgb(var(--ps-accent-rgb));
+
+            /* --- DEFAULT LIGHT THEME VARIABLES --- */
+            --ps-dark: #222831;       /* Warna Kontras Utama */
+            --ps-secondary: #393E46;
+            --ps-light: #F9FAFB;      /* Background Light */
+            --ps-text: #111827;       /* Text Light Mode */
+            --ps-sidebar-bg: #222831; /* Sidebar selalu gelap biar elegan */
+            --ps-sidebar-text: #EEEEEE;
+            --ps-card-bg: #FFFFFF;
+            --ps-body-bg: #F3F4F6;
+            --ps-border: #E5E7EB;
         }
 
+        /* --- DARK THEME OVERRIDES --- */
+        /* Jika user pilih Dark ATAU System (dan OS dark) */
+        @if($userMode === 'dark')
+            :root {
+                --ps-light: #222831;      /* Background Dark */
+                --ps-text: #EEEEEE;       /* Text Dark Mode */
+                --ps-sidebar-bg: #191D24; 
+                --ps-card-bg: #2A303C;
+                --ps-body-bg: #222831;
+                --ps-border: #393E46;
+            }
+        @elseif($userMode === 'system')
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --ps-light: #222831;
+                    --ps-text: #EEEEEE;
+                    --ps-sidebar-bg: #191D24;
+                    --ps-card-bg: #2A303C;
+                    --ps-body-bg: #222831;
+                    --ps-border: #393E46;
+                }
+            }
+        @endif
+
+        /* --- GLOBAL STYLES --- */
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--ps-body-bg); /* Updated to Palette */
-            color: var(--ps-dark);
+            background-color: var(--ps-body-bg);
+            color: var(--ps-text);
             margin: 0;
             overflow-x: hidden;
-            font-display: swap;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         #wrapper {
@@ -53,24 +100,28 @@
             width: 100%;
             display: flex;
             flex-direction: column;
-            background-color: var(--ps-body-bg); /* Updated to Palette */
+            background-color: var(--ps-body-bg);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             min-width: 0;
             position: relative;
         }
 
-        /* --- LOGIKA NAVBAR SCROLL EFFECT --- */
+        /* Navbar Styling */
         #main-navbar {
             position: sticky;
             top: 0;
             z-index: 1040;
             width: 100%;
-            background: rgba(255, 255, 255, 0.95); /* Keep white/glass for contrast */
-            border-bottom: 1px solid rgba(0,0,0,0.05);
+            background: rgba(var(--ps-card-bg-rgb, 255, 255, 255), 0.95);
+            border-bottom: 1px solid var(--ps-border);
             padding: 0.75rem 1.5rem;
             transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
             backdrop-filter: blur(10px);
         }
+
+        @if($userMode === 'dark')
+            #main-navbar { background: rgba(34, 40, 49, 0.95); }
+        @endif
 
         #main-navbar.scrolled {
             top: 20px;
@@ -78,9 +129,10 @@
             margin-left: auto;
             margin-right: auto;
             border-radius: 50px;
-            background: rgba(255, 255, 255, 0.85) !important;
-            border: 1px solid rgba(0, 173, 181, 0.2); /* Use Teal Border accent */
-            box-shadow: 0 10px 30px -10px rgba(34, 40, 49, 0.1); /* Shadow color match dark theme */
+            background: rgba(var(--ps-card-bg-rgb, 255, 255, 255), 0.85) !important;
+            @if($userMode === 'dark') background: rgba(42, 48, 60, 0.9) !important; @endif
+            border: 1px solid rgba(var(--ps-accent-rgb), 0.3);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
             padding: 0.5rem 1.5rem;
         }
 
@@ -89,34 +141,26 @@
             #main-navbar.scrolled { width: 92%; top: 15px; }
         }
 
-        /* Overlay Mobile */
         #sidebar-overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(34, 40, 49, 0.5); /* Use Dark palette with opacity */
+            background: rgba(0, 0, 0, 0.5);
             z-index: 1045;
             opacity: 0;
             transition: opacity 0.3s ease-in-out;
         }
         #sidebar-overlay.show { display: block; opacity: 1; }
 
-        /* Scrollbar Customization */
+        /* Scrollbar */
         ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-track { background: var(--ps-light); }
-        ::-webkit-scrollbar-thumb { background: var(--ps-secondary); border-radius: 10px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(var(--ps-accent-rgb), 0.3); border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--ps-accent); }
 
-        .shimmer {
-            background: #f6f7f8;
-            background-image: linear-gradient(90deg, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
-            background-size: 800px 100%;
-            animation: shim 1.2s infinite linear;
-        }
-        @keyframes shim {
-            0% { background-position: -468px 0; }
-            100% { background-position: 468px 0; }
-        }
+        .text-accent { color: var(--ps-accent) !important; }
+        .bg-accent { background-color: var(--ps-accent) !important; }
+        .border-accent { border-color: var(--ps-accent) !important; }
     </style>
 
     @livewireStyles
@@ -149,35 +193,27 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Navbar Scroll Logic
+            // Navbar Logic
             const navbar = document.getElementById('main-navbar');
             if(navbar) {
                 function checkScroll() {
-                    if (window.scrollY > 20) {
-                        navbar.classList.add('scrolled');
-                    } else {
-                        navbar.classList.remove('scrolled');
-                    }
+                    if (window.scrollY > 20) { navbar.classList.add('scrolled'); } 
+                    else { navbar.classList.remove('scrolled'); }
                 }
                 window.addEventListener('scroll', checkScroll);
                 checkScroll();
             }
 
-            // Sidebar Toggle Logic
+            // Sidebar Toggle
             const toggleBtn = document.getElementById('sidebarToggle'),
                 sidebar = document.getElementById('sidebar'),
                 overlay = document.getElementById('sidebar-overlay');
 
             if (toggleBtn && sidebar) {
                 toggleBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (window.innerWidth >= 992) {
-                        sidebar.classList.toggle('minimized');
-                    } else {
-                        sidebar.classList.toggle('show-mobile');
-                        if (overlay) overlay.classList.toggle('show');
-                    }
+                    e.preventDefault(); e.stopPropagation();
+                    if (window.innerWidth >= 992) { sidebar.classList.toggle('minimized'); } 
+                    else { sidebar.classList.toggle('show-mobile'); if (overlay) overlay.classList.toggle('show'); }
                 });
             }
 
@@ -202,13 +238,13 @@
 
             function resetIdleTimer() {
                 if (isCurrentlyOffline) {
-                    console.log('User kembali aktif, mengirim sinyal online...');
+                    console.log('User kembali aktif...');
                     Livewire.dispatch('setUserOnline');
                     isCurrentlyOffline = false;
                 }
                 clearTimeout(idleTimer);
                 idleTimer = setTimeout(() => {
-                    console.log('Status: Diam terdeteksi, mengirim sinyal offline...');
+                    console.log('User idle...');
                     Livewire.dispatch('setUserOffline');
                     isCurrentlyOffline = true;
                 }, statusDelay);
@@ -218,18 +254,6 @@
                 window.addEventListener(evt, resetIdleTimer, { passive: true })
             );
             @endauth
-        });
-
-        document.addEventListener('livewire:init', () => {
-            Livewire.on('echo:pstore-channel,inventory.updated', (event) => {
-                setTimeout(() => {
-                    let alertEl = document.querySelector('.alert');
-                    if (alertEl) {
-                        alertEl.classList.add('animate__fadeOutRight');
-                        setTimeout(() => alertEl.remove(), 1000);
-                    }
-                }, 7000);
-            });
         });
     </script>
 </body>

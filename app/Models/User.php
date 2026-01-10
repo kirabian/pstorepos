@@ -14,8 +14,19 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-        'nama_lengkap', 'idlogin', 'email', 'password', 'tanggal_lahir', 
-        'role', 'distributor_id', 'cabang_id', 'last_seen', 'is_active'
+        'nama_lengkap', 
+        'idlogin', 
+        'email', 
+        'password', 
+        'tanggal_lahir', 
+        'role', 
+        'distributor_id', 
+        'cabang_id', 
+        'last_seen', 
+        'is_active',
+        // Tambahan Kolom Tema
+        'theme_mode',
+        'theme_color'
     ];
 
     protected $hidden = [
@@ -39,19 +50,16 @@ class User extends Authenticatable
         return Cache::has('user-is-online-'.$this->id);
     }
 
-    // Relasi Single (Untuk role umum)
     public function cabang()
     {
         return $this->belongsTo(Cabang::class, 'cabang_id');
     }
 
-    // Relasi Multi (Khusus Role Audit) - FIX KEY DISINI
     public function branches()
     {
         return $this->belongsToMany(Cabang::class, 'branch_user', 'user_id', 'cabang_id');
     }
     
-    // Helper: Ambil Akses Cabang
     public function getAccessCabangIdsAttribute()
     {
         if ($this->role === 'superadmin') {
@@ -69,7 +77,7 @@ class User extends Authenticatable
             return 'Belum pernah login';
         }
 
-        $timezone = 'Asia/Jakarta'; // Default
+        $timezone = 'Asia/Jakarta'; 
 
         if ($this->cabang) {
             $timezone = $this->cabang->timezone;
