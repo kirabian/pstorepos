@@ -5,6 +5,7 @@ namespace App\Livewire\User;
 use App\Models\User;
 use App\Models\Cabang;
 use App\Models\Distributor;
+use App\Models\Gudang; // Import Model Gudang
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -24,10 +25,13 @@ class UserIndex extends Component
     public $isEdit = false;
 
     // Form Fields
-    public $nama_lengkap, $idlogin, $email, $password, $tanggal_lahir, $role, $distributor_id, $cabang_id, $is_active = true;
+    public $nama_lengkap, $idlogin, $email, $password, $tanggal_lahir, $role, $is_active = true;
     
+    // ID Locations
+    public $distributor_id, $cabang_id, $gudang_id; 
+
     // Logic Baru: Penempatan Kerja untuk Inventory Staff
-    public $placement_type = ''; // Values: 'distributor' atau 'cabang'
+    public $placement_type = ''; // Values: 'distributor' atau 'gudang'
 
     // Khusus Audit: Multi Cabang Selection
     public $selected_branches = []; 
@@ -47,20 +51,24 @@ class UserIndex extends Component
     {
         if ($value !== 'gudang') {
             $this->placement_type = '';
+            $this->gudang_id = null;
         }
         
         // Reset ID jika role berubah
         if ($value === 'distributor') {
             $this->cabang_id = null;
+            $this->gudang_id = null;
         } elseif (in_array($value, ['adminproduk', 'analis', 'leader', 'sales', 'security'])) {
             $this->distributor_id = null;
+            $this->gudang_id = null;
         }
     }
 
     public function updatedPlacementType()
     {
-        // Reset pilihan dropdown saat ganti radio button
+        // Reset pilihan dropdown saat ganti radio button penempatan
         $this->distributor_id = null;
+        $this->gudang_id = null;
         $this->cabang_id = null;
     }
 
@@ -69,7 +77,8 @@ class UserIndex extends Component
     {
         $currentUser = Auth::user();
         
-        $query = User::with(['distributor', 'cabang', 'branches']);
+        // Load relasi gudang juga
+        $query = User::with(['distributor', 'cabang', 'gudang', 'branches']);
 
         // 1. Filter Search
         if ($this->search) {
@@ -97,21 +106,25 @@ class UserIndex extends Component
 
         $users = $query->latest()->paginate(10);
 
-        // 3. LOGIKA DROPDOWN CABANG
+        // 3. LOGIKA DROPDOWN
+        // Load Cabang
         if ($currentUser->role === 'superadmin') {
             $cabangs = Cabang::orderBy('nama_cabang', 'asc')->get();
         } else {
             $cabangs = Cabang::whereIn('id', $currentUser->access_cabang_ids ?? [])
-                        ->orderBy('nama_cabang', 'asc')
-                        ->get();
+                             ->orderBy('nama_cabang', 'asc')
+                             ->get();
         }
 
+        // Load Distributor & Gudang
         $distributors = Distributor::orderBy('nama_distributor', 'asc')->get();
+        $gudangs = Gudang::orderBy('nama_gudang', 'asc')->get();
 
-        return view('livewire.auth.user-index', [
+        return view('livewire.user.user-index', [
             'users' => $users,
             'cabangs' => $cabangs,
-            'distributors' => $distributors
+            'distributors' => $distributors,
+            'gudangs' => $gudangs
         ]);
     }
 
@@ -124,9 +137,12 @@ class UserIndex extends Component
         $this->password = '';
         $this->tanggal_lahir = '';
         $this->role = '';
+        
         $this->distributor_id = '';
         $this->cabang_id = '';
-        $this->placement_type = ''; // Reset placement
+        $this->gudang_id = ''; // Reset Gudang
+        
+        $this->placement_type = ''; 
         $this->is_active = true; 
         $this->selected_branches = [];
         $this->userId = null;
@@ -154,13 +170,14 @@ class UserIndex extends Component
             $rules['distributor_id'] = 'required';
         }
         elseif ($this->role === 'gudang') {
-            // Role Inventory Staff (Bisa di Distributor / Cabang)
-            $rules['placement_type'] = 'required|in:distributor,cabang';
+            // Role Inventory Staff (Pilih: Distributor ATAU Gudang Fisik)
+            $rules['placement_type'] = 'required|in:distributor,gudang';
             
             if ($this->placement_type === 'distributor') {
                 $rules['distributor_id'] = 'required';
             } else {
-                $rules['cabang_id'] = 'required';
+                // Jika pilih Gudang (Model Gudang)
+                $rules['gudang_id'] = 'required';
             }
         }
         elseif (in_array($this->role, ['adminproduk', 'analis', 'leader', 'sales', 'security'])) {
@@ -193,13 +210,7 @@ class UserIndex extends Component
                     return;
                 }
             }
-
-            if ($this->isEdit && $this->role === 'audit') {
-                $existingUser = User::find($this->userId);
-                if ($existingUser) {
-                    $this->selected_branches = $existingUser->branches->pluck('id')->map(fn($id) => (string)$id)->toArray();
-                }
-            }
+            // Audit tidak bisa assign gudang / distributor, logic disesuaikan kebutuhan
         }
 
         // 4. Siapkan Data
@@ -212,28 +223,29 @@ class UserIndex extends Component
             'is_active'    => $this->is_active,
         ];
 
-        // Logic Save ID berdasarkan Placement
+        // Reset semua ID dulu agar tidak tumpang tindih
+        $data['distributor_id'] = null;
+        $data['cabang_id'] = null;
+        $data['gudang_id'] = null;
+
+        // Logic Save ID berdasarkan Role & Placement
         if ($this->role === 'distributor') {
             $data['distributor_id'] = $this->distributor_id;
-            $data['cabang_id'] = null;
         } 
         elseif ($this->role === 'gudang') {
             if ($this->placement_type === 'distributor') {
                 $data['distributor_id'] = $this->distributor_id;
-                $data['cabang_id'] = null;
             } else {
-                $data['cabang_id'] = $this->cabang_id;
-                $data['distributor_id'] = null;
+                // Masuk ke tabel gudang
+                $data['gudang_id'] = $this->gudang_id;
             }
         }
         elseif (in_array($this->role, ['superadmin', 'audit'])) {
-            $data['distributor_id'] = null;
-            $data['cabang_id'] = null;
+            // Tidak terikat lokasi fisik spesifik (Audit by relation many-to-many)
         }
         else {
             // Role operasional cabang biasa
             $data['cabang_id'] = $this->cabang_id;
-            $data['distributor_id'] = null;
         }
 
         if (!empty($this->password)) {
@@ -291,14 +303,15 @@ class UserIndex extends Component
         // Load IDs
         $this->distributor_id = $user->distributor_id;
         $this->cabang_id = $user->cabang_id;
+        $this->gudang_id = $user->gudang_id;
 
         // Tentukan Placement Type saat Edit
         $this->placement_type = '';
         if ($user->role === 'gudang') {
             if ($user->distributor_id) {
                 $this->placement_type = 'distributor';
-            } elseif ($user->cabang_id) {
-                $this->placement_type = 'cabang';
+            } elseif ($user->gudang_id) {
+                $this->placement_type = 'gudang';
             }
         }
 

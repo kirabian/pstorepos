@@ -142,16 +142,16 @@
                                         </div>
                                     </div>
                                 @elseif($user->role === 'gudang')
-                                    {{-- DISPLAY LOKASI GUDANG (Distributor atau Cabang) --}}
+                                    {{-- DISPLAY LOKASI GUDANG (Distributor atau Gudang Fisik) --}}
                                     @if($user->distributor_id)
                                         <div class="d-flex align-items-center gap-2 text-primary fw-bold small">
                                             <div class="bg-primary bg-opacity-10 p-1 rounded-circle"><i class="fas fa-truck"></i></div>
                                             {{ $user->distributor->nama_distributor }} (Dist.)
                                         </div>
-                                    @elseif($user->cabang_id)
+                                    @elseif($user->gudang_id)
                                         <div class="d-flex align-items-center gap-2 text-dark fw-bold small">
-                                            <div class="bg-warning bg-opacity-10 text-warning p-1 rounded-circle"><i class="fas fa-warehouse"></i></div>
-                                            {{ $user->cabang->nama_cabang }} (Gudang)
+                                            <div class="bg-info bg-opacity-10 text-info p-1 rounded-circle"><i class="fas fa-warehouse"></i></div>
+                                            {{ $user->gudang->nama_gudang }} (Warehouse)
                                         </div>
                                     @else
                                         <span class="text-muted small italic">-</span>
@@ -288,13 +288,6 @@
                                 @error('email') <span class="text-danger extra-small fw-bold ms-2">{{ $message }}</span> @enderror
                             </div>
 
-                            <div class="col-md-6">
-                                <div class="form-floating">
-                                    <input type="text" class="form-control bg-light border-0 fw-bold text-dark rounded-4" id="phoneInput" placeholder="0812..." wire:model="distributor_id"> 
-                                    <label for="phoneInput" class="text-secondary fw-semibold">Phone (Optional)</label>
-                                </div>
-                            </div>
-
                             {{-- ACCESS CONTROL --}}
                             <div class="col-12 mt-4">
                                 <h6 class="text-uppercase text-muted extra-small fw-bold tracking-widest mb-3">Access Control</h6>
@@ -337,18 +330,18 @@
                             @if($role === 'gudang')
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="p-4 bg-light border rounded-4">
-                                        <label class="d-block text-secondary small fw-bold text-uppercase mb-3">Penempatan Kerja</label>
+                                        <label class="d-block text-secondary small fw-bold text-uppercase mb-3">Penempatan Inventory</label>
                                         <div class="d-flex gap-3">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="radio" name="placement" id="plc_dist" value="distributor" wire:model.live="placement_type">
-                                                <label class="form-check-label fw-bold text-dark" for="plc_dist">
+                                                <label class="form-check-label fw-bold text-dark cursor-pointer" for="plc_dist">
                                                     <i class="fas fa-truck me-1"></i> Distributor
                                                 </label>
                                             </div>
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="placement" id="plc_cabang" value="cabang" wire:model.live="placement_type">
-                                                <label class="form-check-label fw-bold text-dark" for="plc_cabang">
-                                                    <i class="fas fa-store me-1"></i> Cabang / Gudang
+                                                <input class="form-check-input" type="radio" name="placement" id="plc_gudang" value="gudang" wire:model.live="placement_type">
+                                                <label class="form-check-label fw-bold text-dark cursor-pointer" for="plc_gudang">
+                                                    <i class="fas fa-warehouse me-1"></i> Gudang (Warehouse)
                                                 </label>
                                             </div>
                                         </div>
@@ -359,7 +352,7 @@
 
                             {{-- DYNAMIC DROPDOWNS --}}
                             
-                            {{-- 1. Dropdown Distributor (Jika Role=Distributor ATAU (Role=Gudang & Placement=Distributor)) --}}
+                            {{-- 1. Dropdown Distributor --}}
                             @if($role === 'distributor' || ($role === 'gudang' && $placement_type === 'distributor'))
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="form-floating">
@@ -375,15 +368,28 @@
                                 </div>
                             @endif
 
-                            {{-- 2. Dropdown Cabang (Jika Role=Operasional ATAU (Role=Gudang & Placement=Cabang)) --}}
-                            @if(
-                                ($role && !in_array($role, ['superadmin', 'audit', 'distributor', 'gudang'])) || 
-                                ($role === 'gudang' && $placement_type === 'cabang')
-                            )
+                            {{-- 2. Dropdown Gudang Fisik (NEW) --}}
+                            @if($role === 'gudang' && $placement_type === 'gudang')
+                                <div class="col-12 animate__animated animate__fadeIn">
+                                    <div class="form-floating">
+                                        <select class="form-select bg-info-subtle border-0 text-dark fw-bold rounded-4" wire:model="gudang_id">
+                                            <option value="">Pilih Gudang</option>
+                                            @foreach($gudangs as $g)
+                                                <option value="{{ $g->id }}">{{ $g->nama_gudang }}</option>
+                                            @endforeach
+                                        </select>
+                                        <label class="text-dark fw-bold">Lokasi Gudang</label>
+                                    </div>
+                                    @error('gudang_id') <span class="text-danger extra-small fw-bold ms-2">{{ $message }}</span> @enderror
+                                </div>
+                            @endif
+
+                            {{-- 3. Dropdown Cabang (Tidak Muncul jika Role = Gudang/Distributor) --}}
+                            @if($role && !in_array($role, ['superadmin', 'audit', 'distributor', 'gudang']))
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="form-floating">
                                         <select class="form-select bg-warning-subtle border-0 text-dark fw-bold rounded-4" id="branchSelect" wire:model="cabang_id">
-                                            <option value="">Pilih Cabang / Gudang</option>
+                                            <option value="">Pilih Cabang</option>
                                             @foreach($cabangs as $c)
                                                 <option value="{{ $c->id }}">{{ $c->nama_cabang }}</option>
                                             @endforeach
