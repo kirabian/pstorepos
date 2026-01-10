@@ -2,31 +2,31 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\HasApiTokens;
-use Carbon\Carbon;
 
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-        'nama_lengkap', 
-        'idlogin', 
-        'email', 
-        'password', 
-        'tanggal_lahir', 
-        'role', 
-        'distributor_id', 
-        'cabang_id', 
-        'last_seen', 
+        'nama_lengkap',
+        'idlogin',
+        'email',
+        'password',
+        'tanggal_lahir',
+        'role',
+        'distributor_id',
+        'cabang_id',
+        'last_seen',
         'is_active',
         // Tambahan Kolom Tema
         'theme_mode',
-        'theme_color'
+        'theme_color',
     ];
 
     protected $hidden = [
@@ -40,22 +40,17 @@ class User extends Authenticatable
         'is_active' => 'boolean',
     ];
 
-    public function distributor()
-    {
-        return $this->belongsTo(Distributor::class, 'distributor_id');
-    }
-
-    public function isOnline()
-    {
-        return Cache::has('user-is-online-'.$this->id);
-    }
-
     public function cabang()
     {
         return $this->belongsTo(Cabang::class, 'cabang_id');
     }
 
-     public function gudang()
+    public function distributor()
+    {
+        return $this->belongsTo(Distributor::class, 'distributor_id');
+    }
+
+    public function gudang()
     {
         return $this->belongsTo(Gudang::class, 'gudang_id');
     }
@@ -64,7 +59,12 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Cabang::class, 'branch_user', 'user_id', 'cabang_id');
     }
-    
+
+    public function isOnline()
+    {
+        return Cache::has('user-is-online-'.$this->id);
+    }
+
     public function getAccessCabangIdsAttribute()
     {
         if ($this->role === 'superadmin') {
@@ -73,16 +73,17 @@ class User extends Authenticatable
         if ($this->role === 'audit') {
             return $this->branches()->pluck('cabangs.id')->toArray();
         }
+
         return $this->cabang_id ? [$this->cabang_id] : [];
     }
 
     public function getLastSeenFormattedAttribute()
     {
-        if (!$this->last_seen) {
+        if (! $this->last_seen) {
             return 'Belum pernah login';
         }
 
-        $timezone = 'Asia/Jakarta'; 
+        $timezone = 'Asia/Jakarta';
 
         if ($this->cabang) {
             $timezone = $this->cabang->timezone;
@@ -98,6 +99,6 @@ class User extends Authenticatable
 
         return Carbon::parse($this->last_seen)
             ->setTimezone($timezone)
-            ->translatedFormat('d M, H:i') . ' ' . $label;
+            ->translatedFormat('d M, H:i').' '.$label;
     }
 }
