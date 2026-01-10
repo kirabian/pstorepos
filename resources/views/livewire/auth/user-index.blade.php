@@ -142,7 +142,7 @@
                                         </div>
                                     </div>
                                 @elseif($user->role === 'inventory_staff')
-                                    {{-- DISPLAY LOKASI INVENTORY STAFF (Distributor atau Gudang Fisik) --}}
+                                    {{-- TAMPILAN KHUSUS INVENTORY STAFF (Bisa di Distributor atau Gudang) --}}
                                     @if($user->distributor_id)
                                         <div class="d-flex align-items-center gap-2 text-primary fw-bold small">
                                             <div class="bg-primary bg-opacity-10 p-1 rounded-circle"><i class="fas fa-truck"></i></div>
@@ -310,7 +310,9 @@
                                             <option value="analis">ANALIST DATA</option>
                                             <option value="leader">TEAM LEADER</option>
                                             <option value="sales">SALES / CASHIER</option>
-                                            <option value="inventory_staff">INVENTORY STAFF (Staff Gudang)</option>
+                                            <option value="inventory_staff">INVENTORY STAFF (Staff Inventory)</option>
+                                            <option value="distributor">DISTRIBUTOR (Pemilik/Admin)</option>
+                                            <option value="gudang">KEPALA GUDANG</option>
                                             <option value="security">SECURITY</option>
                                         </select>
                                         <label for="roleSelect" class="text-dark fw-bold">User Role</label>
@@ -326,7 +328,7 @@
                                 @error('role') <span class="text-danger extra-small fw-bold ms-2">{{ $message }}</span> @enderror
                             </div>
 
-                            {{-- RADIO PILIHAN PENEMPATAN (KHUSUS INVENTORY STAFF) --}}
+                            {{-- LOGIC BARU: Jika Inventory Staff -> Pilih Penempatan (Distributor / Gudang) --}}
                             @if($role === 'inventory_staff')
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="p-4 bg-light border rounded-4">
@@ -335,13 +337,13 @@
                                             <div class="form-check">
                                                 <input class="form-check-input" type="radio" name="placement" id="plc_dist" value="distributor" wire:model.live="placement_type">
                                                 <label class="form-check-label fw-bold text-dark cursor-pointer" for="plc_dist">
-                                                    <i class="fas fa-truck me-1"></i> Distributor
+                                                    <i class="fas fa-truck me-1"></i> Di Distributor
                                                 </label>
                                             </div>
                                             <div class="form-check">
                                                 <input class="form-check-input" type="radio" name="placement" id="plc_gudang" value="gudang" wire:model.live="placement_type">
                                                 <label class="form-check-label fw-bold text-dark cursor-pointer" for="plc_gudang">
-                                                    <i class="fas fa-warehouse me-1"></i> Gudang (Warehouse)
+                                                    <i class="fas fa-warehouse me-1"></i> Di Gudang Fisik
                                                 </label>
                                             </div>
                                         </div>
@@ -368,8 +370,8 @@
                                 </div>
                             @endif
 
-                            {{-- 2. Dropdown Gudang Fisik (NEW) --}}
-                            @if($role === 'inventory_staff' && $placement_type === 'gudang')
+                            {{-- 2. Dropdown Gudang Fisik --}}
+                            @if($role === 'gudang' || ($role === 'inventory_staff' && $placement_type === 'gudang'))
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="form-floating">
                                         <select class="form-select bg-info-subtle border-0 text-dark fw-bold rounded-4" wire:model="gudang_id">
@@ -385,7 +387,7 @@
                             @endif
 
                             {{-- 3. Dropdown Cabang --}}
-                            @if($role && !in_array($role, ['superadmin', 'audit', 'distributor', 'inventory_staff']))
+                            @if($role && !in_array($role, ['superadmin', 'audit', 'distributor', 'inventory_staff', 'gudang']))
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="form-floating">
                                         <select class="form-select bg-warning-subtle border-0 text-dark fw-bold rounded-4" id="branchSelect" wire:model="cabang_id">
