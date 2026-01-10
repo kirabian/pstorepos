@@ -55,6 +55,11 @@ class User extends Authenticatable
         return $this->belongsTo(Cabang::class, 'cabang_id');
     }
 
+     public function gudang()
+    {
+        return $this->belongsTo(Gudang::class, 'gudang_id');
+    }
+
     public function branches()
     {
         return $this->belongsToMany(Cabang::class, 'branch_user', 'user_id', 'cabang_id');
