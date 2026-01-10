@@ -3,148 +3,104 @@
 namespace App\Livewire;
 
 use Livewire\Component;
-use Livewire\Attributes\Layout;
-use Livewire\Attributes\On;
-use Livewire\Attributes\Lazy;
-use App\Models\User;
-use App\Models\Cabang;
-use App\Models\Gudang;
-use App\Models\Distributor;
-use App\Models\Stok;
-use App\Models\StokHistory;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title;
 
-#[Lazy]
+#[Layout('layouts.master')]
+#[Title('Dashboard Operasional')]
 class Dashboard extends Component
 {
-    // Properties untuk Superadmin
-    public $totalUsers = 0;
-    public $totalCabang = 0;
-    public $totalGudang = 0;
-    public $totalDistributor = 0;
-    public $onlineUsersCount = 0;
-
-    // Properties untuk Audit
-    public $cabangCount = 0;
-    public $masukToday = 0;
-    public $keluarToday = 0;
-    public $pendingApprovals = [];
-    public $priceLogs = [];
-
-    public function mount()
-    {
-        $user = Auth::user();
-
-        // 1. JIKA SUPERADMIN
-        if ($user->role === 'superadmin') {
-            $this->totalUsers = User::count();
-            $this->totalCabang = Cabang::count();
-            $this->totalGudang = Gudang::count();
-            $this->totalDistributor = Distributor::count();
-            $this->onlineUsersCount = User::all()->filter(fn($u) => $u->isOnline())->count();
-        }
-
-        // 2. JIKA AUDIT
-        elseif ($user->role === 'audit') {
-            
-            // FIX: Pastikan ini selalu array, hindari null
-            $cabangIds = $user->access_cabang_ids ?? []; 
-
-            $this->cabangCount = count($cabangIds);
-
-            // Jika punya cabang, baru query datanya
-            if (!empty($cabangIds)) {
-                $this->masukToday = StokHistory::whereIn('cabang_id', $cabangIds)
-                    ->where('status', 'like', '%Masuk%')
-                    ->whereDate('created_at', today())
-                    ->count();
-
-                $this->keluarToday = StokHistory::whereIn('cabang_id', $cabangIds)
-                    ->where('status', 'Stok Keluar')
-                    ->whereDate('created_at', today())
-                    ->count();
-
-                $this->pendingApprovals = StokHistory::with(['user', 'cabang'])
-                    ->whereIn('cabang_id', $cabangIds)
-                    ->where(function($q) {
-                        $q->where('keterangan', 'like', '%Retur%')
-                          ->orWhere('keterangan', 'like', '%Void%');
-                    })
-                    ->latest()
-                    ->take(5)
-                    ->get();
-
-                $this->priceLogs = StokHistory::with(['user', 'cabang'])
-                    ->whereIn('cabang_id', $cabangIds)
-                    ->where('status', 'Update Data')
-                    ->latest()
-                    ->take(5)
-                    ->get();
-            } else {
-                // Jika belum pegang cabang, kosongkan data
-                $this->masukToday = 0;
-                $this->keluarToday = 0;
-                $this->pendingApprovals = collect([]); 
-                $this->priceLogs = collect([]);
-            }
-        }
-    }
-
-    #[On('echo:pstore-channel,inventory.updated')]
-    public function handleUpdate($event)
-    {
-        session()->flash('info', 'Notifikasi: ' . ($event['message'] ?? 'Data baru masuk!'));
-        $this->mount(); 
-    }
-
-    public function placeholder()
-    {
-        if (view()->exists('livewire.dashboard-skeleton')) {
-            return view('livewire.dashboard-skeleton');
-        }
-        return <<<'HTML'
-        <div class="d-flex justify-content-center align-items-center vh-100">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
-        HTML;
-    }
-
-    public function testSinyal()
-    {
-        $name = auth()->user()->nama_lengkap ?? 'Admin';
-        broadcast(new \App\Events\InventoryUpdate("Sinyal dikirim oleh " . $name))->toOthers();
-        session()->flash('info', 'Sinyal berhasil dikirim!');
-    }
-
-    #[Layout('layouts.master')]
     public function render()
     {
         $user = Auth::user();
 
-        // 1. Tampilan Khusus AUDIT
-        if ($user->role === 'audit') {
-            // PASSING DATA SECARA EKSPLISIT KE VIEW AGAR VARIABEL DIKENALI
-            return view('livewire.dashboard-audit', [
-                'cabang_count' => $this->cabangCount,
-                'masuk_today' => $this->masukToday,
-                'keluar_today' => $this->keluarToday,
-                'pending_approvals' => $this->pendingApprovals,
-                'price_logs' => $this->priceLogs
-            ])->title('Audit Control Center');
+        // Default Data (Untuk Admin/Role lain)
+        $viewData = [
+            'mode' => 'general',
+            'stats' => [],
+            'activities' => []
+        ];
+
+        // LOGIKA KHUSUS ROLE INVENTORY STAFF (GUDANG)
+        if ($user->role === 'gudang') {
+            
+            // 1. JIKA PENEMPATAN DI DISTRIBUTOR
+            if ($user->distributor_id) {
+                $viewData['mode'] = 'distributor';
+                $viewData['location_name'] = $user->distributor->nama_distributor ?? 'Unknown Distributor';
+                
+                // Mockup Data Statistik Distributor (Ganti dengan Count DB Asli)
+                $viewData['stats'] = [
+                    [
+                        'label' => 'Total Supply Masuk',
+                        'value' => '1,240', // Ganti: BarangMasuk::where('distributor_id', ...)->count()
+                        'icon' => 'fa-truck-loading',
+                        'color' => 'primary',
+                        'trend' => '+12% minggu ini'
+                    ],
+                    [
+                        'label' => 'Distribusi ke Cabang',
+                        'value' => '85', // Ganti: Pengiriman::where(...)
+                        'icon' => 'fa-paper-plane',
+                        'color' => 'info',
+                        'trend' => '5 pending'
+                    ],
+                    [
+                        'label' => 'Total SKU Unit',
+                        'value' => '450',
+                        'icon' => 'fa-boxes-stacked',
+                        'color' => 'warning',
+                        'trend' => 'Stok aman'
+                    ],
+                    [
+                        'label' => 'Cabang Terhubung',
+                        'value' => '12',
+                        'icon' => 'fa-network-wired',
+                        'color' => 'success',
+                        'trend' => 'Active'
+                    ]
+                ];
+            } 
+            // 2. JIKA PENEMPATAN DI GUDANG FISIK (WAREHOUSE)
+            elseif ($user->gudang_id) {
+                $viewData['mode'] = 'gudang';
+                $viewData['location_name'] = $user->gudang->nama_gudang ?? 'Unknown Warehouse';
+
+                // Mockup Data Statistik Gudang (Ganti dengan Count DB Asli)
+                $viewData['stats'] = [
+                    [
+                        'label' => 'Kapasitas Rak',
+                        'value' => '85%',
+                        'icon' => 'fa-warehouse',
+                        'color' => 'danger',
+                        'trend' => 'Hampir Penuh'
+                    ],
+                    [
+                        'label' => 'Barang Retur',
+                        'value' => '24',
+                        'icon' => 'fa-rotate-left',
+                        'color' => 'warning',
+                        'trend' => 'Perlu QC'
+                    ],
+                    [
+                        'label' => 'Stock Opname',
+                        'value' => 'Verified',
+                        'icon' => 'fa-clipboard-check',
+                        'color' => 'success',
+                        'trend' => 'Last: Hari ini'
+                    ],
+                    [
+                        'label' => 'Total Item Fisik',
+                        'value' => '5,600',
+                        'icon' => 'fa-box-open',
+                        'color' => 'primary',
+                        'trend' => '+200 unit'
+                    ]
+                ];
+            }
         }
 
-        // 2. Tampilan Khusus SUPERADMIN
-        if ($user->role === 'superadmin') {
-            return view('livewire.dashboard', [
-                'stok_menipis' => Stok::where('jumlah', '<', 5)->count(),
-                'recent_history' => StokHistory::with('user')->latest()->take(5)->get()
-            ])->title('Superadmin Overview');
-        }
-
-        // 3. Tampilan User Lain
-        return view('livewire.dashboard-user')->title('Dashboard');
+        return view('livewire.dashboard', $viewData);
     }
 }
