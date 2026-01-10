@@ -197,16 +197,16 @@
             
             <div class="d-flex align-items-center mb-3 user-info-wrapper position-relative" style="z-index: 2;">
                 <div class="position-relative flex-shrink-0">
-                    <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->nama_lengkap) }}&background=fff&color=000&bold=true"
+                    <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->nama_lengkap) }}&background=DFD0B8&color=222831&bold=true"
                         class="rounded-circle border border-2 border-white shadow-sm" width="42" height="42"
                         alt="User Avatar">
                     <span class="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle"
                         style="width: 10px; height: 10px;"></span>
                 </div>
                 <div class="ms-3 overflow-hidden sidebar-text">
-                    <p class="mb-0 fw-bold text-truncate text-white" style="font-size: 0.9rem;">
+                    <p class="mb-0 fw-bold text-truncate text-white" style="font-size: 0.9rem; color: #DFD0B8 !important;">
                         {{ Auth::user()->nama_lengkap }}</p>
-                    <p class="mb-0 text-white-50 text-truncate text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px;">
+                    <p class="mb-0 text-white-50 text-truncate text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px; color: #948979 !important;">
                         {{ str_replace('_', ' ', Auth::user()->role) }}</p>
                 </div>
             </div>
@@ -224,26 +224,36 @@
 
 <style>
     /* --- THEME COLORS & BASICS --- */
+    /* Palette Code:
+       #222831 -> Dark Background
+       #393E46 -> Secondary Background
+       #948979 -> Taupe Accent
+       #DFD0B8 -> Cream Text
+    */
+
     .sidebar-premium {
-        background: linear-gradient(180deg, #09090b 0%, #18181b 100%);
-        color: #a1a1aa;
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
+        /* Gradient from #222831 to #393E46 */
+        background: linear-gradient(180deg, #222831 0%, #393E46 100%);
+        color: #DFD0B8;
+        border-right: 1px solid #393E46;
     }
 
     .invert-logo {
         filter: brightness(0) invert(1);
-        opacity: 0.9;
+        opacity: 0.95;
     }
 
     .sidebar-divider {
         height: 1px;
-        background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 100%);
+        /* Using Taupe #948979 for divider */
+        background: linear-gradient(90deg, rgba(148, 137, 121, 0) 0%, rgba(148, 137, 121, 0.5) 50%, rgba(148, 137, 121, 0) 100%);
         margin-top: 10px;
     }
 
     /* --- NAVIGATION ITEMS --- */
     #sidebar .nav-link {
-        color: #a1a1aa; /* Text Gray */
+        color: #DFD0B8; /* Cream Text */
+        opacity: 0.8;
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         border: 1px solid transparent;
         margin-bottom: 4px;
@@ -254,27 +264,46 @@
         width: 24px;
         height: 24px;
         flex-shrink: 0;
+        color: #948979; /* Icon Taupe Color by default */
+        transition: color 0.3s ease;
+    }
+    
+    #sidebar .nav-link:hover .icon-wrapper,
+    #sidebar .nav-link.active .icon-wrapper {
+        color: inherit;
     }
 
     /* Hover State */
     #sidebar .nav-link:hover:not(.active) {
-        color: #ffffff;
-        background: rgba(255, 255, 255, 0.08);
+        color: #DFD0B8;
+        opacity: 1;
+        /* Background Hover: #393E46 */
+        background: rgba(57, 62, 70, 0.8);
+        border: 1px solid rgba(148, 137, 121, 0.2);
         transform: translateX(5px);
     }
 
     /* Active State */
     #sidebar .nav-link.active {
-        background-color: #ffffff;
-        color: #000000;
-        box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+        /* Active Background: Cream #DFD0B8 */
+        background-color: #DFD0B8;
+        /* Active Text: Dark #222831 */
+        color: #222831;
+        opacity: 1;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         font-weight: 700 !important;
-        border: 1px solid rgba(255, 255, 255, 1);
+        border: 1px solid #DFD0B8;
     }
     
     #sidebar .nav-link.active i {
         transform: scale(1.1);
         transition: transform 0.2s;
+        color: #222831;
+    }
+
+    /* Headers / Label */
+    .text-muted {
+        color: #948979 !important; /* Taupe for labels */
     }
 
     /* --- SCROLLBAR CUSTOMIZATION --- */
@@ -285,33 +314,34 @@
         background: transparent;
     }
     .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(148, 137, 121, 0.3); /* Taupe transparent */
         border-radius: 10px;
     }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.2);
+        background: rgba(148, 137, 121, 0.6);
     }
 
     /* --- USER CARD GLASSMORPHISM --- */
     .glass-card {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        /* Background #393E46 with opacity */
+        background: rgba(57, 62, 70, 0.4);
+        border: 1px solid rgba(148, 137, 121, 0.3);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
     }
 
     .btn-logout {
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: #fff;
+        border: 1px solid rgba(148, 137, 121, 0.4);
+        color: #DFD0B8;
         background: transparent;
         transition: all 0.2s ease;
     }
 
     .btn-logout:hover {
-        background: #dc3545;
-        border-color: #dc3545;
-        color: #fff;
-        box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3);
+        background: #948979; /* Taupe Hover */
+        border-color: #948979;
+        color: #222831;
+        box-shadow: 0 4px 10px rgba(148, 137, 121, 0.2);
     }
 
     /* --- RESPONSIVE LOGIC (DESKTOP) --- */
@@ -351,7 +381,7 @@
 
         #sidebar.minimized .nav-link:hover {
             transform: none; /* Disable shift on minimize */
-            background: rgba(255,255,255,0.1);
+            background: rgba(57, 62, 70, 0.8);
         }
 
         #sidebar.minimized .user-info-wrapper {
@@ -368,11 +398,12 @@
         #sidebar.minimized .logout-btn {
             border: none !important;
             background: transparent !important;
-            color: #dc3545 !important;
+            color: #948979 !important;
         }
         
         #sidebar.minimized .logout-btn:hover {
-            background: rgba(220, 53, 69, 0.1) !important;
+            background: rgba(148, 137, 121, 0.1) !important;
+            color: #DFD0B8 !important;
         }
 
         #sidebar.minimized .logout-btn span {
