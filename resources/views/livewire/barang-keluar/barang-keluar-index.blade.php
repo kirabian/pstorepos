@@ -7,11 +7,9 @@
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="card-body p-0">
             
-            {{-- Toolbar Filter --}}
             <div class="p-4 border-bottom bg-white">
                 <div class="row g-3 align-items-center justify-content-end">
                     
-                    {{-- Kategori Filter Dropdown --}}
                     <div class="col-md-3">
                         <div class="position-relative">
                             <select class="form-select rounded-3 ps-3" wire:model.live="kategori">
@@ -23,7 +21,6 @@
                         </div>
                     </div>
 
-                    {{-- Search Filter --}}
                     <div class="col-md-3">
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0 rounded-start-3 ps-3">
@@ -35,7 +32,6 @@
                         </div>
                     </div>
 
-                    {{-- Bulan Filter --}}
                     <div class="col-md-2">
                         <select class="form-select rounded-3" wire:model.live="bulan">
                             <option value="01">Januari</option>
@@ -53,7 +49,6 @@
                         </select>
                     </div>
 
-                    {{-- Tahun Filter --}}
                     <div class="col-md-auto">
                         <select class="form-select rounded-3" wire:model.live="tahun" style="width: 100px;">
                             @for($i = date('Y'); $i >= date('Y')-5; $i--)
@@ -63,10 +58,15 @@
                     </div>
 
                     <div class="col-md-auto d-flex gap-2">
-                        {{-- Tombol Tambah --}}
-                        @if(in_array(Auth::user()->role, ['inventory_staff', 'gudang', 'superadmin']))
+                        {{-- TOMBOL INPUT: HANYA MUNCUL JIKA STAFF GUDANG / ROLE GUDANG --}}
+                        @php
+                            $user = Auth::user();
+                            $bolehInput = ($user->role === 'gudang') || ($user->role === 'inventory_staff' && $user->gudang_id && !$user->distributor_id);
+                        @endphp
+
+                        @if($bolehInput)
                             <a href="{{ route('barang-keluar.create') }}" class="btn btn-danger rounded-3 px-4 fw-bold text-white shadow-sm hover-scale">
-                                <i class="fas fa-sign-out-alt me-2"></i> Input Barang Keluar
+                                <i class="fas fa-sign-out-alt me-2"></i> Input Barang
                             </a>
                         @endif
 
@@ -77,7 +77,6 @@
                 </div>
             </div>
 
-            {{-- Table Data --}}
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">

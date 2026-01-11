@@ -11,7 +11,6 @@
             <div class="p-4 border-bottom bg-white">
                 <div class="row g-3 align-items-center justify-content-end">
                     
-                    {{-- Search Filter --}}
                     <div class="col-md-3">
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0 rounded-start-3 ps-3">
@@ -23,7 +22,6 @@
                         </div>
                     </div>
 
-                    {{-- Bulan Filter --}}
                     <div class="col-md-2">
                         <select class="form-select rounded-3" wire:model.live="bulan">
                             <option value="01">Januari</option>
@@ -41,7 +39,6 @@
                         </select>
                     </div>
 
-                    {{-- Tahun Filter --}}
                     <div class="col-md-2">
                         <select class="form-select rounded-3" wire:model.live="tahun">
                             @for($i = date('Y'); $i >= date('Y')-5; $i--)
@@ -50,11 +47,16 @@
                         </select>
                     </div>
 
-                   <div class="col-md-auto d-flex gap-2">
-                        {{-- Tombol Tambah (Hanya untuk Role yang berhak input) --}}
-                        @if(in_array(Auth::user()->role, ['inventory_staff', 'gudang', 'superadmin']))
+                    <div class="col-md-auto d-flex gap-2">
+                        {{-- TOMBOL INPUT: HANYA MUNCUL JIKA STAFF GUDANG / ROLE GUDANG --}}
+                        @php
+                            $user = Auth::user();
+                            $bolehInput = ($user->role === 'gudang') || ($user->role === 'inventory_staff' && $user->gudang_id && !$user->distributor_id);
+                        @endphp
+
+                        @if($bolehInput)
                             <a href="{{ route('barang-masuk.create') }}" class="btn btn-primary rounded-3 px-4 fw-bold text-white shadow-sm hover-scale">
-                                <i class="fas fa-plus me-2"></i> Input Barang Masuk
+                                <i class="fas fa-plus me-2"></i> Input Barang
                             </a>
                         @endif
 
@@ -98,10 +100,8 @@
                                 </td>
                                 <td class="text-muted small">{{ Str::limit($item->keterangan, 40) }}</td>
                                 
-                                {{-- PERBAIKAN LOGIKA KONDISI (CEK KE TABLE STOK) --}}
                                 <td>
                                     @php
-                                        // Cari data stok aktif berdasarkan IMEI
                                         $stokAktif = \App\Models\Stok::where('imei', $item->imei)->first();
                                     @endphp
 
@@ -112,7 +112,6 @@
                                             <span class="badge bg-warning bg-opacity-10 text-warning border border-warning rounded-2">2ND</span>
                                         @endif
                                     @else
-                                        {{-- Jika stok sudah keluar/hapus --}}
                                         <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary rounded-2">-</span>
                                     @endif
                                 </td>

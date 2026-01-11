@@ -2,9 +2,9 @@
 
 use App\Livewire\Auth\Login;
 use App\Livewire\BarangKeluar\BarangKeluarIndex;
-use App\Livewire\BarangKeluar\BarangKeluarCreate; // Tambahan Import
+use App\Livewire\BarangKeluar\BarangKeluarCreate; // Import Component Create Keluar
 use App\Livewire\BarangMasuk\BarangMasukIndex;
-use App\Livewire\BarangMasuk\BarangMasukCreate;   // Tambahan Import
+use App\Livewire\BarangMasuk\BarangMasukCreate;   // Import Component Create Masuk
 use App\Livewire\Cabang\CabangCreate;
 use App\Livewire\Cabang\CabangEdit;
 use App\Livewire\Cabang\CabangIndex;
@@ -58,7 +58,6 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     /* |--------------------------------------------------------------------------
     | MANAJEMEN USER (SUPERADMIN & AUDIT)
     |--------------------------------------------------------------------------
-    | Menggunakan middleware 'user.management' yang baru dibuat.
     */
     Route::prefix('users')->name('user.')->middleware('user.management')->group(function () {
         Route::get('/', UserIndex::class)->name('index');
@@ -71,49 +70,42 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::middleware('can:superadmin-only')->group(function () {
-
-        // HAPUS ->middleware('checkRole:superadmin') karena sudah ada di group middleware 'can'
         Route::get('/online-shops', OnlineShopIndex::class)->name('online-shop.index');
 
-        // Manajemen Distributor
         Route::prefix('distributors')->name('distributor.')->group(function () {
             Route::get('/', DistributorIndex::class)->name('index');
             Route::get('/create', DistributorCreate::class)->name('create');
             Route::get('/{id}/edit', DistributorEdit::class)->name('edit');
         });
 
-        // Manajemen Cabang
         Route::get('/cabang', CabangIndex::class)->name('cabang.index');
         Route::get('/cabang/create', CabangCreate::class)->name('cabang.create');
         Route::get('/cabang/{id}/edit', CabangEdit::class)->name('cabang.edit');
 
-        // Manajemen Gudang
         Route::get('/gudang', GudangIndex::class)->name('gudang.index');
         Route::get('/gudang/create', GudangCreate::class)->name('gudang.create');
         Route::get('/gudang/{id}/edit', GudangEdit::class)->name('gudang.edit');
 
-        // Master Data Produk
         Route::get('/merk', MerkIndex::class)->name('merk.index');
         Route::get('/tipe', TipeIndex::class)->name('tipe.index');
-
     });
 
     /* |--------------------------------------------------------------------------
-    | OPERASIONAL / UMUM (Sales, Gudang, Audit, Admin Produk, Inventory Staff)
+    | OPERASIONAL / UMUM
     |--------------------------------------------------------------------------
     */
     Route::get('/stok', StokIndex::class)->name('stok.index');
     Route::get('/lacak-imei', LacakImei::class)->name('lacak.imei');
 
-    // Barang Masuk (Index & Create)
+    // BARANG MASUK
     Route::get('/barang-masuk', BarangMasukIndex::class)->name('barang-masuk.index');
-    Route::get('/barang-masuk/create', BarangMasukCreate::class)->name('barang-masuk.create'); // Tambahan Route
+    Route::get('/barang-masuk/create', BarangMasukCreate::class)->name('barang-masuk.create');
 
-    // Barang Keluar (Index & Create)
+    // BARANG KELUAR
     Route::get('/barang-keluar', BarangKeluarIndex::class)->name('barang-keluar.index');
-    Route::get('/barang-keluar/create', BarangKeluarCreate::class)->name('barang-keluar.create'); // Tambahan Route
+    Route::get('/barang-keluar/create', BarangKeluarCreate::class)->name('barang-keluar.create');
 
     Route::get('/stock-opname', \App\Livewire\Gudang\StockOpnameIndex::class)
         ->name('stock-opname.index')
-        ->middleware('checkRole:gudang'); // Proteksi agar hanya role relevan yang bisa akses
+        ->middleware('checkRole:gudang'); 
 });

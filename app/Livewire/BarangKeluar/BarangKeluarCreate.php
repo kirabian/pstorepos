@@ -14,11 +14,10 @@ use Livewire\Attributes\Title;
 class BarangKeluarCreate extends Component
 {
     public $imei;
-    public $kategori = 'Penjualan'; // Default
+    public $kategori = 'Penjualan';
     public $keterangan;
-    public $barangDitemukan = null; // Untuk preview barang sebelum keluar
+    public $barangDitemukan = null;
 
-    // Opsi Alasan Keluar
     public $opsiKategori = [
         'Penjualan',
         'Pindah Cabang',
@@ -27,12 +26,24 @@ class BarangKeluarCreate extends Component
         'Giveaway'
     ];
 
-    // Real-time check saat IMEI diketik/scan
+    public function mount()
+    {
+        $user = Auth::user();
+
+        // LOGIKA PENGECEKAN HAK AKSES
+        // Boleh akses jika: Role 'gudang' ATAU (Role 'inventory_staff' DAN punya gudang_id)
+        $isGudangMurni = $user->role === 'gudang';
+        $isStaffGudang = ($user->role === 'inventory_staff' && $user->gudang_id && !$user->distributor_id);
+
+        if (!$isGudangMurni && !$isStaffGudang) {
+            abort(403, 'AKSES DITOLAK. Halaman ini hanya untuk Staff Gudang Fisik.');
+        }
+    }
+
     public function updatedImei($value)
     {
         $user = Auth::user();
         
-        // Cari barang di stok gudang user ini saja
         $stok = Stok::where('imei', $value)
             ->when($user->gudang_id, function($q) use ($user) {
                 return $q->where('gudang_id', $user->gudang_id);
@@ -57,7 +68,6 @@ class BarangKeluarCreate extends Component
 
         $user = Auth::user();
 
-        // 1. Catat History Keluar
         StokHistory::create([
             'user_id' => $user->id,
             'cabang_id' => $user->cabang_id ?? null,
@@ -66,13 +76,8 @@ class BarangKeluarCreate extends Component
             'keterangan' => $this->kategori . " - " . ($this->keterangan ?? ''),
         ]);
 
-        // 2. Hapus dari Tabel Stok (Hard Delete karena barang keluar fisik)
-        // Jika sistem Anda pakai SoftDelete, gunakan ->delete() biasa.
-        // Jika ingin memindahkan status jadi 'sold' tanpa hapus, ubah logika di sini.
-        // Di sini saya pakai logika HAPUS agar sesuai dashboard history barang keluar.
         $this->barangDitemukan->delete();
 
-        // Reset
         $this->reset(['imei', 'keterangan', 'barangDitemukan']);
         session()->flash('success', 'Barang berhasil dikeluarkan dari stok.');
     }

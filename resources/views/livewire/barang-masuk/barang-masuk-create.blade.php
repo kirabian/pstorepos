@@ -4,7 +4,7 @@
             <a href="{{ route('barang-masuk.index') }}" class="btn btn-light rounded-circle shadow-sm me-3">
                 <i class="fas fa-arrow-left"></i>
             </a>
-            <h4 class="fw-bold text-black mb-0">Input Barang Masuk</h4>
+            <h4 class="fw-bold text-black mb-0">Input Barang Masuk (Gudang)</h4>
         </div>
     </div>
 
@@ -22,7 +22,6 @@
 
                     <form wire:submit.prevent="simpan">
                         
-                        {{-- IMEI Input (Scan Fokus) --}}
                         <div class="mb-4">
                             <label class="form-label fw-bold small text-uppercase text-secondary">Scan / Input IMEI</label>
                             <div class="input-group input-group-lg">
@@ -37,7 +36,6 @@
                         </div>
 
                         <div class="row">
-                            {{-- Nama Barang --}}
                             <div class="col-md-6 mb-4">
                                 <label class="form-label fw-bold small text-uppercase text-secondary">Nama Barang / Tipe</label>
                                 <input type="text" class="form-control form-control-lg" 
@@ -45,7 +43,6 @@
                                 @error('nama_barang') <small class="text-danger fw-bold mt-1">{{ $message }}</small> @enderror
                             </div>
 
-                            {{-- Kondisi --}}
                             <div class="col-md-6 mb-4">
                                 <label class="form-label fw-bold small text-uppercase text-secondary">Kondisi Fisik</label>
                                 <select class="form-select form-select-lg" wire:model="kondisi">
@@ -56,7 +53,6 @@
                             </div>
                         </div>
 
-                        {{-- Keterangan --}}
                         <div class="mb-4">
                             <label class="form-label fw-bold small text-uppercase text-secondary">Catatan / Keterangan</label>
                             <textarea class="form-control" rows="3" wire:model="keterangan" placeholder="Asal barang, kelengkapan, dll..."></textarea>

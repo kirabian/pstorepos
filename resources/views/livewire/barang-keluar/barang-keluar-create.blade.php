@@ -4,7 +4,7 @@
             <a href="{{ route('barang-keluar.index') }}" class="btn btn-light rounded-circle shadow-sm me-3">
                 <i class="fas fa-arrow-left"></i>
             </a>
-            <h4 class="fw-bold text-black mb-0">Input Barang Keluar</h4>
+            <h4 class="fw-bold text-black mb-0">Input Barang Keluar (Gudang)</h4>
         </div>
     </div>
 
@@ -22,7 +22,6 @@
 
                     <form wire:submit.prevent="prosesKeluar">
                         
-                        {{-- Scan IMEI --}}
                         <div class="mb-4">
                             <label class="form-label fw-bold small text-uppercase text-secondary">Scan IMEI Barang</label>
                             <div class="input-group input-group-lg">
@@ -36,7 +35,6 @@
                             @error('imei') <small class="text-danger fw-bold mt-1">{{ $message }}</small> @enderror
                         </div>
 
-                        {{-- Preview Barang (Jika Ditemukan) --}}
                         @if($barangDitemukan)
                             <div class="alert alert-info border-0 bg-info bg-opacity-10 d-flex align-items-center mb-4 rounded-3">
                                 <i class="fas fa-mobile-alt fs-2 text-info me-3"></i>
@@ -47,11 +45,10 @@
                             </div>
                         @elseif($imei && !$barangDitemukan)
                              <div class="alert alert-warning border-0 bg-warning bg-opacity-10 mb-4 rounded-3">
-                                <small class="fw-bold text-warning"><i class="fas fa-exclamation-triangle me-1"></i> Barang tidak ditemukan di stok gudang ini.</small>
+                                <small class="fw-bold text-warning"><i class="fas fa-exclamation-triangle me-1"></i> Barang tidak ditemukan di gudang ini.</small>
                             </div>
                         @endif
 
-                        {{-- Kategori Keluar --}}
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-uppercase text-secondary">Alasan Keluar</label>
                             <select class="form-select form-select-lg" wire:model="kategori">
@@ -61,7 +58,6 @@
                             </select>
                         </div>
 
-                        {{-- Keterangan --}}
                         <div class="mb-4">
                             <label class="form-label fw-bold small text-uppercase text-secondary">Detail / Tujuan</label>
                             <textarea class="form-control" rows="2" wire:model="keterangan" placeholder="Contoh: Dikirim ke Cabang Condet via JNE..."></textarea>
