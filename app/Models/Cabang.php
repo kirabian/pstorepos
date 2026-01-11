@@ -32,4 +32,9 @@ class Cabang extends Model
     {
         return $this->hasMany(User::class, 'cabang_id');
     }
+
+    public function stoks()
+    {
+        return $this->hasMany(Stok::class, 'cabang_id');
+    }
 }
