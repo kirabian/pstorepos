@@ -11,7 +11,7 @@
 
     <div class="px-3 flex-grow-1 overflow-hidden overflow-y-auto custom-scrollbar">
         <ul class="list-unstyled components mb-5">
-            
+
             {{-- DASHBOARD --}}
             <li class="mb-2">
                 <a href="/"
@@ -27,7 +27,8 @@
             @if (Auth::user()->role === 'superadmin')
                 <li class="mb-1">
                     <div class="sidebar-header mt-3 mb-2 px-3 sidebar-text">
-                        <span class="text-uppercase fw-bold text-muted" style="font-size: 0.65rem; letter-spacing: 1.5px;">Master Data</span>
+                        <span class="text-uppercase fw-bold text-muted"
+                            style="font-size: 0.65rem; letter-spacing: 1.5px;">Master Data</span>
                     </div>
                 </li>
                 <li class="mb-2">
@@ -110,7 +111,8 @@
             @if (Auth::user()->role === 'adminproduk')
                 <li class="mb-1">
                     <div class="sidebar-header mt-3 mb-2 px-3 sidebar-text">
-                        <span class="text-uppercase fw-bold text-muted" style="font-size: 0.65rem; letter-spacing: 1.5px;">Inventory</span>
+                        <span class="text-uppercase fw-bold text-muted"
+                            style="font-size: 0.65rem; letter-spacing: 1.5px;">Inventory</span>
                     </div>
                 </li>
                 <li class="mb-2">
@@ -125,12 +127,13 @@
             @endif
 
             {{-- OPERATIONAL MENU (Available for All) --}}
-            @if(in_array(Auth::user()->role, ['superadmin', 'adminproduk', 'gudang', 'audit'])) 
-             <li class="mb-1">
-                <div class="sidebar-header mt-3 mb-2 px-3 sidebar-text">
-                    <span class="text-uppercase fw-bold text-muted" style="font-size: 0.65rem; letter-spacing: 1.5px;">Operations</span>
-                </div>
-            </li>
+            @if (in_array(Auth::user()->role, ['superadmin', 'adminproduk', 'gudang', 'audit']))
+                <li class="mb-1">
+                    <div class="sidebar-header mt-3 mb-2 px-3 sidebar-text">
+                        <span class="text-uppercase fw-bold text-muted"
+                            style="font-size: 0.65rem; letter-spacing: 1.5px;">Operations</span>
+                    </div>
+                </li>
             @endif
 
             <li class="mb-2">
@@ -178,6 +181,55 @@
                 </li>
             @endif
 
+            {{-- MENU KHUSUS DISTRIBUTOR (Inventory Staff Distributor & Owner Distributor) --}}
+            @php
+                $user = Auth::user();
+                $isDistributorOps =
+                    $user->role === 'distributor' || ($user->role === 'inventory_staff' && $user->distributor_id);
+            @endphp
+
+            @if ($isDistributorOps)
+                <li class="mb-1">
+                    <div class="sidebar-header mt-3 mb-2 px-3 sidebar-text">
+                        <span class="text-uppercase fw-bold text-muted"
+                            style="font-size: 0.65rem; letter-spacing: 1.5px;">Distributor Ops</span>
+                    </div>
+                </li>
+
+                {{-- 1. Stok Cabang --}}
+                <li class="mb-2">
+                    <a href="{{ route('distributor-ops.stok-cabang') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('distributor-ops.stok-cabang') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-cubes fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Stok Cabang</span>
+                    </a>
+                </li>
+
+                {{-- 2. Simulasi Pembagian --}}
+                <li class="mb-2">
+                    <a href="{{ route('distributor-ops.simulasi') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('distributor-ops.simulasi') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-calculator fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Simulasi Distribusi</span>
+                    </a>
+                </li>
+
+                {{-- 3. Omset Cabang --}}
+                <li class="mb-2">
+                    <a href="{{ route('distributor-ops.omset-cabang') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('distributor-ops.omset-cabang') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-chart-line fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Omset Cabang</span>
+                    </a>
+                </li>
+            @endif
+
             <li class="mt-4 mb-2 small text-uppercase text-muted fw-bold px-3 sidebar-text"
                 style="font-size: 0.65rem; letter-spacing: 1.5px;">Preference</li>
             <li>
@@ -194,7 +246,7 @@
     <div class="p-3 mb-2 mt-auto">
         <div class="glass-card rounded-4 p-3 user-card position-relative overflow-hidden">
             <div class="glow-effect"></div>
-            
+
             <div class="d-flex align-items-center mb-3 user-info-wrapper position-relative" style="z-index: 2;">
                 <div class="position-relative flex-shrink-0">
                     {{-- Avatar uses new palette: Teal Background with Dark Text --}}
@@ -206,15 +258,18 @@
                 </div>
                 <div class="ms-3 overflow-hidden sidebar-text">
                     {{-- User Name: Light Gray (#EEEEEE) --}}
-                    <p class="mb-0 fw-bold text-truncate text-white" style="font-size: 0.9rem; color: #EEEEEE !important;">
+                    <p class="mb-0 fw-bold text-truncate text-white"
+                        style="font-size: 0.9rem; color: #EEEEEE !important;">
                         {{ Auth::user()->nama_lengkap }}</p>
                     {{-- User Role: Teal Accent (#00ADB5) --}}
-                    <p class="mb-0 text-white-50 text-truncate text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px; color: #00ADB5 !important;">
+                    <p class="mb-0 text-white-50 text-truncate text-uppercase fw-bold"
+                        style="font-size: 0.65rem; letter-spacing: 0.5px; color: #00ADB5 !important;">
                         {{ str_replace('_', ' ', Auth::user()->role) }}</p>
                 </div>
             </div>
-            
-            <form method="POST" action="{{ route('logout') }}" id="logout-form" class="position-relative" style="z-index: 2;"> 
+
+            <form method="POST" action="{{ route('logout') }}" id="logout-form" class="position-relative"
+                style="z-index: 2;">
                 @csrf
                 <button type="submit"
                     class="btn btn-logout w-100 btn-sm rounded-3 py-2 fw-semibold d-flex align-items-center justify-content-center logout-btn">
@@ -255,7 +310,8 @@
 
     /* --- NAVIGATION ITEMS --- */
     #sidebar .nav-link {
-        color: #EEEEEE; /* Light Gray Text */
+        color: #EEEEEE;
+        /* Light Gray Text */
         opacity: 0.8;
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         border: 1px solid transparent;
@@ -267,13 +323,15 @@
         width: 24px;
         height: 24px;
         flex-shrink: 0;
-        color: #00ADB5; /* Teal Accent for Icons */
+        color: #00ADB5;
+        /* Teal Accent for Icons */
         transition: color 0.3s ease;
     }
-    
+
     #sidebar .nav-link:hover .icon-wrapper,
     #sidebar .nav-link.active .icon-wrapper {
-        color: inherit; /* Follows parent color on active/hover */
+        color: inherit;
+        /* Follows parent color on active/hover */
     }
 
     /* Hover State */
@@ -282,7 +340,8 @@
         opacity: 1;
         /* Background Hover: #393E46 */
         background: rgba(57, 62, 70, 0.9);
-        border: 1px solid rgba(0, 173, 181, 0.3); /* Subtle Teal Border */
+        border: 1px solid rgba(0, 173, 181, 0.3);
+        /* Subtle Teal Border */
         transform: translateX(5px);
     }
 
@@ -297,16 +356,18 @@
         font-weight: 700 !important;
         border: 1px solid #00ADB5;
     }
-    
+
     #sidebar .nav-link.active i {
         transform: scale(1.1);
         transition: transform 0.2s;
-        color: #222831; /* Icon dark on active */
+        color: #222831;
+        /* Icon dark on active */
     }
 
     /* Headers / Label */
     .text-muted {
-        color: #00ADB5 !important; /* Teal for labels */
+        color: #00ADB5 !important;
+        /* Teal for labels */
         opacity: 0.8;
     }
 
@@ -314,13 +375,17 @@
     .custom-scrollbar::-webkit-scrollbar {
         width: 4px;
     }
+
     .custom-scrollbar::-webkit-scrollbar-track {
         background: transparent;
     }
+
     .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(0, 173, 181, 0.3); /* Teal transparent */
+        background: rgba(0, 173, 181, 0.3);
+        /* Teal transparent */
         border-radius: 10px;
     }
+
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background: rgba(0, 173, 181, 0.8);
     }
@@ -342,9 +407,11 @@
     }
 
     .btn-logout:hover {
-        background: #00ADB5; /* Teal Hover */
+        background: #00ADB5;
+        /* Teal Hover */
         border-color: #00ADB5;
-        color: #222831; /* Dark Text */
+        color: #222831;
+        /* Dark Text */
         box-shadow: 0 4px 10px rgba(0, 173, 181, 0.3);
     }
 
@@ -361,7 +428,7 @@
             max-width: 85px !important;
         }
 
-        #sidebar.minimized .sidebar-text, 
+        #sidebar.minimized .sidebar-text,
         #sidebar.minimized .sidebar-header,
         #sidebar.minimized .sidebar-divider {
             display: none !important;
@@ -384,7 +451,8 @@
         }
 
         #sidebar.minimized .nav-link:hover {
-            transform: none; /* Disable shift on minimize */
+            transform: none;
+            /* Disable shift on minimize */
             background: rgba(57, 62, 70, 0.8);
         }
 
@@ -392,7 +460,7 @@
             justify-content: center !important;
             margin-bottom: 10px !important;
         }
-        
+
         #sidebar.minimized .user-card {
             padding: 10px !important;
             background: transparent;
@@ -404,7 +472,7 @@
             background: transparent !important;
             color: #00ADB5 !important;
         }
-        
+
         #sidebar.minimized .logout-btn:hover {
             background: rgba(0, 173, 181, 0.1) !important;
             color: #EEEEEE !important;
@@ -419,7 +487,9 @@
     @media (max-width: 991.98px) {
         #sidebar {
             position: fixed !important;
-            left: 0; top: 0; bottom: 0;
+            left: 0;
+            top: 0;
+            bottom: 0;
             transform: translateX(-100%);
             z-index: 1050;
             width: 280px;

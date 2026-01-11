@@ -2,9 +2,9 @@
 
 use App\Livewire\Auth\Login;
 use App\Livewire\BarangKeluar\BarangKeluarIndex;
-use App\Livewire\BarangKeluar\BarangKeluarCreate; // Import Component Create Keluar
+use App\Livewire\BarangKeluar\BarangKeluarCreate;
 use App\Livewire\BarangMasuk\BarangMasukIndex;
-use App\Livewire\BarangMasuk\BarangMasukCreate;   // Import Component Create Masuk
+use App\Livewire\BarangMasuk\BarangMasukCreate;
 use App\Livewire\Cabang\CabangCreate;
 use App\Livewire\Cabang\CabangEdit;
 use App\Livewire\Cabang\CabangIndex;
@@ -23,6 +23,11 @@ use App\Livewire\Tipe\TipeIndex;
 use App\Livewire\User\UserCreate;
 use App\Livewire\User\UserEdit;
 use App\Livewire\User\UserIndex;
+// IMPORT LIVEWIRE BARU KHUSUS DISTRIBUTOR
+use App\Livewire\Distributor\StokCabangIndex;
+use App\Livewire\Distributor\SimulasiPembagianIndex;
+use App\Livewire\Distributor\OmsetCabangIndex;
+
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -91,21 +96,32 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     });
 
     /* |--------------------------------------------------------------------------
-    | OPERASIONAL / UMUM
+    | OPERASIONAL UMUM
     |--------------------------------------------------------------------------
     */
     Route::get('/stok', StokIndex::class)->name('stok.index');
     Route::get('/lacak-imei', LacakImei::class)->name('lacak.imei');
 
-    // BARANG MASUK
     Route::get('/barang-masuk', BarangMasukIndex::class)->name('barang-masuk.index');
     Route::get('/barang-masuk/create', BarangMasukCreate::class)->name('barang-masuk.create');
 
-    // BARANG KELUAR
     Route::get('/barang-keluar', BarangKeluarIndex::class)->name('barang-keluar.index');
     Route::get('/barang-keluar/create', BarangKeluarCreate::class)->name('barang-keluar.create');
 
     Route::get('/stock-opname', \App\Livewire\Gudang\StockOpnameIndex::class)
         ->name('stock-opname.index')
-        ->middleware('checkRole:gudang'); 
+        ->middleware('checkRole:gudang');
+
+    /* |--------------------------------------------------------------------------
+    | FITUR KHUSUS DISTRIBUTOR (INVENTORY STAFF & OWNER)
+    |--------------------------------------------------------------------------
+    | 1. Lihat Stok Cabang
+    | 2. Simulasi Pembagian
+    | 3. Lihat Omset Cabang
+    */
+    Route::prefix('distributor-ops')->name('distributor-ops.')->group(function () {
+        Route::get('/stok-cabang', StokCabangIndex::class)->name('stok-cabang');
+        Route::get('/simulasi-pembagian', SimulasiPembagianIndex::class)->name('simulasi');
+        Route::get('/omset-cabang', OmsetCabangIndex::class)->name('omset-cabang');
+    });
 });
