@@ -62,8 +62,14 @@
                         </select>
                     </div>
 
-                    {{-- Export Button --}}
-                    <div class="col-md-auto">
+                    <div class="col-md-auto d-flex gap-2">
+                        {{-- Tombol Tambah --}}
+                        @if(in_array(Auth::user()->role, ['inventory_staff', 'gudang', 'superadmin']))
+                            <a href="{{ route('barang-keluar.create') }}" class="btn btn-danger rounded-3 px-4 fw-bold text-white shadow-sm hover-scale">
+                                <i class="fas fa-sign-out-alt me-2"></i> Input Barang Keluar
+                            </a>
+                        @endif
+
                         <button class="btn btn-black rounded-3 px-4 fw-bold text-white" style="background-color: #000;">
                             <i class="fas fa-file-export me-2"></i> Export
                         </button>

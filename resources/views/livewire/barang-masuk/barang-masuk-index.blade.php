@@ -50,8 +50,14 @@
                         </select>
                     </div>
 
-                    {{-- Export Button --}}
-                    <div class="col-md-auto">
+                   <div class="col-md-auto d-flex gap-2">
+                        {{-- Tombol Tambah (Hanya untuk Role yang berhak input) --}}
+                        @if(in_array(Auth::user()->role, ['inventory_staff', 'gudang', 'superadmin']))
+                            <a href="{{ route('barang-masuk.create') }}" class="btn btn-primary rounded-3 px-4 fw-bold text-white shadow-sm hover-scale">
+                                <i class="fas fa-plus me-2"></i> Input Barang Masuk
+                            </a>
+                        @endif
+
                         <button class="btn btn-black rounded-3 px-4 fw-bold text-white" style="background-color: #000;">
                             <i class="fas fa-file-export me-2"></i> Export
                         </button>

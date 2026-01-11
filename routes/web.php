@@ -2,7 +2,9 @@
 
 use App\Livewire\Auth\Login;
 use App\Livewire\BarangKeluar\BarangKeluarIndex;
+use App\Livewire\BarangKeluar\BarangKeluarCreate; // Tambahan Import
 use App\Livewire\BarangMasuk\BarangMasukIndex;
+use App\Livewire\BarangMasuk\BarangMasukCreate;   // Tambahan Import
 use App\Livewire\Cabang\CabangCreate;
 use App\Livewire\Cabang\CabangEdit;
 use App\Livewire\Cabang\CabangIndex;
@@ -68,10 +70,6 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     | AREA KHUSUS SUPERADMIN
     |--------------------------------------------------------------------------
     */
-    /* |--------------------------------------------------------------------------
-    | AREA KHUSUS SUPERADMIN
-    |--------------------------------------------------------------------------
-    */
     Route::middleware('can:superadmin-only')->group(function () {
 
         // HAPUS ->middleware('checkRole:superadmin') karena sudah ada di group middleware 'can'
@@ -101,14 +99,19 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     });
 
     /* |--------------------------------------------------------------------------
-    | OPERASIONAL / UMUM (Sales, Gudang, Audit, Admin Produk)
+    | OPERASIONAL / UMUM (Sales, Gudang, Audit, Admin Produk, Inventory Staff)
     |--------------------------------------------------------------------------
     */
     Route::get('/stok', StokIndex::class)->name('stok.index');
     Route::get('/lacak-imei', LacakImei::class)->name('lacak.imei');
 
+    // Barang Masuk (Index & Create)
     Route::get('/barang-masuk', BarangMasukIndex::class)->name('barang-masuk.index');
+    Route::get('/barang-masuk/create', BarangMasukCreate::class)->name('barang-masuk.create'); // Tambahan Route
+
+    // Barang Keluar (Index & Create)
     Route::get('/barang-keluar', BarangKeluarIndex::class)->name('barang-keluar.index');
+    Route::get('/barang-keluar/create', BarangKeluarCreate::class)->name('barang-keluar.create'); // Tambahan Route
 
     Route::get('/stock-opname', \App\Livewire\Gudang\StockOpnameIndex::class)
         ->name('stock-opname.index')
