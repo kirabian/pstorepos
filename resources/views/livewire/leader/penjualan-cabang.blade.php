@@ -89,7 +89,7 @@
         {{-- Pagination --}}
         @if($transactions->hasPages())
         <div class="card-footer bg-white border-top border-light-subtle p-4">
-            {{ $transactions->links() }}
+            {{ $transactions->links('pagination::bootstrap-5') }}
         </div>
         @endif
     </div>
