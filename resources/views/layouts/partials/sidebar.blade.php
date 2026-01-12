@@ -249,9 +249,10 @@
 
             <div class="d-flex align-items-center mb-3 user-info-wrapper position-relative" style="z-index: 2;">
                 <div class="position-relative flex-shrink-0">
-                    {{-- Avatar uses new palette: Teal Background with Dark Text --}}
-                    <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->nama_lengkap) }}&background=00ADB5&color=222831&bold=true"
-                        class="rounded-circle border border-2 border-white shadow-sm" width="42" height="42"
+                    {{-- UPDATE: Pake avatar_url dari Model & Tambah ID --}}
+                    <img src="{{ Auth::user()->avatar_url }}"
+                        id="sidebar-avatar"
+                        class="rounded-circle border border-2 border-white shadow-sm object-fit-cover" width="42" height="42"
                         alt="User Avatar">
                     <span class="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle"
                         style="width: 10px; height: 10px;"></span>
@@ -283,10 +284,10 @@
 <style>
     /* --- THEME COLORS & BASICS (UPDATED PALETTE) --- */
     /* Palette Code:
-       #222831 -> Dark Background
-       #393E46 -> Secondary Background / Hover
-       #00ADB5 -> Teal Accent (Active, Icons, Borders)
-       #EEEEEE -> Light Text
+        #222831 -> Dark Background
+        #393E46 -> Secondary Background / Hover
+        #00ADB5 -> Teal Accent (Active, Icons, Borders)
+        #EEEEEE -> Light Text
     */
 
     .sidebar-premium {
@@ -414,6 +415,8 @@
         /* Dark Text */
         box-shadow: 0 4px 10px rgba(0, 173, 181, 0.3);
     }
+    
+    .object-fit-cover { object-fit: cover; }
 
     /* --- RESPONSIVE LOGIC (DESKTOP) --- */
     @media (min-width: 992px) {

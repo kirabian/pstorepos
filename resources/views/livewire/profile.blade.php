@@ -116,4 +116,22 @@
         .hover-scale:hover { transform: scale(1.02); }
         .object-fit-cover { object-fit: cover; }
     </style>
+
+    {{-- SCRIPT KHUSUS UPDATE NAVBAR & SIDEBAR REALTIME --}}
+    <script>
+        document.addEventListener('livewire:initialized', () => {
+            Livewire.on('update-navigation-image', (event) => {
+                // Ambil URL baru dari event
+                const newUrl = event.url; 
+                
+                // Cari elemen gambar di Navbar dan Sidebar berdasarkan ID
+                const sidebarImg = document.getElementById('sidebar-avatar');
+                const navbarImg = document.getElementById('navbar-avatar');
+                
+                // Update Source Gambarnya
+                if(sidebarImg) sidebarImg.src = newUrl;
+                if(navbarImg) navbarImg.src = newUrl;
+            });
+        });
+    </script>
 </div>

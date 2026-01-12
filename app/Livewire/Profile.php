@@ -68,7 +68,10 @@ class Profile extends Component
         // Kosongkan variabel $photo agar preview temporary hilang dan berganti ke existingPhoto yang baru
         $this->photo = null; 
 
-        // 6. Kirim Notifikasi Sukses
+        // 6. DISPATCH EVENT KE BROWSER (Agar Navbar & Sidebar berubah realtime)
+        $this->dispatch('update-navigation-image', url: $user->avatar_url);
+
+        // 7. Kirim Notifikasi Sukses
         session()->flash('message', 'Foto profile berhasil diperbarui otomatis!');
     }
 
@@ -97,4 +100,4 @@ class Profile extends Component
     {
         return view('livewire.profile');
     }
-}   
+}

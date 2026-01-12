@@ -25,8 +25,10 @@
                                 <p class="mb-0 text-muted text-uppercase fw-bold" style="font-size: 0.6rem;">
                                     {{ str_replace('_', ' ', Auth::user()->role) }}</p>
                             </div>
-                            <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->nama_lengkap) }}&background=000&color=fff&bold=true"
-                                class="rounded-circle border" width="32" height="32" alt="Avatar">
+                            {{-- UPDATE: Pake avatar_url dari Model & Tambah ID --}}
+                            <img src="{{ Auth::user()->avatar_url }}"
+                                id="navbar-avatar"
+                                class="rounded-circle border object-fit-cover" width="32" height="32" alt="Avatar">
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow-xl border-0 mt-3 p-2 rounded-4">
 
@@ -105,6 +107,8 @@
             top: 15px;
         }
     }
+    
+    .object-fit-cover { object-fit: cover; }
 </style>
 
 <script>
