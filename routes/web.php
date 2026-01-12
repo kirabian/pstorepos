@@ -18,6 +18,7 @@ use App\Livewire\Gudang\GudangIndex;
 use App\Livewire\Lacak\LacakImei;
 use App\Livewire\Merk\MerkIndex;
 use App\Livewire\OnlineShop\OnlineShopIndex;
+use App\Livewire\Profile;
 use App\Livewire\Stok\StokIndex;
 use App\Livewire\Tipe\TipeIndex;
 use App\Livewire\User\UserCreate;
@@ -59,6 +60,7 @@ Route::middleware(['auth', 'active.user'])->group(function () {
 
     // Dashboard (Semua Role)
     Route::get('/', Dashboard::class)->name('dashboard');
+    Route::get('/profile', Profile::class)->name('profile');
 
     /* |--------------------------------------------------------------------------
     | MANAJEMEN USER (SUPERADMIN & AUDIT)

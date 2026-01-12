@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -25,6 +26,7 @@ class User extends Authenticatable
         'password',
         'tanggal_lahir',
         'role',
+        'foto_profile',
         // PASTIKAN KETIGA ID INI ADA
         'distributor_id',
         'cabang_id',
@@ -108,5 +110,15 @@ class User extends Authenticatable
         return Carbon::parse($this->last_seen)
             ->setTimezone($timezone)
             ->translatedFormat('d M, H:i').' '.$label;
+    }
+
+    public function getAvatarUrlAttribute()
+    {
+        if ($this->foto_profile && Storage::disk('public')->exists($this->foto_profile)) {
+            return Storage::url($this->foto_profile);
+        }
+
+        // Fallback ke inisial nama jika tidak ada foto
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->nama_lengkap) . '&background=000&color=fff&bold=true';
     }
 }
