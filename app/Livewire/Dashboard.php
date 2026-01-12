@@ -19,12 +19,9 @@ class Dashboard extends Component
     // ==========================================================
     // PROPERTI KHUSUS SIMULASI ANALIS
     // ==========================================================
-    public $sim_target_growth = 10; // Default kenaikan target 10%
-    public $sim_efficiency = 0;     // Default efisiensi biaya 0%
+    public $sim_target_growth = 10;
+    public $sim_efficiency = 0;
     
-    // ==========================================================
-    // RENDER UTAMA
-    // ==========================================================
     public function render()
     {
         $user = Auth::user();
@@ -42,19 +39,13 @@ class Dashboard extends Component
             return view('livewire.dashboards.superadmin', $viewData);
         }
 
-        // 2. LOGIKA UNTUK ANALIS (BARU)
+        // 2. LOGIKA UNTUK ANALIS
         elseif ($user->role === 'analis') {
-            // Ambil semua cabang
             $cabangs = Cabang::all();
-            
-            // Generate Data Dummy Keuangan (Karena tabel transaksi belum dilampirkan)
-            // Di production, ganti ini dengan Query SUM ke tabel transaksi
             $performanceData = $cabangs->map(function($cabang) {
-                // Simulasi acak agar terlihat real
                 $baseOmset = rand(150000000, 500000000); 
-                $margin = rand(15, 35); // Margin 15% - 35%
+                $margin = rand(15, 35); 
                 $profit = $baseOmset * ($margin / 100);
-                
                 return [
                     'nama_cabang' => $cabang->nama_cabang,
                     'lokasi' => $cabang->lokasi,
@@ -65,13 +56,10 @@ class Dashboard extends Component
                 ];
             });
 
-            // Agregasi Total
             $totalOmset = $performanceData->sum('omset');
             $totalProfit = $performanceData->sum('profit');
             
-            // Hitung Simulasi (Reaktif berdasarkan Input Livewire)
             $sim_projected_omset = $totalOmset + ($totalOmset * ($this->sim_target_growth / 100));
-            // Asumsi: Efisiensi menambah profit langsung dari biaya operasional
             $sim_projected_profit = $totalProfit + ($totalProfit * ($this->sim_target_growth / 100)) + ($totalOmset * ($this->sim_efficiency / 1000)); 
 
             $viewData = [
@@ -80,18 +68,42 @@ class Dashboard extends Component
                 'total_omset' => $totalOmset,
                 'total_profit' => $totalProfit,
                 'avg_margin' => $totalOmset > 0 ? ($totalProfit / $totalOmset) * 100 : 0,
-                
-                // Data Hasil Simulasi
                 'sim_projected_omset' => $sim_projected_omset,
                 'sim_projected_profit' => $sim_projected_profit,
                 'sim_growth_val' => $sim_projected_omset - $totalOmset,
             ];
-
-            // Menggunakan view khusus Analis
             return view('livewire.dashboards.analis', $viewData);
         }
 
-        // 3. LOGIKA UNTUK INVENTORY STAFF
+        // 3. LOGIKA KHUSUS LEADER (BARU)
+        elseif ($user->role === 'leader') {
+            // Pastikan leader punya cabang
+            $cabang = Cabang::find($user->cabang_id);
+            $namaCabang = $cabang ? $cabang->nama_cabang : 'Cabang Tidak Diketahui';
+
+            // Simulasi Data Realtime Cabang Ini
+            // Di production, ganti dengan: Transaction::where('cabang_id', $user->cabang_id)->...
+            $omsetHariIni = rand(5000000, 15000000);
+            $omsetBulanIni = rand(150000000, 300000000);
+            $transaksiHariIni = rand(15, 50);
+            $topSalesName = 'Andi Saputra'; // Simulasi sales terbaik
+
+            $viewData = [
+                'mode' => 'leader',
+                'nama_cabang' => $namaCabang,
+                'lokasi' => $cabang->lokasi ?? '-',
+                'omset_hari_ini' => $omsetHariIni,
+                'omset_bulan_ini' => $omsetBulanIni,
+                'transaksi_hari_ini' => $transaksiHariIni,
+                'top_sales' => $topSalesName,
+                // List staff di cabang ini
+                'staff_list' => User::where('cabang_id', $user->cabang_id)->where('role', '!=', 'leader')->get(),
+            ];
+
+            return view('livewire.dashboards.leader', $viewData);
+        }
+
+        // 4. LOGIKA INVENTORY STAFF
         elseif ($user->role === 'inventory_staff') {
             if ($user->distributor_id) {
                 $viewData = [
@@ -104,7 +116,6 @@ class Dashboard extends Component
                         ['label' => 'Retur', 'value' => 3, 'trend' => 'Normal', 'color' => 'danger', 'icon' => 'fa-undo'],
                     ]
                 ];
-                // Note: Menggunakan view generic dashboard sesuai snippet user
                 return view('livewire.dashboards.inventory-distributor', $viewData); 
             } 
             elseif ($user->gudang_id) {
@@ -122,7 +133,7 @@ class Dashboard extends Component
             }
         }
 
-        // 4. LOGIKA UNTUK OWNER DISTRIBUTOR
+        // 5. OWNER DISTRIBUTOR
         elseif ($user->role === 'distributor') {
             $viewData = [
                 'nama_distributor' => $user->distributor->nama_distributor ?? 'Unit Distributor',
@@ -133,7 +144,7 @@ class Dashboard extends Component
             return view('livewire.dashboards.owner-distributor', $viewData);
         }
 
-        // 5. LOGIKA UNTUK SALES
+        // 6. SALES
         elseif ($user->role === 'sales') {
             $viewData = [
                 'cabang' => $user->cabang->nama_cabang ?? 'PStore Pusat',
@@ -144,7 +155,7 @@ class Dashboard extends Component
             return view('livewire.dashboards.sales', $viewData);
         }
 
-        // 6. FALLBACK
+        // 7. FALLBACK
         return view('livewire.dashboards.general-fallback', [
             'role_name' => str_replace('_', ' ', strtoupper($user->role)),
             'mode' => 'general'

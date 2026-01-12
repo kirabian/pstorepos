@@ -16,6 +16,7 @@ use App\Livewire\Gudang\GudangCreate;
 use App\Livewire\Gudang\GudangEdit;
 use App\Livewire\Gudang\GudangIndex;
 use App\Livewire\Lacak\LacakImei;
+use App\Livewire\Leader\PenjualanCabang;
 use App\Livewire\Merk\MerkIndex;
 use App\Livewire\OnlineShop\OnlineShopIndex;
 use App\Livewire\Profile;
@@ -61,6 +62,7 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     // Dashboard (Semua Role)
     Route::get('/', Dashboard::class)->name('dashboard');
     Route::get('/profile', Profile::class)->name('profile');
+    Route::get('/leader/penjualan', PenjualanCabang::class)->name('leader.penjualan');
 
     /* |--------------------------------------------------------------------------
     | MANAJEMEN USER (SUPERADMIN & AUDIT)

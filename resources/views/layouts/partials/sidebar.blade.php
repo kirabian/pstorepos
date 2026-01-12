@@ -12,7 +12,7 @@
     <div class="px-3 flex-grow-1 overflow-hidden overflow-y-auto custom-scrollbar">
         <ul class="list-unstyled components mb-5">
 
-            {{-- DASHBOARD --}}
+            {{-- DASHBOARD (Semua Role Punya Akses Dashboard) --}}
             <li class="mb-2">
                 <a href="/"
                     class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->is('/') ? 'active' : '' }}">
@@ -22,6 +22,34 @@
                     <span class="ms-3 sidebar-text text-nowrap fw-medium">Overview</span>
                 </a>
             </li>
+
+            {{-- ============================================= --}}
+            {{-- MENU KHUSUS LEADER --}}
+            {{-- ============================================= --}}
+            @if (Auth::user()->role === 'leader')
+                <li class="mb-1">
+                    <div class="sidebar-header mt-3 mb-2 px-3 sidebar-text">
+                        <span class="text-uppercase fw-bold text-muted"
+                            style="font-size: 0.65rem; letter-spacing: 1.5px;">Manajemen Cabang</span>
+                    </div>
+                </li>
+
+                {{-- 1. Laporan Penjualan (View Only) --}}
+                <li class="mb-2">
+                    <a href="{{ route('leader.penjualan') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('leader.penjualan') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-file-invoice-dollar fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Laporan Penjualan</span>
+                    </a>
+                </li>
+
+                {{-- 2. Monitoring Stok (Opsional, Link ke stok biasa tapi view only logic di controller) --}}
+                {{-- Bisa ditambahkan nanti jika perlu --}}
+            @endif
+            {{-- ============================================= --}}
+
 
             {{-- KHUSUS SUPERADMIN: Distributor --}}
             @if (Auth::user()->role === 'superadmin')
@@ -126,7 +154,7 @@
                 </li>
             @endif
 
-            {{-- OPERATIONAL MENU (Available for All) --}}
+            {{-- OPERATIONAL MENU (Available for All EXCEPT LEADER/SALES specific constraint if any) --}}
             @if (in_array(Auth::user()->role, ['superadmin', 'adminproduk', 'gudang', 'audit']))
                 <li class="mb-1">
                     <div class="sidebar-header mt-3 mb-2 px-3 sidebar-text">
@@ -136,37 +164,40 @@
                 </li>
             @endif
 
-            <li class="mb-2">
-                <a href="{{ route('lacak.imei') }}"
-                    class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('lacak.imei') ? 'active' : '' }}">
-                    <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                        <i class="fas fa-barcode fs-5"></i>
-                    </div>
-                    <span class="ms-3 sidebar-text text-nowrap fw-medium">Lacak IMEI</span>
-                </a>
-            </li>
+            {{-- Hide operational menus for Leader since they have specific view only menu --}}
+            @if (!in_array(Auth::user()->role, ['leader'])) 
+                <li class="mb-2">
+                    <a href="{{ route('lacak.imei') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('lacak.imei') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-barcode fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Lacak IMEI</span>
+                    </a>
+                </li>
 
-            {{-- MENU BARANG MASUK --}}
-            <li class="mb-2">
-                <a href="{{ route('barang-masuk.index') }}"
-                    class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('barang-masuk.*') ? 'active' : '' }}">
-                    <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                        <i class="fas fa-arrow-circle-down fs-5"></i>
-                    </div>
-                    <span class="ms-3 sidebar-text text-nowrap fw-medium">Barang Masuk</span>
-                </a>
-            </li>
+                {{-- MENU BARANG MASUK --}}
+                <li class="mb-2">
+                    <a href="{{ route('barang-masuk.index') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('barang-masuk.*') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-arrow-circle-down fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Barang Masuk</span>
+                    </a>
+                </li>
 
-            {{-- MENU BARANG KELUAR --}}
-            <li class="mb-2">
-                <a href="{{ route('barang-keluar.index') }}"
-                    class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('barang-keluar.*') ? 'active' : '' }}">
-                    <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                        <i class="fas fa-arrow-circle-up fs-5"></i>
-                    </div>
-                    <span class="ms-3 sidebar-text text-nowrap fw-medium">Barang Keluar</span>
-                </a>
-            </li>
+                {{-- MENU BARANG KELUAR --}}
+                <li class="mb-2">
+                    <a href="{{ route('barang-keluar.index') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('barang-keluar.*') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-arrow-circle-up fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Barang Keluar</span>
+                    </a>
+                </li>
+            @endif
 
             {{-- MENU KHUSUS GUDANG (INVENTORY STAFF) --}}
             @if (Auth::user()->role === 'gudang')
@@ -249,7 +280,6 @@
 
             <div class="d-flex align-items-center mb-3 user-info-wrapper position-relative" style="z-index: 2;">
                 <div class="position-relative flex-shrink-0">
-                    {{-- UPDATE: Pake avatar_url dari Model & Tambah ID --}}
                     <img src="{{ Auth::user()->avatar_url }}"
                         id="sidebar-avatar"
                         class="rounded-circle border border-2 border-white shadow-sm object-fit-cover" width="42" height="42"
@@ -258,11 +288,9 @@
                         style="width: 10px; height: 10px;"></span>
                 </div>
                 <div class="ms-3 overflow-hidden sidebar-text">
-                    {{-- User Name: Light Gray (#EEEEEE) --}}
                     <p class="mb-0 fw-bold text-truncate text-white"
                         style="font-size: 0.9rem; color: #EEEEEE !important;">
                         {{ Auth::user()->nama_lengkap }}</p>
-                    {{-- User Role: Teal Accent (#00ADB5) --}}
                     <p class="mb-0 text-white-50 text-truncate text-uppercase fw-bold"
                         style="font-size: 0.65rem; letter-spacing: 0.5px; color: #00ADB5 !important;">
                         {{ str_replace('_', ' ', Auth::user()->role) }}</p>
@@ -281,7 +309,11 @@
     </div>
 </nav>
 
+{{-- Masukkan Style CSS Sidebar yang sama seperti sebelumnya disini --}}
+{{-- Saya tidak menghapusnya, tapi agar tidak terlalu panjang, gunakan style dari kode Anda sebelumnya karena tidak ada perubahan di CSS --}}
 <style>
+    /* ... Copy paste CSS Style Sidebar Anda yang lama di sini ... */
+    /* Pastikan style .sidebar-premium, .nav-link, dll tetap ada */
     /* --- THEME COLORS & BASICS (UPDATED PALETTE) --- */
     /* Palette Code:
         #222831 -> Dark Background
