@@ -3,7 +3,7 @@
 namespace App\Livewire;
 
 use Livewire\Component;
-use Livewire\WithFileUploads; // Wajib untuk upload file
+use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
@@ -20,7 +20,7 @@ class Profile extends Component
     public $idlogin;
     public $role;
     
-    // Variable untuk upload foto
+    // Variable Foto
     public $photo; 
     public $existingPhoto;
 
@@ -32,51 +32,69 @@ class Profile extends Component
         $this->email = $user->email;
         $this->idlogin = $user->idlogin;
         $this->role = $user->role;
-        $this->existingPhoto = $user->avatar_url; // Menggunakan accessor dari Model
+        // Mengambil URL foto dari database saat pertama kali load
+        $this->existingPhoto = $user->avatar_url; 
     }
 
+    /**
+     * FITUR BARU: AUTO-SAVE FOTO
+     * Method ini akan OTOMATIS jalan begitu selesai pilih file foto.
+     */
+    public function updatedPhoto()
+    {
+        // 1. Validasi Foto
+        $this->validate([
+            'photo' => 'image|max:10240', // Max 10MB
+        ]);
+
+        $user = Auth::user();
+
+        // 2. Hapus Foto Lama (Jika ada dan bukan default)
+        if ($user->foto_profile && Storage::disk('public')->exists($user->foto_profile)) {
+            Storage::delete($user->foto_profile);
+        }
+
+        // 3. Simpan Foto Baru ke Folder 'profile-photos'
+        $path = $this->photo->store('profile-photos', 'public');
+        
+        // 4. UPDATE DATABASE LANGSUNG DISINI
+        $user->foto_profile = $path;
+        $user->save();
+
+        // 5. Reset State agar tampilan ter-refresh
+        // Kita update existingPhoto dengan URL baru
+        $this->existingPhoto = $user->avatar_url; 
+        
+        // Kosongkan variabel $photo agar preview temporary hilang dan berganti ke existingPhoto yang baru
+        $this->photo = null; 
+
+        // 6. Kirim Notifikasi Sukses
+        session()->flash('message', 'Foto profile berhasil diperbarui otomatis!');
+    }
+
+    /**
+     * Method ini sekarang HANYA untuk update Biodata (Nama & Email)
+     * Dijalankan saat tombol "Simpan Perubahan" ditekan
+     */
     public function updateProfile()
     {
         $user = Auth::user();
 
-        // Validasi
         $this->validate([
             'nama_lengkap' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
-            // Validasi Foto: Image, Max 10MB (10240 KB)
-            'photo' => 'nullable|image|max:10240', 
-        ], [
-            'photo.max' => 'Ukuran foto tidak boleh lebih dari 10MB.',
-            'photo.image' => 'File harus berupa gambar.',
         ]);
 
-        // Logic simpan foto jika ada yang diupload
-        if ($this->photo) {
-            // Hapus foto lama jika bukan null dan file ada
-            if ($user->foto_profile && Storage::disk('public')->exists($user->foto_profile)) {
-                Storage::delete($user->foto_profile);
-            }
-
-            // Simpan foto baru ke folder 'profile-photos' di disk public
-            $path = $this->photo->store('profile-photos', 'public');
-            $user->foto_profile = $path;
-        }
-
-        // Update data text
+        // Update Text
         $user->nama_lengkap = $this->nama_lengkap;
         $user->email = $this->email;
         $user->save();
 
-        // Reset input file dan refresh foto tampilan
-        $this->photo = null;
-        $this->existingPhoto = $user->avatar_url;
-
-        // Kirim notifikasi sukses (jika pakai flash message / toaster)
-        session()->flash('message', 'Profile berhasil diperbarui!');
+        session()->flash('message', 'Biodata berhasil diperbarui!');
     }
 
     public function render()
     {
         return view('livewire.profile');
     }
-}
+}   
