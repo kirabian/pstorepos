@@ -39,7 +39,7 @@ class StokIndex extends Component
     public $segel = '';
     public $kendala_retur = '';
     
-    // Properti Baru: Jumlah yang ingin dipindahkan
+    // Jumlah yang dipindahkan (Default 1)
     public $jumlah_pindah = 1; 
 
     public $opsiKategori = [
@@ -122,7 +122,7 @@ class StokIndex extends Component
     {
         $this->nama_penerima = ''; $this->nomor_handphone = ''; $this->alamat = ''; $this->catatan = '';
         $this->target_cabang_id = ''; $this->nama_petugas = ''; $this->segel = ''; $this->kendala_retur = ''; 
-        $this->jumlah_pindah = 1; // Default
+        $this->jumlah_pindah = 1; 
     }
 
     // --- LOGIKA UTAMA: STORE KELUAR / PINDAH CABANG ---
@@ -133,7 +133,6 @@ class StokIndex extends Component
         $rules = [];
         $keteranganDetail = ""; 
 
-        // Validasi Form sesuai kategori
         switch ($this->kategoriKeluar) {
             case 'Admin WhatsApp':
             case 'Shopee':
@@ -156,15 +155,15 @@ class StokIndex extends Component
             case 'Pindah Cabang':
                 $rules = [
                     'target_cabang_id' => 'required',
-                    'nama_penerima' => 'required', // PIC / Nama Penerima
-                    'nomor_handphone' => 'required', // Sesuai Foto
-                    'alamat' => 'required', // Sesuai Foto
+                    'nama_penerima' => 'required', 
+                    'nomor_handphone' => 'required', 
+                    'alamat' => 'required', 
                     'catatan' => 'required',
-                    'jumlah_pindah' => 'required|numeric|min:1' // Validasi jumlah
+                    'jumlah_pindah' => 'required|numeric|min:1' 
                 ];
                 $cabangTujuan = Cabang::find($this->target_cabang_id);
                 $namaCabangTujuan = $cabangTujuan->nama_cabang ?? '-';
-                $keteranganDetail = "Ke Cabang: {$namaCabangTujuan} | PIC: {$this->nama_penerima}";
+                $keteranganDetail = "Ke Cabang: {$namaCabangTujuan} | PIC: {$this->nama_penerima} | Note: {$this->catatan}";
                 break;
 
             case 'Retur':
@@ -189,46 +188,54 @@ class StokIndex extends Component
                 // --- LOGIKA PINDAH CABANG (MUTASI & PECAH STOK) ---
                 if ($this->kategoriKeluar == 'Pindah Cabang') {
                     
-                    // Pastikan stok cukup
-                    if ($stok->jumlah >= $this->jumlah_pindah) {
-                        
-                        // 1. KURANGI STOK DI CABANG ASAL (Lokasi Asal TIDAK BERUBAH, hanya jumlah berkurang)
-                        $stok->decrement('jumlah', $this->jumlah_pindah);
-
-                        // 2. BUAT STOK BARU DI CABANG TUJUAN (Duplikat data stok tapi di cabang baru)
-                        Stok::create([
-                            'merk_id' => $stok->merk_id,
-                            'tipe_id' => $stok->tipe_id,
-                            'ram_storage' => $stok->ram_storage,
-                            'kondisi' => $stok->kondisi,
-                            'imei' => $stok->imei, // IMEI sama
-                            'jumlah' => $this->jumlah_pindah, // Jumlah yang dibawa
-                            'harga_modal' => $stok->harga_modal,
-                            'harga_jual' => $stok->harga_jual,
-                            'cabang_id' => $this->target_cabang_id, // Lokasi Baru
-                            // Data lain copy dari stok asal jika perlu
+                    // ========================================================
+                    // VALIDASI STOK CUKUP ATAU TIDAK
+                    // ========================================================
+                    if ($stok->jumlah < $this->jumlah_pindah) {
+                        // Jika stok kurang, tampilkan error dan hentikan proses
+                        $this->dispatch('swal', [
+                            'title' => 'Gagal!',
+                            'text' => "Stok {$stok->merk->nama} {$stok->tipe->nama} (IMEI: {$stok->imei}) hanya ada {$stok->jumlah}, tapi Anda ingin memindahkan {$this->jumlah_pindah} unit.",
+                            'icon' => 'error'
                         ]);
-
-                        // 3. CATAT HISTORY KELUAR (DARI ASAL)
-                        StokHistory::create([
-                            'imei' => $stok->imei,
-                            'status' => 'Stok Keluar (Mutasi)', 
-                            'cabang_id' => $stok->cabang_id, // Cabang Asal
-                            'keterangan' => "Mutasi {$this->jumlah_pindah} Unit ke {$namaCabangTujuan}. PIC: {$this->nama_penerima}",
-                            'user_id' => $user->id,
-                        ]);
-
-                        // 4. CATAT HISTORY MASUK (KE TUJUAN)
-                        StokHistory::create([
-                            'imei' => $stok->imei,
-                            'status' => 'Stok Masuk (Mutasi)', 
-                            'cabang_id' => $this->target_cabang_id, // Cabang Tujuan
-                            'keterangan' => "Mutasi {$this->jumlah_pindah} Unit dari " . ($stok->cabang->nama_cabang ?? 'Pusat') . ". PIC: {$this->nama_penerima}",
-                            'user_id' => $user->id,
-                        ]);
-                    } else {
-                        // Handle jika stok tidak cukup (Optional: notify user)
+                        return; // Stop eksekusi function
                     }
+
+                    // Jika Cukup, Lanjutkan Proses
+                    
+                    // 1. KURANGI STOK DI CABANG ASAL
+                    $stok->decrement('jumlah', $this->jumlah_pindah);
+
+                    // 2. BUAT STOK BARU DI CABANG TUJUAN
+                    Stok::create([
+                        'merk_id' => $stok->merk_id,
+                        'tipe_id' => $stok->tipe_id,
+                        'ram_storage' => $stok->ram_storage,
+                        'kondisi' => $stok->kondisi,
+                        'imei' => $stok->imei, 
+                        'jumlah' => $this->jumlah_pindah, // Jumlah yang dipindah
+                        'harga_modal' => $stok->harga_modal,
+                        'harga_jual' => $stok->harga_jual,
+                        'cabang_id' => $this->target_cabang_id, 
+                    ]);
+
+                    // 3. CATAT HISTORY KELUAR (DARI ASAL)
+                    StokHistory::create([
+                        'imei' => $stok->imei,
+                        'status' => 'Stok Keluar (Mutasi)', 
+                        'cabang_id' => $stok->cabang_id, 
+                        'keterangan' => "Mutasi {$this->jumlah_pindah} Unit ke {$namaCabangTujuan}. PIC: {$this->nama_penerima}",
+                        'user_id' => $user->id,
+                    ]);
+
+                    // 4. CATAT HISTORY MASUK (KE TUJUAN)
+                    StokHistory::create([
+                        'imei' => $stok->imei,
+                        'status' => 'Stok Masuk (Mutasi)', 
+                        'cabang_id' => $this->target_cabang_id, 
+                        'keterangan' => "Mutasi {$this->jumlah_pindah} Unit dari " . ($stok->cabang->nama_cabang ?? 'Pusat') . ". PIC: {$this->nama_penerima}",
+                        'user_id' => $user->id,
+                    ]);
 
                 } else {
                     // --- LOGIKA BARANG KELUAR BIASA (JUAL/RUSAK/DLL) ---
@@ -249,7 +256,7 @@ class StokIndex extends Component
             }
         }
 
-        // Reset
+        // Reset & Sukses
         $this->selectedStok = [];
         $this->selectAll = false;
         $this->resetInputFields();

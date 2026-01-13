@@ -214,8 +214,8 @@
             <div class="modal-content rounded-4 border-0 shadow-lg">
                 <div class="modal-header border-0 px-4 pt-4 pb-2">
                     <div>
-                        <h5 class="modal-title fw-bold">Stok Keluar</h5>
-                        <p class="text-secondary small mb-0">Isi form berikut untuk memproses stok.</p>
+                        <h5 class="modal-title fw-bold">Proses Stok (Keluar / Pindah)</h5>
+                        <p class="text-secondary small mb-0">Pilih kategori untuk memproses stok terpilih.</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
