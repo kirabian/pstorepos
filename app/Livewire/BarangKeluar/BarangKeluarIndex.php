@@ -16,16 +16,17 @@ class BarangKeluarIndex extends Component
     public $tahun = '';
     public $kategori = '';
 
-    // Opsi Kategori Filter sesuai gambar
+    // Opsi Kategori Filter
     public $opsiFilter = [
         'Admin WhatsApp',
         'Shopee',
-        'Pindah Cabang',
+        'Pindah Cabang', // Pastikan ini ada
         'Giveaway',
         'Retur',
         'Penjualan',
         'Tukar Tambah',
-        'Refund / Angkut Barang'
+        'Refund / Angkut Barang',
+        'Kesalahan Input'
     ];
 
     public function mount()
@@ -41,9 +42,10 @@ class BarangKeluarIndex extends Component
 
     public function render()
     {
-        // Logika: Barang keluar adalah history dengan status 'Stok Keluar'
+        // PERBAIKAN QUERY: 
+        // Menggunakan 'like' agar menangkap 'Stok Keluar' DAN 'Stok Keluar (Mutasi)'
         $query = StokHistory::with(['user', 'cabang'])
-            ->where('status', 'Stok Keluar');
+            ->where('status', 'like', 'Stok Keluar%'); 
 
         // Filter Search IMEI
         if ($this->search) {
@@ -60,7 +62,15 @@ class BarangKeluarIndex extends Component
 
         // Filter Kategori (Mencari teks kategori di dalam kolom keterangan)
         if ($this->kategori) {
-            $query->where('keterangan', 'like', '%' . $this->kategori . '%');
+            // Khusus Pindah Cabang, kadang keywordnya "Mutasi" atau "Pindah Cabang"
+            if ($this->kategori == 'Pindah Cabang') {
+                $query->where(function($q) {
+                    $q->where('keterangan', 'like', '%Pindah Cabang%')
+                      ->orWhere('keterangan', 'like', '%Mutasi%');
+                });
+            } else {
+                $query->where('keterangan', 'like', '%' . $this->kategori . '%');
+            }
         }
 
         $data = $query->latest()->paginate(10);

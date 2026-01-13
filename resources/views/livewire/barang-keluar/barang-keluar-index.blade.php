@@ -58,7 +58,6 @@
                     </div>
 
                     <div class="col-md-auto d-flex gap-2">
-                        {{-- TOMBOL INPUT: HANYA MUNCUL JIKA STAFF GUDANG / ROLE GUDANG --}}
                         @php
                             $user = Auth::user();
                             $bolehInput = ($user->role === 'gudang') || ($user->role === 'inventory_staff' && $user->gudang_id && !$user->distributor_id);
@@ -107,6 +106,9 @@
                                     </span>
                                 </td>
                                 <td class="text-muted small" style="max-width: 300px;">
+                                    @if(str_contains($item->status, 'Mutasi'))
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle mb-1">Mutasi</span><br>
+                                    @endif
                                     {{ $item->keterangan }}
                                 </td>
                                 <td>
