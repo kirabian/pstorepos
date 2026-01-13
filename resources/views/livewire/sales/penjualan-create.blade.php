@@ -1,4 +1,11 @@
 <div class="container-fluid">
+    {{-- DEBUG INFO --}}
+    @if(app()->environment('local')) {{-- Hanya muncul di mode local/dev --}}
+    <div class="alert alert-info py-2 mb-4 small">
+        <i class="fas fa-bug me-1"></i> Debug: User Cabang ID = <strong>{{ Auth::user()->cabang_id ?? 'NULL' }}</strong> | {{ Auth::user()->cabang->nama_cabang ?? '-' }}
+    </div>
+    @endif
+
     <div class="d-flex align-items-center mb-4">
         <div class="bg-dark text-white rounded-3 p-2 me-3">
             <i class="fas fa-cash-register fs-3"></i>
@@ -31,7 +38,7 @@
                                 
                                 <div>
                                     <div class="d-flex align-items-center gap-2 mb-1">
-                                        <h6 class="mb-0 fw-bold text-dark">{{ $stok->merk->nama }} {{ $stok->tipe->nama }}</h6>
+                                        <h6 class="mb-0 fw-bold text-dark">{{ $stok->merk->nama ?? 'No Merk' }} {{ $stok->tipe->nama ?? 'No Tipe' }}</h6>
                                         @if($stok->kondisi == 'Baru')
                                             <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2" style="font-size: 0.65rem;">NEW</span>
                                         @else
@@ -58,9 +65,9 @@
                                 </div>
                                 <h6 class="fw-bold text-dark">Stok Tidak Ditemukan</h6>
                                 <p class="text-muted small mb-0">
-                                    Pastikan Admin Produk sudah menginput stok ke cabang 
-                                    <span class="fw-bold">{{ Auth::user()->cabang->nama_cabang ?? 'ini' }}</span> 
-                                    dan stok > 0.
+                                    Tidak ada barang ready di cabang 
+                                    <span class="fw-bold">{{ Auth::user()->cabang->nama_cabang ?? 'ini' }}</span>.
+                                    <br>Pastikan stok memiliki Cabang ID: {{ Auth::user()->cabang_id }}.
                                 </p>
                             </div>
                         @endforelse
@@ -89,7 +96,7 @@
                             </div>
                             <div class="flex-grow-1">
                                 <small class="d-block text-uppercase fw-bold opacity-75" style="font-size: 0.7rem;">Produk Terpilih:</small>
-                                <div class="fw-bold fs-5">{{ $selectedStokDetail->merk->nama }} {{ $selectedStokDetail->tipe->nama }}</div>
+                                <div class="fw-bold fs-5">{{ $selectedStokDetail->merk->nama ?? '-' }} {{ $selectedStokDetail->tipe->nama ?? '-' }}</div>
                                 <div class="font-monospace small">{{ $selectedStokDetail->imei }}</div>
                             </div>
                             <button wire:click="cancelSelection" class="btn btn-sm btn-light fw-bold text-danger border shadow-sm">
