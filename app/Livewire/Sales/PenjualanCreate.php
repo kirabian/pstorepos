@@ -40,6 +40,7 @@ class PenjualanCreate extends Component
     #[Rule('nullable')] 
     public $catatan = '';
 
+    // Reset pagination saat search berubah
     public function updatedSearchStok()
     {
         $this->resetPage();
@@ -69,15 +70,14 @@ class PenjualanCreate extends Component
 
         $user = Auth::user();
         
-        // Validasi stok
-        $stokQuery = Stok::where('id', $this->selectedStokId)->where('jumlah', '>', 0);
-
-        // Jika user punya cabang, pastikan stok ada di cabang itu
-        if ($user->cabang_id) {
-            $stokQuery->where('cabang_id', $user->cabang_id);
-        }
-
-        $stok = $stokQuery->first();
+        // FIX VALIDASI: Cek stok di cabang user ATAU stok pusat (null)
+        $stok = Stok::where('id', $this->selectedStokId)
+            ->where(function($q) use ($user) {
+                $q->where('cabang_id', $user->cabang_id)
+                  ->orWhereNull('cabang_id'); // Izinkan jual stok pusat jika null
+            })
+            ->where('jumlah', '>', 0)
+            ->first();
 
         if (!$stok) {
             $this->dispatch('swal', [
@@ -93,11 +93,11 @@ class PenjualanCreate extends Component
 
             Penjualan::create([
                 'user_id' => $user->id,
-                'cabang_id' => $user->cabang_id, // Simpan ID cabang sales
+                'cabang_id' => $user->cabang_id,
                 'stok_id' => $stok->id,
                 'tipe_penjualan' => 'Unit',
                 'imei_terjual' => $stok->imei,
-                'nama_produk' => optional($stok->merk)->nama . ' ' . optional($stok->tipe)->nama, // Pakai optional biar ga error klo relasi null
+                'nama_produk' => optional($stok->merk)->nama . ' ' . optional($stok->tipe)->nama,
                 'nama_customer' => $this->nama_customer,
                 'nomor_wa' => $this->nomor_wa,
                 'foto_bukti_transaksi' => $path,
@@ -112,7 +112,7 @@ class PenjualanCreate extends Component
                 'imei' => $stok->imei,
                 'status' => 'Stok Keluar', 
                 'cabang_id' => $user->cabang_id,
-                'keterangan' => "[PENJUALAN] Sold to {$this->nama_customer}",
+                'keterangan' => "[PENJUALAN] Sold to {$this->nama_customer} by {$user->nama_lengkap}",
                 'user_id' => $user->id
             ]);
         });
@@ -126,33 +126,22 @@ class PenjualanCreate extends Component
     {
         $user = Auth::user();
 
-        // LOGIKA PERBAIKAN QUERY:
-        // Kita gunakan query builder bertahap agar lebih mudah didebug
-        $query = Stok::with(['merk', 'tipe'])
-                     ->where('jumlah', '>', 0);
-
-        // Filter Cabang: Hanya ambil stok yang ada di cabang user
-        // PENTING: Pastikan user sales MEMANG punya cabang_id di database users
-        if ($user->cabang_id) {
-            $query->where('cabang_id', $user->cabang_id);
-        } else {
-            // Jika sales tidak punya cabang (misal admin yang nyamar jadi sales), 
-            // tampilkan stok yang cabang_id nya NULL atau bebas (tergantung kebijakan)
-            // Untuk keamanan, sales tanpa cabang sebaiknya tidak lihat apa-apa atau lihat semua?
-            // Kita asumsi lihat semua stok yang cabang_id nya null (stok pusat belum distribusi)
-            // $query->whereNull('cabang_id'); 
-        }
-
-        // Filter Search
-        if ($this->searchStok) {
-            $query->where(function($q) {
-                $q->where('imei', 'like', '%' . $this->searchStok . '%')
-                  ->orWhereHas('merk', fn($q2) => $q2->where('nama', 'like', '%'.$this->searchStok.'%'))
-                  ->orWhereHas('tipe', fn($q2) => $q2->where('nama', 'like', '%'.$this->searchStok.'%'));
-            });
-        }
-
-        $stoks = $query->latest()->paginate(5);
+        // FIX QUERY: Ambil stok cabang user ATAU stok yang cabang_id nya NULL (Pusat/Belum diset)
+        $stoks = Stok::with(['merk', 'tipe'])
+            ->where(function($q) use ($user) {
+                $q->where('cabang_id', $user->cabang_id)
+                  ->orWhereNull('cabang_id'); // <--- INI KUNCI PERBAIKANNYA
+            })
+            ->where('jumlah', '>', 0)
+            ->when($this->searchStok, function($query) {
+                $query->where(function($q) {
+                    $q->where('imei', 'like', '%' . $this->searchStok . '%')
+                      ->orWhereHas('merk', fn($q2) => $q2->where('nama', 'like', '%'.$this->searchStok.'%'))
+                      ->orWhereHas('tipe', fn($q2) => $q2->where('nama', 'like', '%'.$this->searchStok.'%'));
+                });
+            })
+            ->latest()
+            ->paginate(5);
 
         return view('livewire.sales.penjualan-create', [
             'stoks' => $stoks

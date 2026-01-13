@@ -1,8 +1,8 @@
 <div class="container-fluid">
-    {{-- DEBUG INFO --}}
-    @if(app()->environment('local')) {{-- Hanya muncul di mode local/dev --}}
+    {{-- DEBUG INFO: Silakan hapus jika sudah muncul --}}
+    @if(app()->environment('local'))
     <div class="alert alert-info py-2 mb-4 small">
-        <i class="fas fa-bug me-1"></i> Debug: User Cabang ID = <strong>{{ Auth::user()->cabang_id ?? 'NULL' }}</strong> | {{ Auth::user()->cabang->nama_cabang ?? '-' }}
+        <i class="fas fa-bug me-1"></i> Debug: Cabang User ID = <strong>{{ Auth::user()->cabang_id ?? 'NULL' }}</strong>
     </div>
     @endif
 
@@ -19,7 +19,7 @@
     </div>
 
     <div class="row">
-        {{-- BAGIAN KIRI: LIST STOK CABANG --}}
+        {{-- BAGIAN KIRI: LIST STOK --}}
         <div class="col-lg-5 mb-4">
             <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
                 <div class="card-header bg-white border-bottom p-4">
@@ -38,16 +38,24 @@
                                 
                                 <div>
                                     <div class="d-flex align-items-center gap-2 mb-1">
-                                        <h6 class="mb-0 fw-bold text-dark">{{ $stok->merk->nama ?? 'No Merk' }} {{ $stok->tipe->nama ?? 'No Tipe' }}</h6>
+                                        <h6 class="mb-0 fw-bold text-dark">{{ $stok->merk->nama ?? '-' }} {{ $stok->tipe->nama ?? '-' }}</h6>
+                                        
+                                        {{-- Badge Lokasi Stok --}}
+                                        @if($stok->cabang_id == Auth::user()->cabang_id)
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2" style="font-size: 0.6rem;">CABANG INI</span>
+                                        @else
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle py-1 px-2" style="font-size: 0.6rem;">PUSAT/GUDANG</span>
+                                        @endif
+                                    </div>
+                                    
+                                    <small class="text-muted font-monospace d-block">IMEI: {{ $stok->imei }}</small>
+                                    <div class="mt-2">
                                         @if($stok->kondisi == 'Baru')
                                             <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2" style="font-size: 0.65rem;">NEW</span>
                                         @else
                                             <span class="badge bg-warning-subtle text-warning border border-warning-subtle py-1 px-2" style="font-size: 0.65rem;">2ND</span>
                                         @endif
-                                    </div>
-                                    <small class="text-muted font-monospace d-block">IMEI: {{ $stok->imei }}</small>
-                                    <div class="mt-2">
-                                        <span class="badge bg-light text-dark border">
+                                        <span class="badge bg-light text-dark border ms-1">
                                             {{ $stok->ram_storage }}
                                         </span>
                                     </div>
@@ -65,9 +73,8 @@
                                 </div>
                                 <h6 class="fw-bold text-dark">Stok Tidak Ditemukan</h6>
                                 <p class="text-muted small mb-0">
-                                    Tidak ada barang ready di cabang 
-                                    <span class="fw-bold">{{ Auth::user()->cabang->nama_cabang ?? 'ini' }}</span>.
-                                    <br>Pastikan stok memiliki Cabang ID: {{ Auth::user()->cabang_id }}.
+                                    Tidak ada barang ready yang cocok.<br>
+                                    (Menampilkan stok Cabang {{ Auth::user()->cabang->nama_cabang ?? 'Pusat' }} & Stok Pusat)
                                 </p>
                             </div>
                         @endforelse
@@ -82,7 +89,7 @@
             </div>
         </div>
 
-        {{-- BAGIAN KANAN: FORM DATA DIRI & BUKTI --}}
+        {{-- BAGIAN KANAN: FORM DATA DIRI --}}
         <div class="col-lg-7 mb-4">
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-header bg-white border-bottom p-4">
