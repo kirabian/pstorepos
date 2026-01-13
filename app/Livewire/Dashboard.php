@@ -11,6 +11,7 @@ use App\Models\Stok;
 use App\Models\Cabang;
 use App\Models\Distributor;
 use App\Models\Gudang;
+use App\Models\Penjualan; // <--- PASTIKAN MODEL INI DI-IMPORT
 
 #[Layout('layouts.master')]
 #[Title('Dashboard Sistem')]
@@ -43,6 +44,7 @@ class Dashboard extends Component
         elseif ($user->role === 'analis') {
             $cabangs = Cabang::all();
             $performanceData = $cabangs->map(function($cabang) {
+                // Simulasi data analis (tetap dummy karena analis biasanya main prediksi)
                 $baseOmset = rand(150000000, 500000000); 
                 $margin = rand(15, 35); 
                 $profit = $baseOmset * ($margin / 100);
@@ -77,15 +79,22 @@ class Dashboard extends Component
 
         // 3. LOGIKA KHUSUS LEADER
         elseif ($user->role === 'leader') {
-            // Pastikan leader punya cabang
             $cabang = Cabang::find($user->cabang_id);
             $namaCabang = $cabang ? $cabang->nama_cabang : 'Cabang Tidak Diketahui';
 
-            // Simulasi Data Realtime Cabang Ini
-            $omsetHariIni = rand(5000000, 15000000);
-            $omsetBulanIni = rand(150000000, 300000000);
-            $transaksiHariIni = rand(15, 50);
-            $topSalesName = 'Andi Saputra'; 
+            // Ambil Data Realtime Penjualan Cabang Ini
+            $omsetHariIni = Penjualan::where('cabang_id', $user->cabang_id)->whereDate('created_at', today())->sum('harga_jual_real');
+            $omsetBulanIni = Penjualan::where('cabang_id', $user->cabang_id)->whereMonth('created_at', now()->month)->sum('harga_jual_real');
+            $transaksiHariIni = Penjualan::where('cabang_id', $user->cabang_id)->whereDate('created_at', today())->count();
+            
+            // Cari Top Sales
+            $topSales = Penjualan::where('cabang_id', $user->cabang_id)
+                ->whereMonth('created_at', now()->month)
+                ->selectRaw('user_id, sum(harga_jual_real) as total_omset')
+                ->groupBy('user_id')
+                ->orderByDesc('total_omset')
+                ->with('user')
+                ->first();
 
             $viewData = [
                 'mode' => 'leader',
@@ -94,7 +103,7 @@ class Dashboard extends Component
                 'omset_hari_ini' => $omsetHariIni,
                 'omset_bulan_ini' => $omsetBulanIni,
                 'transaksi_hari_ini' => $transaksiHariIni,
-                'top_sales' => $topSalesName,
+                'top_sales' => $topSales ? $topSales->user->nama_lengkap : '-',
                 'staff_list' => User::where('cabang_id', $user->cabang_id)->where('role', '!=', 'leader')->get(),
             ];
 
@@ -104,6 +113,7 @@ class Dashboard extends Component
         // 4. LOGIKA INVENTORY STAFF
         elseif ($user->role === 'inventory_staff') {
             if ($user->distributor_id) {
+                // ... (Logic Distributor Inventory tetap sama/dummy dulu jika belum ada tabel distribusi)
                 $viewData = [
                     'mode' => 'distributor',
                     'location_name' => $user->distributor->nama_distributor,
@@ -142,24 +152,69 @@ class Dashboard extends Component
             return view('livewire.dashboards.owner-distributor', $viewData);
         }
 
-        // 6. SALES (DIPERBARUI DENGAN DATA LENGKAP)
+        // 6. SALES (FIXED: MENGGUNAKAN DATA REAL DATABASE)
         elseif ($user->role === 'sales') {
+            
+            // Hitung Penjualan Hari Ini (Milik Sales Ini Saja)
+            $penjualanHariIni = Penjualan::where('user_id', $user->id)
+                ->whereDate('created_at', today())
+                ->count();
+
+            // Hitung Omset Hari Ini
+            $omsetHariIni = Penjualan::where('user_id', $user->id)
+                ->whereDate('created_at', today())
+                ->sum('harga_jual_real');
+
+            // Hitung Capaian Bulan Ini
+            $capaianBulan = Penjualan::where('user_id', $user->id)
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count();
+
+            // Target Bulanan (Bisa dibuat dinamis nanti, sementara hardcode 100)
+            $targetBulan = 100; 
+
+            // Hitung Estimasi Insentif (Misal 1% dari omset bulanan)
+            $totalOmsetBulan = Penjualan::where('user_id', $user->id)
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->sum('harga_jual_real');
+            
+            $insentifEstimasi = $totalOmsetBulan * 0.01; // 1 Persen
+
+            // Ambil 5 Transaksi Terakhir
+            $recentSalesRaw = Penjualan::where('user_id', $user->id)
+                ->latest()
+                ->take(5)
+                ->get();
+
+            // Format Data untuk View
+            $recentSales = $recentSalesRaw->map(function($sale) {
+                // Tentukan Status berdasarkan Audit
+                $statusLabel = 'Proses'; // Default Pending
+                if ($sale->status_audit == 'Approved') $statusLabel = 'Lunas';
+                if ($sale->status_audit == 'Rejected') $statusLabel = 'Ditolak';
+
+                return [
+                    'customer' => $sale->nama_customer,
+                    'unit' => $sale->nama_produk, // Mengambil dari kolom nama_produk di tabel penjualans
+                    'harga' => 'Rp ' . number_format($sale->harga_jual_real, 0, ',', '.'),
+                    'status' => $statusLabel,
+                    'time' => $sale->created_at->format('H:i'),
+                ];
+            });
+
             $viewData = [
                 'mode' => 'sales',
                 'cabang' => $user->cabang->nama_cabang ?? 'PStore Pusat',
-                'penjualan_hari_ini' => rand(2, 8),
-                'omset_hari_ini' => rand(5000000, 25000000),
-                'target_bulan' => 100, // Target Unit
-                'capaian_bulan' => rand(45, 95), // Unit Terjual Bulan Ini
-                'insentif_estimasi' => rand(2500000, 8000000),
-                'recent_sales' => [
-                    ['customer' => 'Budi Santoso', 'unit' => 'iPhone 15 Pro 256GB', 'harga' => 'Rp 21.000.000', 'status' => 'Lunas', 'time' => '10:30'],
-                    ['customer' => 'Siti Aminah', 'unit' => 'Samsung S24 Ultra', 'harga' => 'Rp 19.500.000', 'status' => 'Proses', 'time' => '11:45'],
-                    ['customer' => 'Rudi Hartono', 'unit' => 'Xiaomi 14', 'harga' => 'Rp 12.000.000', 'status' => 'Lunas', 'time' => '13:15'],
-                    ['customer' => 'Dewi Persik', 'unit' => 'iPhone 11 128GB', 'harga' => 'Rp 6.500.000', 'status' => 'Lunas', 'time' => '14:00'],
-                    ['customer' => 'Aldi Taher', 'unit' => 'Infinix GT 10', 'harga' => 'Rp 3.200.000', 'status' => 'Booking', 'time' => '14:30'],
-                ]
+                'penjualan_hari_ini' => $penjualanHariIni,
+                'omset_hari_ini' => $omsetHariIni,
+                'target_bulan' => $targetBulan, 
+                'capaian_bulan' => $capaianBulan, 
+                'insentif_estimasi' => $insentifEstimasi,
+                'recent_sales' => $recentSales // Data Real
             ];
+            
             return view('livewire.dashboards.sales', $viewData);
         }
 
