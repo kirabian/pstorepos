@@ -1,5 +1,5 @@
 <div class="container-fluid">
-    {{-- DEBUG INFO: Silakan hapus jika sudah muncul --}}
+    {{-- DEBUG INFO: Silakan hapus jika sudah tidak dibutuhkan --}}
     @if(app()->environment('local'))
     <div class="alert alert-info py-2 mb-4 small">
         <i class="fas fa-bug me-1"></i> Debug: Cabang User ID = <strong>{{ Auth::user()->cabang_id ?? 'NULL' }}</strong>
@@ -19,7 +19,7 @@
     </div>
 
     <div class="row">
-        {{-- BAGIAN KIRI: LIST STOK --}}
+        {{-- BAGIAN KIRI: LIST STOK CABANG --}}
         <div class="col-lg-5 mb-4">
             <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
                 <div class="card-header bg-white border-bottom p-4">
@@ -40,11 +40,18 @@
                                     <div class="d-flex align-items-center gap-2 mb-1">
                                         <h6 class="mb-0 fw-bold text-dark">{{ $stok->merk->nama ?? '-' }} {{ $stok->tipe->nama ?? '-' }}</h6>
                                         
-                                        {{-- Badge Lokasi Stok --}}
+                                        {{-- LOGIKA BADGE DIPERBAIKI --}}
                                         @if($stok->cabang_id == Auth::user()->cabang_id)
+                                            {{-- Jika ID Cabang Sama Persis --}}
                                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2" style="font-size: 0.6rem;">CABANG INI</span>
+                                        
+                                        @elseif(is_null($stok->cabang_id))
+                                            {{-- Jika ID Cabang Null (Stok Pusat), kita anggap Ready Stock juga --}}
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle py-1 px-2" style="font-size: 0.6rem;">STOK PUSAT</span>
+                                        
                                         @else
-                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle py-1 px-2" style="font-size: 0.6rem;">PUSAT/GUDANG</span>
+                                            {{-- Jika ID Cabang Beda (Harusnya tidak muncul karena difilter query, tapi buat jaga-jaga) --}}
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle py-1 px-2" style="font-size: 0.6rem;">LAINNYA</span>
                                         @endif
                                     </div>
                                     
