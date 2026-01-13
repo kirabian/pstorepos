@@ -108,22 +108,24 @@
                     <h5 class="fw-bold text-dark mb-3">Aksi Cepat</h5>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <button class="btn btn-dark w-100 py-3 rounded-4 d-flex align-items-center justify-content-center gap-3 hover-scale shadow-sm">
+                            {{-- PERBAIKAN: Menggunakan tag <a> href ke route input penjualan --}}
+                            <a href="{{ route('sales.input') }}" class="btn btn-dark w-100 py-3 rounded-4 d-flex align-items-center justify-content-center gap-3 hover-scale shadow-sm">
                                 <i class="fas fa-plus-circle fs-4 text-info"></i>
                                 <div class="text-start">
                                     <span class="d-block fw-bold fs-6">Input Penjualan Baru</span>
                                     <span class="d-block small text-white-50">Catat transaksi customer</span>
                                 </div>
-                            </button>
+                            </a>
                         </div>
                         <div class="col-md-6">
-                            <button class="btn btn-light border w-100 py-3 rounded-4 d-flex align-items-center justify-content-center gap-3 hover-bg-light transition-all">
+                            {{-- PERBAIKAN: Menggunakan tag <a> href ke route stok index --}}
+                            <a href="{{ route('stok.index') }}" class="btn btn-light border w-100 py-3 rounded-4 d-flex align-items-center justify-content-center gap-3 hover-bg-light transition-all">
                                 <i class="fas fa-search fs-4 text-dark"></i>
                                 <div class="text-start">
                                     <span class="d-block fw-bold fs-6 text-dark">Cek Stok Cabang</span>
                                     <span class="d-block small text-muted">Lihat ketersediaan unit</span>
                                 </div>
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -133,7 +135,7 @@
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-header bg-white border-bottom border-light-subtle p-4 d-flex justify-content-between align-items-center">
                     <h5 class="fw-bold text-dark mb-0">Transaksi Terakhir Anda</h5>
-                    <a href="#" class="btn btn-sm btn-light rounded-pill px-3 fw-bold small">Lihat Semua</a>
+                    <a href="{{ route('sales.history') }}" class="btn btn-sm btn-light rounded-pill px-3 fw-bold small">Lihat Semua</a>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
