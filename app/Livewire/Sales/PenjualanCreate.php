@@ -7,6 +7,7 @@ use App\Models\Penjualan;
 use App\Models\StokHistory;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Livewire\WithPagination; // Tambahkan ini untuk pagination
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Rule;
@@ -14,6 +15,9 @@ use Livewire\Attributes\Rule;
 class PenjualanCreate extends Component
 {
     use WithFileUploads;
+    use WithPagination; // Gunakan trait pagination
+
+    protected $paginationTheme = 'bootstrap';
 
     // --- STEP 1: PILIH PRODUK ---
     public $searchStok = '';
@@ -21,18 +25,33 @@ class PenjualanCreate extends Component
     public $selectedStokDetail = null;
 
     // --- STEP 2: FORM PENJUALAN ---
-    #[Rule('required')] public $nama_customer = '';
-    #[Rule('required|numeric')] public $nomor_wa = '';
-    #[Rule('required|image|max:2048')] public $foto_bukti = ''; // Max 2MB
-    #[Rule('required|numeric')] public $harga_deal = '';
-    #[Rule('nullable')] public $catatan = '';
+    #[Rule('required', as: 'Nama Customer')] 
+    public $nama_customer = '';
+
+    #[Rule('required|numeric', as: 'Nomor WA')] 
+    public $nomor_wa = '';
+
+    #[Rule('required|image|max:2048', as: 'Foto Bukti')] 
+    public $foto_bukti = ''; 
+
+    #[Rule('required|numeric', as: 'Harga Deal')] 
+    public $harga_deal = '';
+
+    #[Rule('nullable')] 
+    public $catatan = '';
+
+    // Reset pagination saat search berubah
+    public function updatedSearchStok()
+    {
+        $this->resetPage();
+    }
 
     public function selectStok($id)
     {
         $this->selectedStokId = $id;
         $this->selectedStokDetail = Stok::with(['merk', 'tipe'])->find($id);
         
-        // Auto isi harga jual standar
+        // Auto isi harga jual standar jika barang ditemukan
         if($this->selectedStokDetail) {
             $this->harga_deal = $this->selectedStokDetail->harga_jual;
         }
@@ -42,7 +61,9 @@ class PenjualanCreate extends Component
     {
         $this->selectedStokId = null;
         $this->selectedStokDetail = null;
+        // Kita reset input form penjualan, tapi search stok biarkan saja
         $this->reset(['nama_customer', 'nomor_wa', 'foto_bukti', 'harga_deal', 'catatan']);
+        $this->resetValidation();
     }
 
     public function storePenjualan()
@@ -51,14 +72,19 @@ class PenjualanCreate extends Component
 
         $user = Auth::user();
         
-        // Cek Stok Lagi (Concurrency Check)
+        // Cek Stok Lagi (Concurrency Check / Validasi Akhir)
+        // Pastikan barang masih ada di cabang user dan jumlahnya > 0
         $stok = Stok::where('id', $this->selectedStokId)
                     ->where('cabang_id', $user->cabang_id)
                     ->where('jumlah', '>', 0)
                     ->first();
 
         if (!$stok) {
-            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Gagal', 'text' => 'Stok barang ini sudah habis atau tidak ditemukan!']);
+            $this->dispatch('swal', [
+                'icon' => 'error', 
+                'title' => 'Gagal', 
+                'text' => 'Stok barang ini sudah habis atau tidak ditemukan di cabang Anda!'
+            ]);
             return;
         }
 
@@ -85,19 +111,23 @@ class PenjualanCreate extends Component
             // 3. Kurangi Stok (Otomatis jadi Barang Keluar)
             $stok->decrement('jumlah');
 
-            // 4. Catat di Stok History (Agar Admin Produk/Gudang tau)
+            // 4. Catat di Stok History
             StokHistory::create([
                 'imei' => $stok->imei,
-                'status' => 'Stok Keluar', // Kategori Umum
+                'status' => 'Stok Keluar', 
                 'cabang_id' => $user->cabang_id,
                 'keterangan' => "[PENJUALAN SALES] Sold to {$this->nama_customer} by {$user->nama_lengkap}",
                 'user_id' => $user->id
             ]);
         });
 
-        $this->dispatch('swal', ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Penjualan berhasil disimpan & Stok berkurang!']);
+        $this->dispatch('swal', [
+            'icon' => 'success', 
+            'title' => 'Berhasil', 
+            'text' => 'Penjualan berhasil disimpan & Stok berkurang!'
+        ]);
         
-        // Reset
+        // Reset Form
         $this->cancelSelection();
     }
 
@@ -105,9 +135,13 @@ class PenjualanCreate extends Component
     {
         $user = Auth::user();
 
-        // Cari stok HANYA di cabang sales tersebut dan jumlah > 0
+        // QUERY STOK:
+        // 1. Ambil stok yang Cabang ID-nya SAMA dengan Cabang ID User Sales.
+        // 2. Jumlah stok harus lebih dari 0.
+        // 3. Filter pencarian berdasarkan IMEI, Nama Merk, atau Nama Tipe.
+        
         $stoks = Stok::with(['merk', 'tipe'])
-            ->where('cabang_id', $user->cabang_id)
+            ->where('cabang_id', $user->cabang_id) 
             ->where('jumlah', '>', 0)
             ->where(function($q) {
                 $q->where('imei', 'like', '%' . $this->searchStok . '%')
@@ -115,7 +149,7 @@ class PenjualanCreate extends Component
                   ->orWhereHas('tipe', fn($q2) => $q2->where('nama', 'like', '%'.$this->searchStok.'%'));
             })
             ->latest()
-            ->paginate(5);
+            ->paginate(5); // Tampilkan 5 barang per halaman di list kiri
 
         return view('livewire.sales.penjualan-create', [
             'stoks' => $stoks
