@@ -75,18 +75,17 @@ class Dashboard extends Component
             return view('livewire.dashboards.analis', $viewData);
         }
 
-        // 3. LOGIKA KHUSUS LEADER (BARU)
+        // 3. LOGIKA KHUSUS LEADER
         elseif ($user->role === 'leader') {
             // Pastikan leader punya cabang
             $cabang = Cabang::find($user->cabang_id);
             $namaCabang = $cabang ? $cabang->nama_cabang : 'Cabang Tidak Diketahui';
 
             // Simulasi Data Realtime Cabang Ini
-            // Di production, ganti dengan: Transaction::where('cabang_id', $user->cabang_id)->...
             $omsetHariIni = rand(5000000, 15000000);
             $omsetBulanIni = rand(150000000, 300000000);
             $transaksiHariIni = rand(15, 50);
-            $topSalesName = 'Andi Saputra'; // Simulasi sales terbaik
+            $topSalesName = 'Andi Saputra'; 
 
             $viewData = [
                 'mode' => 'leader',
@@ -96,7 +95,6 @@ class Dashboard extends Component
                 'omset_bulan_ini' => $omsetBulanIni,
                 'transaksi_hari_ini' => $transaksiHariIni,
                 'top_sales' => $topSalesName,
-                // List staff di cabang ini
                 'staff_list' => User::where('cabang_id', $user->cabang_id)->where('role', '!=', 'leader')->get(),
             ];
 
@@ -144,13 +142,23 @@ class Dashboard extends Component
             return view('livewire.dashboards.owner-distributor', $viewData);
         }
 
-        // 6. SALES
+        // 6. SALES (DIPERBARUI DENGAN DATA LENGKAP)
         elseif ($user->role === 'sales') {
             $viewData = [
+                'mode' => 'sales',
                 'cabang' => $user->cabang->nama_cabang ?? 'PStore Pusat',
-                'penjualan_hari_ini' => 12,
-                'target_bulan' => 85,
-                'mode' => 'sales'
+                'penjualan_hari_ini' => rand(2, 8),
+                'omset_hari_ini' => rand(5000000, 25000000),
+                'target_bulan' => 100, // Target Unit
+                'capaian_bulan' => rand(45, 95), // Unit Terjual Bulan Ini
+                'insentif_estimasi' => rand(2500000, 8000000),
+                'recent_sales' => [
+                    ['customer' => 'Budi Santoso', 'unit' => 'iPhone 15 Pro 256GB', 'harga' => 'Rp 21.000.000', 'status' => 'Lunas', 'time' => '10:30'],
+                    ['customer' => 'Siti Aminah', 'unit' => 'Samsung S24 Ultra', 'harga' => 'Rp 19.500.000', 'status' => 'Proses', 'time' => '11:45'],
+                    ['customer' => 'Rudi Hartono', 'unit' => 'Xiaomi 14', 'harga' => 'Rp 12.000.000', 'status' => 'Lunas', 'time' => '13:15'],
+                    ['customer' => 'Dewi Persik', 'unit' => 'iPhone 11 128GB', 'harga' => 'Rp 6.500.000', 'status' => 'Lunas', 'time' => '14:00'],
+                    ['customer' => 'Aldi Taher', 'unit' => 'Infinix GT 10', 'harga' => 'Rp 3.200.000', 'status' => 'Booking', 'time' => '14:30'],
+                ]
             ];
             return view('livewire.dashboards.sales', $viewData);
         }

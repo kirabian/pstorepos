@@ -44,9 +44,52 @@
                         <span class="ms-3 sidebar-text text-nowrap fw-medium">Laporan Penjualan</span>
                     </a>
                 </li>
+            @endif
 
-                {{-- 2. Monitoring Stok (Opsional, Link ke stok biasa tapi view only logic di controller) --}}
-                {{-- Bisa ditambahkan nanti jika perlu --}}
+            {{-- ============================================= --}}
+            {{-- MENU KHUSUS SALES (BARU) --}}
+            {{-- ============================================= --}}
+            @if (Auth::user()->role === 'sales')
+                <li class="mb-1">
+                    <div class="sidebar-header mt-3 mb-2 px-3 sidebar-text">
+                        <span class="text-uppercase fw-bold text-muted"
+                            style="font-size: 0.65rem; letter-spacing: 1.5px;">Sales Area</span>
+                    </div>
+                </li>
+
+                {{-- 1. Input Penjualan --}}
+                <li class="mb-2">
+                    {{-- Ganti route('sales.create') sesuai route actual Anda nanti --}}
+                    <a href="#"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('sales.create') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-cash-register fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Input Penjualan</span>
+                    </a>
+                </li>
+
+                {{-- 2. Riwayat Penjualan --}}
+                <li class="mb-2">
+                    <a href="#"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('sales.history') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-history fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Riwayat</span>
+                    </a>
+                </li>
+
+                {{-- 3. Cek Stok (Akses Read Only ke Stok) --}}
+                <li class="mb-2">
+                    <a href="{{ route('stok.index') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('stok.index') ? 'active' : '' }}">
+                        <div class="icon-wrapper d-flex justify-content-center align-items-center">
+                            <i class="fas fa-boxes fs-5"></i>
+                        </div>
+                        <span class="ms-3 sidebar-text text-nowrap fw-medium">Cek Stok</span>
+                    </a>
+                </li>
             @endif
             {{-- ============================================= --}}
 
@@ -165,7 +208,8 @@
             @endif
 
             {{-- Hide operational menus for Leader since they have specific view only menu --}}
-            @if (!in_array(Auth::user()->role, ['leader'])) 
+            {{-- UPDATE: Hide for Sales too, Sales only see their specific menu --}}
+            @if (!in_array(Auth::user()->role, ['leader', 'sales'])) 
                 <li class="mb-2">
                     <a href="{{ route('lacak.imei') }}"
                         class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('lacak.imei') ? 'active' : '' }}">
@@ -309,11 +353,7 @@
     </div>
 </nav>
 
-{{-- Masukkan Style CSS Sidebar yang sama seperti sebelumnya disini --}}
-{{-- Saya tidak menghapusnya, tapi agar tidak terlalu panjang, gunakan style dari kode Anda sebelumnya karena tidak ada perubahan di CSS --}}
 <style>
-    /* ... Copy paste CSS Style Sidebar Anda yang lama di sini ... */
-    /* Pastikan style .sidebar-premium, .nav-link, dll tetap ada */
     /* --- THEME COLORS & BASICS (UPDATED PALETTE) --- */
     /* Palette Code:
         #222831 -> Dark Background

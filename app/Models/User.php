@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Penjualan;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -121,4 +122,9 @@ class User extends Authenticatable
         // Fallback ke inisial nama jika tidak ada foto
         return 'https://ui-avatars.com/api/?name=' . urlencode($this->nama_lengkap) . '&background=000&color=fff&bold=true';
     }
+
+    public function penjualans()
+{
+    return $this->hasMany(Penjualan::class, 'user_id');
+}
 }

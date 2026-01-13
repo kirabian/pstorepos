@@ -65,6 +65,23 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     Route::get('/leader/penjualan', PenjualanCabang::class)->name('leader.penjualan');
 
     /* |--------------------------------------------------------------------------
+    | SALES AREA (Form Penjualan)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('checkRole:sales')->group(function () {
+        Route::get('/sales/input', \App\Livewire\Sales\PenjualanCreate::class)->name('sales.input');
+        Route::get('/sales/history', \App\Livewire\Sales\PenjualanHistory::class)->name('sales.history');
+    });
+
+    /* |--------------------------------------------------------------------------
+    | AUDIT AREA (Verifikasi Penjualan)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('checkRole:audit')->group(function () {
+        Route::get('/audit/verifikasi', \App\Livewire\Audit\VerifikasiPenjualan::class)->name('audit.verifikasi');
+    });
+
+    /* |--------------------------------------------------------------------------
     | MANAJEMEN USER (SUPERADMIN & AUDIT)
     |--------------------------------------------------------------------------
     */
