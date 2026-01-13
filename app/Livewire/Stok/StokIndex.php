@@ -38,20 +38,15 @@ class StokIndex extends Component
     public $nama_petugas = '';
     public $segel = '';
     public $kendala_retur = '';
-    public $tanggal_pembelian = '';
-    public $nama_customer = '';
-    public $instagram_customer = '';
-    public $email_icloud = '';
-    public $password_email = '';
-    public $pola_pin = '';
-
+    
+    // Opsi Kategori
     public $opsiKategori = [
         'Admin WhatsApp' => 'Admin WhatsApp',
         'Shopee' => 'Shopee',
         'Tokopedia' => 'Tokopedia',
         'Giveaway' => 'Giveaway',
         'Kesalahan Input' => 'Kesalahan Input',
-        'Pindah Cabang' => 'Pindah Cabang',
+        'Pindah Cabang' => 'Pindah Cabang', // <--- Logic Khusus
         'Retur' => 'Retur',
     ];
 
@@ -60,14 +55,8 @@ class StokIndex extends Component
     #[Rule('required')] public $tipe_id = '';
     #[Rule('required')] public $ram_storage = '';
     #[Rule('required|in:Baru,Second')] public $kondisi = 'Baru';
-    
-    // Imei
     #[Rule('required|unique:stoks,imei')] public $imei = '';
-    
-    // Jumlah Stok (Angka)
     #[Rule('required|numeric|min:1')] public $jumlah = 1;
-
-    // Harga (String karena ada format Rp)
     #[Rule('nullable')] public $harga_modal = ''; 
     #[Rule('required')] public $harga_jual = ''; 
 
@@ -96,7 +85,6 @@ class StokIndex extends Component
     // --- HELPER: BERSIHKAN FORMAT RUPIAH ---
     private function cleanRupiah($value)
     {
-        // Hapus "Rp", titik, dan spasi agar jadi integer murni
         return (int) str_replace(['Rp', '.', ' '], '', $value);
     }
 
@@ -118,7 +106,7 @@ class StokIndex extends Component
         // Reset CRUD
         $this->merk_id = ''; $this->tipe_id = ''; $this->ram_storage = '';
         $this->kondisi = 'Baru'; $this->imei = ''; 
-        $this->jumlah = 1; // Default 1
+        $this->jumlah = 1; 
         $this->harga_modal = ''; 
         $this->harga_jual = '';
         
@@ -136,17 +124,14 @@ class StokIndex extends Component
     {
         $this->nama_penerima = ''; $this->nomor_handphone = ''; $this->alamat = ''; $this->catatan = '';
         $this->target_cabang_id = ''; $this->nama_petugas = ''; $this->segel = ''; $this->kendala_retur = ''; 
-        $this->tanggal_pembelian = ''; $this->nama_customer = ''; $this->instagram_customer = '';
-        $this->email_icloud = ''; $this->password_email = ''; $this->pola_pin = '';
     }
 
     // --- LOGIKA UTAMA: VALIDASI DINAMIS & SIMPAN KELUAR ---
     public function storeKeluarStok()
     {
-        // 1. Validasi Dasar
         $this->validate(['kategoriKeluar' => 'required']);
 
-        // 2. Validasi Dinamis
+        // Validasi Dinamis
         $rules = [];
         $keteranganDetail = ""; 
 
@@ -172,13 +157,12 @@ class StokIndex extends Component
             case 'Pindah Cabang':
                 $rules = [
                     'target_cabang_id' => 'required',
-                    'nama_penerima' => 'required',
-                    'nomor_handphone' => 'required',
-                    'alamat' => 'required',
+                    'nama_penerima' => 'required', // PIC Cabang Tujuan
                     'catatan' => 'required',
                 ];
-                $cabangTujuan = Cabang::find($this->target_cabang_id)->nama_cabang ?? '-';
-                $keteranganDetail = "Ke Cabang: {$cabangTujuan} | PIC: {$this->nama_penerima}";
+                $cabangTujuan = Cabang::find($this->target_cabang_id);
+                $namaCabangTujuan = $cabangTujuan->nama_cabang ?? '-';
+                $keteranganDetail = "Ke Cabang: {$namaCabangTujuan} | PIC: {$this->nama_penerima} | Note: {$this->catatan}";
                 break;
 
             case 'Retur':
@@ -193,29 +177,53 @@ class StokIndex extends Component
 
         $this->validate($rules);
 
-        // 3. Eksekusi Pengurangan Stok
         $user = Auth::user();
         $count = 0;
 
         foreach ($this->selectedStok as $id) {
             $stok = Stok::find($id);
+            
             if ($stok) {
-                // Kurangi stok jika masih ada
-                if ($stok->jumlah > 0) {
-                    $stok->decrement('jumlah'); // Kurangi 1
+                // LOGIK BARU: PINDAH CABANG
+                if ($this->kategoriKeluar == 'Pindah Cabang') {
+                    // Update Lokasi Cabang Barang (Mutasi)
+                    $stok->update([
+                        'cabang_id' => $this->target_cabang_id
+                    ]);
+                    
+                    // Catat History Pindah (Masuk ke Cabang Baru)
+                    StokHistory::create([
+                        'imei' => $stok->imei,
+                        'status' => 'Stok Masuk (Mutasi)', 
+                        'cabang_id' => $this->target_cabang_id,
+                        'keterangan' => "Mutasi dari " . ($user->cabang->nama_cabang ?? 'Pusat') . ". PIC: {$this->nama_penerima}",
+                        'user_id' => $user->id,
+                    ]);
+
+                    // Catat History Keluar (Dari Cabang Lama/Pusat)
+                    StokHistory::create([
+                        'imei' => $stok->imei,
+                        'status' => 'Stok Keluar (Mutasi)', 
+                        'cabang_id' => $user->cabang_id, // Cabang Asal
+                        'keterangan' => "Mutasi ke {$namaCabangTujuan}. PIC: {$this->nama_penerima}",
+                        'user_id' => $user->id,
+                    ]);
+
+                } else {
+                    // LOGIK LAMA: BARANG KELUAR/TERJUAL/RUSAK/GIVEAWAY
+                    if ($stok->jumlah > 0) {
+                        $stok->decrement('jumlah'); 
+                    }
+
+                    // Catat History
+                    StokHistory::create([
+                        'imei' => $stok->imei,
+                        'status' => 'Stok Keluar', 
+                        'cabang_id' => $user->cabang_id,
+                        'keterangan' => "[$this->kategoriKeluar] $keteranganDetail (Sisa Stok: {$stok->jumlah})",
+                        'user_id' => $user->id,
+                    ]);
                 }
-
-                // Catat History
-                StokHistory::create([
-                    'imei' => $stok->imei,
-                    'status' => 'Stok Keluar', 
-                    'cabang_id' => $user->cabang_id,
-                    'keterangan' => "[$this->kategoriKeluar] $keteranganDetail (Sisa Stok: {$stok->jumlah})",
-                    'user_id' => $user->id,
-                ]);
-
-                // Opsional: Hapus row jika stok 0? 
-                // Sesuai request "kalau 0 habis", jadi kita biarkan datanya tetap ada tapi jumlah 0.
                 
                 $count++;
             }
@@ -233,7 +241,6 @@ class StokIndex extends Component
     // --- CRUD FUNCTION (STORE/UPDATE) ---
     public function store()
     {
-        // Bersihkan Rupiah sebelum validasi
         $cleanModal = $this->cleanRupiah($this->harga_modal);
         $cleanJual = $this->cleanRupiah($this->harga_jual);
 
@@ -243,22 +250,29 @@ class StokIndex extends Component
             'jumlah' => 'required|numeric|min:0',
         ]);
 
+        $user = Auth::user();
+
+        // Saat input baru, otomatis set cabang_id sesuai user yg input
+        // Jika user admin pusat (cabang_id null), maka stok jadi stok pusat (cabang_id null)
         Stok::updateOrCreate(['id' => $this->stokId], [
-            'merk_id' => $this->merk_id, 'tipe_id' => $this->tipe_id, 'ram_storage' => $this->ram_storage,
-            'kondisi' => $this->kondisi, 'imei' => $this->imei, 
-            'jumlah' => $this->jumlah, // Simpan Jumlah
+            'merk_id' => $this->merk_id, 
+            'tipe_id' => $this->tipe_id, 
+            'ram_storage' => $this->ram_storage,
+            'kondisi' => $this->kondisi, 
+            'imei' => $this->imei, 
+            'jumlah' => $this->jumlah, 
             'harga_modal' => $cleanModal, 
             'harga_jual' => $cleanJual,
+            'cabang_id' => $user->cabang_id, // <--- PENTING: Set Lokasi Awal
         ]);
 
-        $user = Auth::user();
         $namaCabang = $user->cabang->nama_cabang ?? 'Pusat';
 
         StokHistory::create([
             'imei' => $this->imei,
             'status' => $this->stokId ? 'Update Data' : 'Stok Masuk',
             'cabang_id' => $user->cabang_id,
-            'keterangan' => $this->stokId ? "Update stok oleh {$user->nama_lengkap} (Stok: $this->jumlah)" : "Stok masuk di $namaCabang (Stok: $this->jumlah)",
+            'keterangan' => $this->stokId ? "Update stok oleh {$user->nama_lengkap}" : "Stok masuk di $namaCabang (Stok: $this->jumlah)",
             'user_id' => $user->id,
         ]);
 
@@ -274,14 +288,15 @@ class StokIndex extends Component
         $this->merk_id = $stok->merk_id;
         $this->tipeOptions = Tipe::where('merk_id', $stok->merk_id)->get();
         $this->tipe_id = $stok->tipe_id;
+        
         $tipe = Tipe::find($stok->tipe_id);
         $this->ramOptions = $tipe->ram_storage ?? [];
+        
         $this->ram_storage = $stok->ram_storage;
         $this->kondisi = $stok->kondisi;
         $this->imei = $stok->imei;
-        $this->jumlah = $stok->jumlah; // Load Jumlah
+        $this->jumlah = $stok->jumlah; 
         
-        // Format ke Rupiah saat edit agar tampil cantik
         $this->harga_modal = number_format($stok->harga_modal, 0, ',', '.');
         $this->harga_jual = number_format($stok->harga_jual, 0, ',', '.');
         
@@ -308,7 +323,9 @@ class StokIndex extends Component
 
     public function render()
     {
-        $stoks = Stok::with(['merk', 'tipe'])
+        // Tampilkan semua stok (Admin Pusat bisa lihat semua, Admin Cabang lihat cabangnya saja)
+        // Anda bisa menambahkan filter 'where cabang_id' di sini jika perlu pembatasan akses
+        $stoks = Stok::with(['merk', 'tipe', 'cabang']) // Tambah relation cabang
             ->where(function($q) {
                 $q->where('imei', 'like', '%' . $this->search . '%')
                   ->orWhereHas('merk', fn($q2) => $q2->where('nama', 'like', '%'.$this->search.'%'))
@@ -318,7 +335,6 @@ class StokIndex extends Component
             ->paginate(10);
 
         $merks = Merk::orderBy('nama', 'asc')->get();
-        // Fixing: Gunakan nama_cabang
         $cabangs = Cabang::orderBy('nama_cabang', 'asc')->get(); 
 
         $selectedItems = [];
