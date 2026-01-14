@@ -34,6 +34,8 @@ use App\Livewire\Distributor\OmsetCabangIndex;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/nota/print/{id}', [NotaController::class, 'print'])->name('nota.print');
+
 /*
 |--------------------------------------------------------------------------
 | Autentikasi Publik (Guest)
@@ -81,8 +83,6 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     Route::middleware('checkRole:audit')->group(function () {
         Route::get('/audit/verifikasi', \App\Livewire\Audit\VerifikasiPenjualan::class)->name('audit.verifikasi');
     });
-
-    Route::get('/nota/print/{id}', [NotaController::class, 'print'])->name('nota.print');
 
     /* |--------------------------------------------------------------------------
     | MANAJEMEN USER (SUPERADMIN & AUDIT)
