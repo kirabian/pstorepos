@@ -6,6 +6,8 @@ use App\Models\Penjualan;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http; // Untuk tembak API
+use Illuminate\Support\Facades\Storage; // Untuk simpan file sementara
 use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
 
@@ -25,57 +27,76 @@ class PenjualanHistory extends Component
         $this->tahun = date('Y');
     }
 
-    public function updatedSearch()
-    {
-        $this->resetPage();
-    }
+    public function updatedSearch() { $this->resetPage(); }
 
-    // --- DOWNLOAD PDF (UNTUK SALES) ---
+    // --- DOWNLOAD PDF MANUAL ---
     public function downloadNota($id)
     {
-        // Kita redirect ke route controller yang baru dibuat agar logicnya satu pintu
         return redirect()->route('nota.print', ['id' => $id]);
     }
 
-    // --- KIRIM WA (DENGAN LINK PDF) ---
+    // --- KIRIM PDF KE WA OTOMATIS (VIA FONNTE) ---
     public function kirimWa($id)
     {
-        $penjualan = Penjualan::findOrFail($id);
+        $penjualan = Penjualan::with(['user', 'cabang', 'stok'])->findOrFail($id);
         
-        // 1. Format Nomor WA
-        $wa = $penjualan->nomor_wa;
-        $wa = preg_replace('/[^0-9]/', '', $wa); // Hapus karakter aneh
-        if(substr($wa, 0, 1) == '0') {
-            $wa = '62' . substr($wa, 1);
+        // 1. Format Nomor WA (Wajib 62xxx untuk API)
+        $target = $penjualan->nomor_wa;
+        $target = preg_replace('/[^0-9]/', '', $target); 
+        if(substr($target, 0, 1) == '0') {
+            $target = '62' . substr($target, 1);
         }
 
-        // 2. Generate Link PDF
-        // route() akan membuat link otomatis: https://websiteanda.com/nota/print/1
-        $linkPdf = route('nota.print', ['id' => $penjualan->id]);
+        try {
+            // 2. Generate PDF Binary
+            $pdf = Pdf::loadView('pdf.nota_penjualan', ['penjualan' => $penjualan])
+                      ->setPaper('a5', 'portrait');
+            $content = $pdf->output();
 
-        // 3. Susun Pesan
-        $pesan = "Halo Kak *{$penjualan->nama_customer}*,\n\n";
-        $pesan .= "Terima kasih telah berbelanja di *PSTORE {$penjualan->cabang->nama_cabang}*.\n\n";
-        $pesan .= "Berikut detail pesanan Anda:\n";
-        $pesan .= "🛍️ Unit: *{$penjualan->nama_produk}*\n";
-        $pesan .= "📱 IMEI: {$penjualan->imei_terjual}\n";
-        $pesan .= "💰 Total: Rp " . number_format($penjualan->harga_jual_real, 0, ',', '.') . "\n\n";
-        $pesan .= "📄 *DOWNLOAD NOTA RESMI:*\n";
-        $pesan .= $linkPdf . "\n\n";
-        $pesan .= "Harap simpan nota ini sebagai bukti garansi/transaksi yang sah.\n";
-        $pesan .= "Sehat selalu kak!";
+            // 3. Simpan PDF Sementara di Public Storage
+            // Agar bisa diakses oleh server Fonnte
+            $fileName = 'Nota_TRX-' . $penjualan->id . '_' . time() . '.pdf';
+            Storage::disk('public')->put('temp_pdf/' . $fileName, $content);
+            
+            // Generate URL Publik (PENTING: Ini harus bisa diakses internet)
+            // Jika Anda di Localhost, Fonnte tidak bisa ambil file ini kecuali pakai Ngrok.
+            $fileUrl = asset('storage/temp_pdf/' . $fileName);
 
-        // 4. Encode & Kirim
-        $encodedPesan = urlencode($pesan);
-        $this->dispatch('open-wa', ['url' => "https://wa.me/{$wa}?text={$encodedPesan}"]);
+            // 4. Kirim Request ke Fonnte
+            $token = env('FONNTE_TOKEN'); // Ambil dari .env
+
+            $pesan = "Halo Kak *{$penjualan->nama_customer}*,\n";
+            $pesan .= "Terima kasih telah berbelanja di *PSTORE {$penjualan->cabang->nama_cabang}*.\n";
+            $pesan .= "Berikut kami lampirkan Nota Resmi pembelian Anda.\n\n";
+            $pesan .= "Mohon disimpan sebagai bukti garansi.\nSehat selalu!";
+
+            $response = Http::withHeaders([
+                'Authorization' => $token,
+            ])->post('https://api.fonnte.com/send', [
+                'target' => $target,
+                'url' => $fileUrl, // Fonnte akan download file dari link ini & kirim ke customer
+                'message' => $pesan,
+            ]);
+
+            // 5. Cek Response
+            if ($response->successful()) {
+                $this->dispatch('swal', ['icon' => 'success', 'title' => 'Terikirim!', 'text' => 'Nota PDF berhasil dikirim ke WhatsApp Customer.']);
+            } else {
+                $this->dispatch('swal', ['icon' => 'error', 'title' => 'Gagal', 'text' => 'Gagal kirim WA: ' . $response->body()]);
+            }
+
+            // (Opsional) Hapus file temp nanti pakai Job/Scheduler agar storage tidak penuh
+            // Storage::disk('public')->delete('temp_pdf/' . $fileName); 
+
+        } catch (Exception $e) {
+            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Error', 'text' => $e->getMessage()]);
+        }
     }
 
     public function render()
     {
         $user = Auth::user();
-
-        $query = Penjualan::with(['stok', 'auditor'])
-            ->where('user_id', $user->id);
+        $query = Penjualan::with(['stok', 'auditor'])->where('user_id', $user->id);
 
         if ($this->search) {
             $query->where(function($q) {
@@ -84,11 +105,9 @@ class PenjualanHistory extends Component
                   ->orWhere('nama_produk', 'like', '%' . $this->search . '%');
             });
         }
-
         if ($this->filterStatus) {
             $query->where('status_audit', $this->filterStatus);
         }
-
         if ($this->bulan) {
             $query->whereMonth('created_at', $this->bulan);
         }
@@ -98,22 +117,18 @@ class PenjualanHistory extends Component
 
         $penjualans = $query->latest()->paginate(10);
 
-        $totalOmsetBulanIni = Penjualan::where('user_id', $user->id)
-            ->whereMonth('created_at', $this->bulan)
-            ->whereYear('created_at', $this->tahun)
-            ->where('status_audit', '!=', 'Rejected')
-            ->sum('harga_jual_real');
-
-        $totalUnitBulanIni = Penjualan::where('user_id', $user->id)
-            ->whereMonth('created_at', $this->bulan)
-            ->whereYear('created_at', $this->tahun)
-            ->where('status_audit', '!=', 'Rejected')
-            ->count();
+        // Summary
+        $omset = Penjualan::where('user_id', $user->id)
+            ->whereMonth('created_at', $this->bulan)->whereYear('created_at', $this->tahun)
+            ->where('status_audit', '!=', 'Rejected')->sum('harga_jual_real');
+        $unit = Penjualan::where('user_id', $user->id)
+            ->whereMonth('created_at', $this->bulan)->whereYear('created_at', $this->tahun)
+            ->where('status_audit', '!=', 'Rejected')->count();
 
         return view('livewire.sales.penjualan-history', [
             'penjualans' => $penjualans,
-            'omset' => $totalOmsetBulanIni,
-            'total_unit' => $totalUnitBulanIni
+            'omset' => $omset,
+            'total_unit' => $unit
         ])->title('Riwayat Penjualan Saya');
     }
 }
