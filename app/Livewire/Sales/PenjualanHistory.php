@@ -31,6 +31,7 @@ class PenjualanHistory extends Component
         return redirect()->route('nota.print', ['id' => $id]);
     }
 
+    // --- FUNGSI KIRIM WA (METODE UPLOAD V2 WABLAS) ---
     public function kirimWa($id)
     {
         $penjualan = Penjualan::with(['user', 'cabang'])->find($id);
@@ -47,81 +48,58 @@ class PenjualanHistory extends Component
             // 1. Generate & Save PDF Locally
             $pdf = Pdf::loadView('pdf.nota_penjualan', ['penjualan' => $penjualan])->setPaper('a5', 'portrait');
             $fileName = 'Nota-' . $penjualan->id . '.pdf';
+            $path = storage_path('app/public/temp_nota/' . $fileName);
             
-            // Simpan di storage public agar ada URL-nya (untuk fallback)
-            $filePath = 'temp_nota/' . $fileName;
-            Storage::disk('public')->put($filePath, $pdf->output());
-            $publicUrl = asset('storage/' . $filePath);
+            if(!file_exists(dirname($path))) mkdir(dirname($path), 0777, true);
+            $pdf->save($path);
 
-            // Path Fisik untuk Upload CURL
-            $realPath = storage_path('app/public/temp_nota/' . $fileName);
-
-            // 2. Pesan Caption
-            $pesan = "Halo Kak *{$penjualan->nama_customer}*,\n";
-            $pesan .= "Terima kasih telah berbelanja di *PSTORE {$penjualan->cabang->nama_cabang}*.\n";
-            $pesan .= "Berikut Nota Resmi (PDF) transaksi Anda.\n";
-            $pesan .= "Total: Rp " . number_format($penjualan->harga_jual_real, 0, ',', '.') . "\n\n";
-            $pesan .= "Sehat selalu!";
-
-            // 3. Config Wablas
             $domain = env('WABLAS_DOMAIN'); 
             $token  = env('WABLAS_TOKEN');
 
-            // --- METODE 1: COBA UPLOAD FILE FISIK ---
+            // 2. UPLOAD FILE KE WABLAS (API V2)
+            // Kita upload dulu agar file tersimpan di server Wablas
             $curl = curl_init();
+            $fileData = new CURLFile($path, 'application/pdf', $fileName);
             
-            // Gunakan array murni untuk post fields
-            $postFields = [
-                'phone' => $target,
-                'message' => $pesan,
-                'document' => new CURLFile($realPath, 'application/pdf', $fileName),
-            ];
-
-            curl_setopt($curl, CURLOPT_HTTPHEADER, [
-                "Authorization: $token",
-                // JANGAN set Content-Type, biarkan CURL yang handle boundary
-            ]);
-            curl_setopt($curl, CURLOPT_URL, "$domain/api/send-message");
+            curl_setopt($curl, CURLOPT_HTTPHEADER, ["Authorization: $token"]);
+            curl_setopt($curl, CURLOPT_URL, "$domain/api/v2/send-media"); // Endpoint Upload
             curl_setopt($curl, CURLOPT_POST, true);
-            curl_setopt($curl, CURLOPT_POSTFIELDS, $postFields);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, [
+                'phone' => $target,
+                'caption' => "Halo Kak *{$penjualan->nama_customer}*,\nBerikut Nota Resmi pembelian Anda di *PSTORE {$penjualan->cabang->nama_cabang}*.\n\nTotal: Rp " . number_format($penjualan->harga_jual_real, 0, ',', '.') . "\nSehat selalu!",
+                'file' => $fileData, // Kirim file fisik
+                'data' => json_encode(['type' => 'document', 'url' => '']) // Trik agar dianggap dokumen
+            ]);
             curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
-            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
-
+            
             $result = curl_exec($curl);
             $error = curl_error($curl);
             curl_close($curl);
 
+            // Hapus file lokal
+            if(file_exists($path)) unlink($path);
+
             $response = json_decode($result, true);
 
-            // 4. Validasi Response
+            // 3. Validasi
             if (isset($response['status']) && $response['status'] == true) {
-                $this->dispatch('swal', ['icon' => 'success', 'title' => 'Terkirim!', 'text' => 'Nota PDF berhasil dikirim via Wablas.']);
+                $this->dispatch('swal', ['icon' => 'success', 'title' => 'Terkirim!', 'text' => 'Nota PDF berhasil dikirim via Wablas V2.']);
             } else {
-                // --- METODE 2 (FALLBACK): KIRIM LINK DOWNLOAD ---
-                // Jika upload gagal, kita kirim link publik saja. Ini 99% pasti berhasil.
+                // --- FALLBACK TERAKHIR: KIRIM LINK ---
+                $linkDownload = route('nota.print', ['id' => $penjualan->id]);
+                $pesanLink = "Halo Kak *{$penjualan->nama_customer}*,\nTerima kasih telah berbelanja.\n\n(Gagal melampirkan file otomatis, silakan download nota di sini):\n" . $linkDownload;
                 
-                $pesanFallback = $pesan . "\n\n(Klik link di bawah untuk download Nota):\n" . $publicUrl;
-
                 $curl2 = curl_init();
-                $postFields2 = [
-                    'phone' => $target,
-                    'message' => $pesanFallback,
-                ];
-
-                curl_setopt($curl2, CURLOPT_HTTPHEADER, [
-                    "Authorization: $token",
-                    "Content-Type: application/x-www-form-urlencoded" // Kirim text biasa
-                ]);
+                curl_setopt($curl2, CURLOPT_HTTPHEADER, ["Authorization: $token"]);
                 curl_setopt($curl2, CURLOPT_URL, "$domain/api/send-message");
                 curl_setopt($curl2, CURLOPT_POST, true);
-                curl_setopt($curl2, CURLOPT_POSTFIELDS, http_build_query($postFields2));
+                curl_setopt($curl2, CURLOPT_POSTFIELDS, http_build_query(['phone' => $target, 'message' => $pesanLink]));
                 curl_setopt($curl2, CURLOPT_RETURNTRANSFER, true);
                 curl_exec($curl2);
                 curl_close($curl2);
 
-                $reason = $response['message'] ?? 'Gagal upload file';
-                $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Info', 'text' => "File gagal terlampir ($reason), Link download dikirim sebagai gantinya."]);
+                $reason = $response['message'] ?? 'Gagal Upload V2';
+                $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Info', 'text' => "File gagal, Link dikirim ($reason)."]);
             }
 
         } catch (Exception $e) {
