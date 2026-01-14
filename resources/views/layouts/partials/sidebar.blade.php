@@ -59,9 +59,8 @@
 
                 {{-- 1. Input Penjualan --}}
                 <li class="mb-2">
-                    {{-- Ganti route('sales.create') sesuai route actual Anda nanti --}}
-                    <a href="#"
-                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('sales.create') ? 'active' : '' }}">
+                    <a href="{{ route('sales.input') }}"
+                        class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('sales.input') ? 'active' : '' }}">
                         <div class="icon-wrapper d-flex justify-content-center align-items-center">
                             <i class="fas fa-cash-register fs-5"></i>
                         </div>
@@ -69,9 +68,9 @@
                     </a>
                 </li>
 
-                {{-- 2. Riwayat Penjualan --}}
+                {{-- 2. Riwayat Penjualan (FIXED ROUTE) --}}
                 <li class="mb-2">
-                    <a href="#"
+                    <a href="{{ route('sales.history') }}"
                         class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('sales.history') ? 'active' : '' }}">
                         <div class="icon-wrapper d-flex justify-content-center align-items-center">
                             <i class="fas fa-history fs-5"></i>

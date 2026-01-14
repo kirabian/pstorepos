@@ -1,29 +1,41 @@
 <div class="container-fluid">
+    
+    {{-- LOADING INDICATOR --}}
+    <div wire:loading.delay class="fixed-top w-100 h-100 d-flex justify-content-center align-items-center" style="background: rgba(255,255,255,0.7); z-index: 9999;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
     {{-- HEADER & SUMMARY --}}
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
         <div>
-            <h4 class="fw-bold mb-1">Riwayat Penjualan Saya</h4>
-            <small class="text-muted">Cabang: {{ Auth::user()->cabang->nama_cabang ?? '-' }}</small>
+            <h4 class="fw-bold mb-1 text-dark">Riwayat Penjualan Saya</h4>
+            <small class="text-muted">
+                Cabang: <span class="fw-bold text-primary">{{ Auth::user()->cabang->nama_cabang ?? '-' }}</span>
+            </small>
         </div>
         
         <div class="d-flex gap-3">
-            {{-- Card Ringkasan Kecil --}}
-            <div class="bg-white border shadow-sm rounded-3 px-3 py-2 d-flex align-items-center gap-3">
-                <div class="bg-success bg-opacity-10 text-success rounded-circle p-2">
-                    <i class="fas fa-coins"></i>
+            {{-- Card Ringkasan Omset --}}
+            <div class="bg-white border shadow-sm rounded-4 px-4 py-2 d-flex align-items-center gap-3">
+                <div class="bg-success bg-opacity-10 text-success rounded-circle p-3">
+                    <i class="fas fa-coins fa-lg"></i>
                 </div>
                 <div>
-                    <small class="text-muted d-block" style="font-size: 0.7rem;">Omset Bulan Ini</small>
-                    <span class="fw-bold">Rp {{ number_format($omset, 0,',','.') }}</span>
+                    <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.5px;">Omset Bulan Ini</small>
+                    <span class="fw-black text-dark fs-5">Rp {{ number_format($omset, 0,',','.') }}</span>
                 </div>
             </div>
-            <div class="bg-white border shadow-sm rounded-3 px-3 py-2 d-flex align-items-center gap-3">
-                <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2">
-                    <i class="fas fa-box"></i>
+
+            {{-- Card Ringkasan Unit --}}
+            <div class="bg-white border shadow-sm rounded-4 px-4 py-2 d-flex align-items-center gap-3">
+                <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3">
+                    <i class="fas fa-box fa-lg"></i>
                 </div>
                 <div>
-                    <small class="text-muted d-block" style="font-size: 0.7rem;">Unit Terjual</small>
-                    <span class="fw-bold">{{ $total_unit }} Unit</span>
+                    <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.5px;">Unit Terjual</small>
+                    <span class="fw-black text-dark fs-5">{{ $total_unit }} <span class="fs-6 text-muted fw-normal">Unit</span></span>
                 </div>
             </div>
         </div>
@@ -35,20 +47,20 @@
             <div class="row g-2 align-items-center">
                 <div class="col-md-4">
                     <div class="input-group">
-                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" class="form-control border-start-0 ps-0" placeholder="Cari Customer, IMEI, Produk..." wire:model.live.debounce.300ms="search">
+                        <span class="input-group-text bg-white border-end-0 text-muted ps-3 rounded-start-pill"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control border-start-0 rounded-end-pill ps-2" placeholder="Cari Customer, IMEI, Produk..." wire:model.live.debounce.300ms="search">
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <select class="form-select" wire:model.live="filterStatus">
+                    <select class="form-select rounded-pill" wire:model.live="filterStatus">
                         <option value="">Semua Status</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Approved">Approved</option>
-                        <option value="Rejected">Rejected</option>
+                        <option value="Pending">⏳ Pending</option>
+                        <option value="Approved">✅ Valid</option>
+                        <option value="Rejected">❌ Ditolak</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select class="form-select" wire:model.live="bulan">
+                    <select class="form-select rounded-pill" wire:model.live="bulan">
                         <option value="01">Januari</option>
                         <option value="02">Februari</option>
                         <option value="03">Maret</option>
@@ -64,14 +76,14 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select class="form-select" wire:model.live="tahun">
+                    <select class="form-select rounded-pill" wire:model.live="tahun">
                         @for($i = date('Y'); $i >= date('Y')-2; $i--)
                             <option value="{{ $i }}">{{ $i }}</option>
                         @endfor
                     </select>
                 </div>
                 <div class="col-md-2 text-end">
-                    <a href="{{ route('sales.input') }}" class="btn btn-dark w-100 fw-bold">
+                    <a href="{{ route('sales.input') }}" class="btn btn-dark w-100 fw-bold rounded-pill shadow-sm hover-scale">
                         <i class="fas fa-plus me-1"></i> Input Baru
                     </a>
                 </div>
@@ -85,12 +97,12 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light">
                     <tr>
-                        <th class="ps-4 py-3 text-secondary small fw-bold">Tanggal</th>
-                        <th class="py-3 text-secondary small fw-bold">Produk</th>
-                        <th class="py-3 text-secondary small fw-bold">Customer</th>
-                        <th class="py-3 text-secondary small fw-bold">Harga Deal</th>
-                        <th class="py-3 text-secondary small fw-bold text-center">Bukti</th>
-                        <th class="py-3 text-secondary small fw-bold text-center">Status Audit</th>
+                        <th class="ps-4 py-3 text-secondary small fw-bold text-uppercase">Tanggal</th>
+                        <th class="py-3 text-secondary small fw-bold text-uppercase">Produk & IMEI</th>
+                        <th class="py-3 text-secondary small fw-bold text-uppercase">Customer</th>
+                        <th class="py-3 text-secondary small fw-bold text-uppercase text-end">Harga Deal</th>
+                        <th class="py-3 text-secondary small fw-bold text-uppercase text-center">Status</th>
+                        <th class="py-3 px-4 text-secondary small fw-bold text-uppercase text-end">Nota & Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -98,68 +110,97 @@
                         <tr>
                             <td class="ps-4">
                                 <span class="fw-bold d-block text-dark">{{ $p->created_at->format('d M Y') }}</span>
-                                <small class="text-muted">{{ $p->created_at->format('H:i') }} WIB</small>
+                                <small class="text-muted font-monospace">{{ $p->created_at->format('H:i') }} WIB</small>
                             </td>
                             <td>
-                                <div class="fw-bold text-dark">{{ $p->nama_produk }}</div>
-                                <span class="badge bg-light text-primary border border-primary-subtle font-monospace mt-1">
-                                    {{ $p->imei_terjual }}
-                                </span>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light p-2 rounded-3 me-2 text-primary">
+                                        <i class="fas fa-mobile-alt"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark">{{ $p->nama_produk }}</div>
+                                        <span class="badge bg-white text-secondary border font-monospace mt-1" style="font-size: 0.7rem;">
+                                            {{ $p->imei_terjual }}
+                                        </span>
+                                    </div>
+                                </div>
                             </td>
                             <td>
-                                <div class="fw-bold">{{ $p->nama_customer }}</div>
-                                <small class="text-muted"><i class="fab fa-whatsapp text-success"></i> {{ $p->nomor_wa }}</small>
+                                <div class="fw-bold text-dark">{{ $p->nama_customer }}</div>
+                                <small class="text-muted d-flex align-items-center">
+                                    <i class="fab fa-whatsapp text-success me-1"></i> {{ $p->nomor_wa }}
+                                </small>
                             </td>
-                            <td>
-                                <span class="fw-bold text-dark">Rp {{ number_format($p->harga_jual_real, 0,',','.') }}</span>
+                            <td class="text-end">
+                                <span class="fw-bold text-dark fs-6">Rp {{ number_format($p->harga_jual_real, 0,',','.') }}</span>
                                 @if($p->catatan)
-                                    <i class="fas fa-info-circle text-muted ms-1" data-bs-toggle="tooltip" title="{{ $p->catatan }}"></i>
-                                @endif
-                            </td>
-                            <td class="text-center">
-                                @if($p->foto_bukti_transaksi)
-                                    <a href="{{ asset('storage/'.$p->foto_bukti_transaksi) }}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-circle">
-                                        <i class="fas fa-image"></i>
-                                    </a>
-                                @else
-                                    <span class="text-muted small">-</span>
+                                    <div class="text-muted small fst-italic text-truncate" style="max-width: 150px; margin-left: auto;" title="{{ $p->catatan }}">
+                                        {{ $p->catatan }}
+                                    </div>
                                 @endif
                             </td>
                             <td class="text-center">
                                 @if($p->status_audit == 'Pending')
-                                    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill">
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 rounded-pill">
                                         <i class="fas fa-clock me-1"></i> Menunggu
                                     </span>
                                 @elseif($p->status_audit == 'Approved')
-                                    <span class="badge bg-success px-3 py-2 rounded-pill">
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill">
                                         <i class="fas fa-check-circle me-1"></i> Valid
                                     </span>
                                 @else
-                                    <span class="badge bg-danger px-3 py-2 rounded-pill">
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-pill">
                                         <i class="fas fa-times-circle me-1"></i> Ditolak
                                     </span>
-                                    {{-- Tampilkan siapa yang menolak jika rejected --}}
-                                    <div class="small text-danger mt-1" style="font-size: 0.7rem;">
-                                        Oleh: {{ $p->auditor->nama_lengkap ?? 'Audit' }}
-                                    </div>
                                 @endif
+                            </td>
+                            <td class="text-end px-4">
+                                <div class="d-flex justify-content-end gap-2">
+                                    {{-- Tombol Download PDF --}}
+                                    <button wire:click="downloadNota({{ $p->id }})" 
+                                            wire:loading.attr="disabled"
+                                            class="btn btn-sm btn-outline-danger rounded-circle shadow-sm" 
+                                            title="Download Nota PDF"
+                                            data-bs-toggle="tooltip">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </button>
+
+                                    {{-- Tombol Kirim WA --}}
+                                    <button wire:click="kirimWa({{ $p->id }})" 
+                                            wire:loading.attr="disabled"
+                                            class="btn btn-sm btn-success rounded-circle text-white shadow-sm" 
+                                            title="Kirim ke WhatsApp Customer"
+                                            data-bs-toggle="tooltip">
+                                        <i class="fab fa-whatsapp"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
                             <td colspan="6" class="text-center py-5">
-                                <div class="text-muted opacity-50 mb-2">
-                                    <i class="fas fa-receipt fa-3x"></i>
+                                <div class="text-muted opacity-50 mb-3">
+                                    <i class="fas fa-receipt fa-4x"></i>
                                 </div>
-                                <p class="text-muted mb-0">Belum ada riwayat penjualan pada periode ini.</p>
+                                <h6 class="fw-bold text-secondary">Belum ada riwayat penjualan</h6>
+                                <p class="text-muted small mb-0">Transaksi yang Anda input akan muncul di sini.</p>
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        <div class="p-4 border-top">
-            {{ $penjualans->links() }}
-        </div>
+        
+        {{-- Pagination --}}
+        @if($penjualans->hasPages())
+            <div class="p-4 border-top">
+                {{ $penjualans->links() }}
+            </div>
+        @endif
     </div>
+
+    <style>
+        .hover-scale:hover { transform: scale(1.02); transition: 0.2s; }
+        .fw-black { font-weight: 900; }
+    </style>
 </div>
