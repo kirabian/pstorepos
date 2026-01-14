@@ -29,72 +29,92 @@ class PenjualanHistory extends Component
 
     public function updatedSearch() { $this->resetPage(); }
 
-    // --- DOWNLOAD PDF MANUAL (Tetap Ada) ---
+    // --- DOWNLOAD PDF MANUAL ---
     public function downloadNota($id)
     {
+        // Redirect ke route khusus download PDF agar stabil
         return redirect()->route('nota.print', ['id' => $id]);
     }
 
     // --- KIRIM FILE PDF KE WA (VIA FONNTE) ---
     public function kirimWa($id)
     {
-        $penjualan = Penjualan::with(['user', 'cabang', 'stok'])->findOrFail($id);
+        // 1. Ambil Data Penjualan
+        $penjualan = Penjualan::with(['user', 'cabang', 'stok'])->find($id);
+
+        if(!$penjualan) {
+            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Gagal', 'text' => 'Data penjualan tidak ditemukan.']);
+            return;
+        }
         
-        // 1. Format Nomor WA (Wajib 62xxx untuk Fonnte)
+        // 2. Format Nomor WA (Wajib 62xxx untuk Fonnte)
         $target = $penjualan->nomor_wa;
-        $target = preg_replace('/[^0-9]/', '', $target); 
+        $target = preg_replace('/[^0-9]/', '', $target); // Hapus spasi/strip
+        
+        // Ubah 08 jadi 62
         if(substr($target, 0, 1) == '0') {
             $target = '62' . substr($target, 1);
         }
 
         try {
-            // 2. Generate PDF Binary di Server
+            // 3. Generate PDF Binary di Server (Tanpa Download)
             $pdf = Pdf::loadView('pdf.nota_penjualan', ['penjualan' => $penjualan])
                       ->setPaper('a5', 'portrait');
             $pdfContent = $pdf->output();
 
-            // 3. Simpan File PDF Sementara di Public Storage
-            // Nama file unik biar gak bentrok
+            // 4. Simpan File PDF Sementara di Public Storage
+            // Nama file dibuat unik dengan time()
             $fileName = 'Nota_TRX-' . $penjualan->id . '_' . time() . '.pdf';
             $filePath = 'temp_nota/' . $fileName;
             
-            // Simpan ke storage/app/public/temp_nota
+            // Pastikan simpan di 'public' disk agar bisa diakses URL-nya
             Storage::disk('public')->put($filePath, $pdfContent);
             
-            // Generate URL Publik (Fonnte butuh link internet untuk ambil filenya)
-            // Contoh: https://domainanda.com/storage/temp_nota/Nota_TRX-1.pdf
+            // 5. Generate URL Publik File PDF
+            // Fonnte membutuhkan URL ini untuk mendownload dan mengirim file ke WA
             $fileUrl = asset('storage/' . $filePath);
 
-            // 4. Susun Pesan Caption
+            // 6. Susun Pesan Caption
             $pesan = "Halo Kak *{$penjualan->nama_customer}*,\n";
             $pesan .= "Terima kasih telah berbelanja di *PSTORE {$penjualan->cabang->nama_cabang}*.\n";
-            $pesan .= "Berikut kami lampirkan Nota Resmi pembelian Anda (File PDF).\n\n";
+            $pesan .= "Berikut kami lampirkan Nota Resmi pembelian Anda.\n\n";
             $pesan .= "Mohon disimpan sebagai bukti garansi.\nSehat selalu!";
 
-            // 5. Tembak API Fonnte
+            // 7. Ambil Token dari .env
             $token = env('FONNTE_TOKEN'); 
 
+            if(empty($token)) {
+                throw new Exception("Token Fonnte belum disetting di file .env");
+            }
+
+            // 8. Tembak API Fonnte
             $response = Http::withHeaders([
                 'Authorization' => $token,
             ])->post('https://api.fonnte.com/send', [
                 'target' => $target,
-                'url' => $fileUrl, // <--- INI KUNCINYA (Fonnte download dari sini & kirim sbg file)
-                'filename' => 'Nota-PStore.pdf', // Nama file yang muncul di WA Customer
-                'message' => $pesan, // Caption
+                'url' => $fileUrl, // URL PDF yang kita generate tadi
+                'filename' => 'Nota-PStore-'.$penjualan->id.'.pdf', // Nama file di WA Customer
+                'message' => $pesan, // Caption pesan
             ]);
 
-            // 6. Cek Response & Bersihkan File
-            if ($response->successful()) {
-                $this->dispatch('swal', ['icon' => 'success', 'title' => 'Terkirim!', 'text' => 'File PDF Nota berhasil dikirim ke WA Customer.']);
+            // 9. Cek Response dari Fonnte
+            $resBody = $response->json();
+
+            if ($response->successful() && isset($resBody['status']) && $resBody['status'] == true) {
+                $this->dispatch('swal', ['icon' => 'success', 'title' => 'Terkirim!', 'text' => 'Nota PDF berhasil dikirim ke WhatsApp Customer.']);
             } else {
-                $this->dispatch('swal', ['icon' => 'error', 'title' => 'Gagal', 'text' => 'Gagal kirim: ' . $response->body()]);
+                // Tangkap pesan error dari Fonnte (misal: invalid token)
+                $reason = $resBody['reason'] ?? 'Unknown Error';
+                $this->dispatch('swal', ['icon' => 'error', 'title' => 'Gagal Kirim', 'text' => 'Fonnte Error: ' . $reason]);
             }
 
-            // Hapus file sementara agar server tidak penuh (Opsional, kasih delay atau pakai Job)
+            // (Opsional) Hapus file temp agar server tidak penuh
+            // Beri delay sedikit atau gunakan Job Queue di production
             // Storage::disk('public')->delete($filePath); 
 
         } catch (Exception $e) {
-            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Error', 'text' => $e->getMessage()]);
+            // Tangkap Error System (misal gagal generate PDF)
+            $this->dispatch('swal', ['icon' => 'error', 'title' => 'System Error', 'text' => $e->getMessage()]);
         }
     }
 
@@ -122,10 +142,11 @@ class PenjualanHistory extends Component
 
         $penjualans = $query->latest()->paginate(10);
 
-        // Summary
+        // Summary Data
         $omset = Penjualan::where('user_id', $user->id)
             ->whereMonth('created_at', $this->bulan)->whereYear('created_at', $this->tahun)
             ->where('status_audit', '!=', 'Rejected')->sum('harga_jual_real');
+            
         $unit = Penjualan::where('user_id', $user->id)
             ->whereMonth('created_at', $this->bulan)->whereYear('created_at', $this->tahun)
             ->where('status_audit', '!=', 'Rejected')->count();
