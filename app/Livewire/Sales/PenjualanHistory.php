@@ -6,7 +6,8 @@ use App\Models\Penjualan;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
-use Barryvdh\DomPDF\Facade\Pdf; // Import DOMPDF
+use Barryvdh\DomPDF\Facade\Pdf;
+use Exception;
 
 class PenjualanHistory extends Component
 {
@@ -30,49 +31,62 @@ class PenjualanHistory extends Component
         $this->resetPage();
     }
 
-    // --- FITUR BARU: DOWNLOAD PDF ---
+    // --- FIXING: DOWNLOAD PDF DENGAN ERROR HANDLING ---
     public function downloadNota($id)
     {
-        $penjualan = Penjualan::with(['user', 'cabang', 'stok'])->findOrFail($id);
-        
-        // Pastikan hanya sales ybs atau admin yg bisa download
-        if(Auth::user()->role == 'sales' && $penjualan->user_id != Auth::id()) {
-            return abort(403);
+        try {
+            $penjualan = Penjualan::with(['user', 'cabang', 'stok'])->findOrFail($id);
+            
+            // Validasi Hak Akses (Opsional)
+            if(Auth::user()->role == 'sales' && $penjualan->user_id != Auth::id()) {
+                $this->dispatch('swal', ['icon' => 'error', 'title' => 'Akses Ditolak', 'text' => 'Anda tidak berhak mengunduh nota ini.']);
+                return;
+            }
+
+            // Generate PDF
+            $pdf = Pdf::loadView('pdf.nota_penjualan', ['penjualan' => $penjualan])
+                      ->setPaper('a5', 'portrait');
+
+            return response()->streamDownload(function () use ($pdf) {
+                echo $pdf->output();
+            }, 'Nota_TRX-'.$penjualan->id.'.pdf');
+
+        } catch (Exception $e) {
+            // Jika error, tampilkan notifikasi biar ga loading terus
+            $this->dispatch('swal', [
+                'icon' => 'error', 
+                'title' => 'Gagal Download PDF', 
+                'text' => 'Terjadi kesalahan saat membuat PDF: ' . $e->getMessage()
+            ]);
         }
-
-        $pdf = Pdf::loadView('pdf.nota_penjualan', ['penjualan' => $penjualan])
-                  ->setPaper('a5', 'portrait'); // Ukuran A5 biar ringkas
-
-        return response()->streamDownload(function () use ($pdf) {
-            echo $pdf->output();
-        }, 'Nota_PStore_TRX'.$penjualan->id.'.pdf');
     }
 
-    // --- FITUR BARU: KIRIM WA ---
+    // --- FITUR KIRIM WA ---
     public function kirimWa($id)
     {
         $penjualan = Penjualan::findOrFail($id);
         
-        // Format Nomor WA (Ganti 08 jadi 628)
         $wa = $penjualan->nomor_wa;
+        // Bersihkan nomor (hapus spasi, strip)
+        $wa = preg_replace('/[^0-9]/', '', $wa);
+        
+        // Ubah 08 jadi 628
         if(substr($wa, 0, 1) == '0') {
             $wa = '62' . substr($wa, 1);
         }
 
-        // Pesan WA
         $pesan = "Halo Kak *{$penjualan->nama_customer}*,\n\n";
         $pesan .= "Terima kasih telah berbelanja di *PSTORE {$penjualan->cabang->nama_cabang}*.\n\n";
         $pesan .= "Berikut detail pesanan Anda:\n";
         $pesan .= "Unit: {$penjualan->nama_produk}\n";
         $pesan .= "IMEI: {$penjualan->imei_terjual}\n";
         $pesan .= "Total: Rp " . number_format($penjualan->harga_jual_real, 0, ',', '.') . "\n\n";
-        $pesan .= "Nota digital Anda dapat diunduh melalui link berikut (Jika tersedia) atau minta sales kami mengirimkannya.\n\n";
-        $pesan .= "Sehat selalu kak!";
+        $pesan .= "Simpan pesan ini sebagai bukti transaksi yang sah.\nSehat selalu kak!";
 
         $encodedPesan = urlencode($pesan);
         
-        // Redirect ke WA Web / API
-        return redirect()->away("https://wa.me/{$wa}?text={$encodedPesan}");
+        // Gunakan dispatch browser event untuk buka tab baru (lebih aman drpd redirect)
+        $this->dispatch('open-wa', ['url' => "https://wa.me/{$wa}?text={$encodedPesan}"]);
     }
 
     public function render()
@@ -103,7 +117,6 @@ class PenjualanHistory extends Component
 
         $penjualans = $query->latest()->paginate(10);
 
-        // Hitung Summary
         $totalOmsetBulanIni = Penjualan::where('user_id', $user->id)
             ->whereMonth('created_at', $this->bulan)
             ->whereYear('created_at', $this->tahun)

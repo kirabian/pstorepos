@@ -1,12 +1,7 @@
 <div class="container-fluid">
     
-    {{-- LOADING INDICATOR --}}
-    <div wire:loading.delay class="fixed-top w-100 h-100 d-flex justify-content-center align-items-center" style="background: rgba(255,255,255,0.7); z-index: 9999;">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-    </div>
-
+    {{-- HAPUS LOADING LAYAR PENUH YANG BIKIN MACET --}}
+    
     {{-- HEADER & SUMMARY --}}
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
         <div>
@@ -17,7 +12,6 @@
         </div>
         
         <div class="d-flex gap-3">
-            {{-- Card Ringkasan Omset --}}
             <div class="bg-white border shadow-sm rounded-4 px-4 py-2 d-flex align-items-center gap-3">
                 <div class="bg-success bg-opacity-10 text-success rounded-circle p-3">
                     <i class="fas fa-coins fa-lg"></i>
@@ -28,7 +22,6 @@
                 </div>
             </div>
 
-            {{-- Card Ringkasan Unit --}}
             <div class="bg-white border shadow-sm rounded-4 px-4 py-2 d-flex align-items-center gap-3">
                 <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3">
                     <i class="fas fa-box fa-lg"></i>
@@ -159,10 +152,15 @@
                                     {{-- Tombol Download PDF --}}
                                     <button wire:click="downloadNota({{ $p->id }})" 
                                             wire:loading.attr="disabled"
-                                            class="btn btn-sm btn-outline-danger rounded-circle shadow-sm" 
+                                            class="btn btn-sm btn-outline-danger rounded-circle shadow-sm position-relative" 
                                             title="Download Nota PDF"
                                             data-bs-toggle="tooltip">
-                                        <i class="fas fa-file-pdf"></i>
+                                        
+                                        {{-- Icon Normal --}}
+                                        <i class="fas fa-file-pdf" wire:loading.remove wire:target="downloadNota({{ $p->id }})"></i>
+                                        
+                                        {{-- Icon Loading (Muter cuma di tombol ini) --}}
+                                        <span wire:loading wire:target="downloadNota({{ $p->id }})" class="spinner-border spinner-border-sm text-danger" role="status" aria-hidden="true"></span>
                                     </button>
 
                                     {{-- Tombol Kirim WA --}}
@@ -203,4 +201,21 @@
         .hover-scale:hover { transform: scale(1.02); transition: 0.2s; }
         .fw-black { font-weight: 900; }
     </style>
+    
+    {{-- Script untuk buka WA di tab baru --}}
+    <script>
+        document.addEventListener('livewire:initialized', () => {
+            Livewire.on('open-wa', (data) => {
+                window.open(data[0].url, '_blank');
+            });
+            
+            Livewire.on('swal', (data) => {
+                Swal.fire({
+                    icon: data[0].icon,
+                    title: data[0].title,
+                    text: data[0].text,
+                });
+            });
+        });
+    </script>
 </div>
