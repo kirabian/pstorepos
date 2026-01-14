@@ -150,10 +150,10 @@ class PenjualanHistory extends Component
 
         $penjualans = $query->latest()->paginate(10);
 
+        // Summary
         $omset = Penjualan::where('user_id', $user->id)
             ->whereMonth('created_at', $this->bulan)->whereYear('created_at', $this->tahun)
             ->where('status_audit', '!=', 'Rejected')->sum('harga_jual_real');
-            
         $unit = Penjualan::where('user_id', $user->id)
             ->whereMonth('created_at', $this->bulan)->whereYear('created_at', $this->tahun)
             ->where('status_audit', '!=', 'Rejected')->count();
