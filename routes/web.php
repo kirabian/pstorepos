@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\NotaController;
 use App\Livewire\Auth\Login;
 use App\Livewire\BarangKeluar\BarangKeluarIndex;
 use App\Livewire\BarangKeluar\BarangKeluarCreate;
@@ -80,6 +81,8 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     Route::middleware('checkRole:audit')->group(function () {
         Route::get('/audit/verifikasi', \App\Livewire\Audit\VerifikasiPenjualan::class)->name('audit.verifikasi');
     });
+
+    Route::get('/nota/print/{id}', [NotaController::class, 'print'])->name('nota.print');
 
     /* |--------------------------------------------------------------------------
     | MANAJEMEN USER (SUPERADMIN & AUDIT)

@@ -14,9 +14,8 @@ class PenjualanHistory extends Component
     use WithPagination;
     protected $paginationTheme = 'bootstrap';
 
-    // Filter
     public $search = '';
-    public $filterStatus = ''; // Kosong = Semua
+    public $filterStatus = ''; 
     public $bulan = '';
     public $tahun = '';
 
@@ -31,61 +30,43 @@ class PenjualanHistory extends Component
         $this->resetPage();
     }
 
-    // --- FIXING: DOWNLOAD PDF DENGAN ERROR HANDLING ---
+    // --- DOWNLOAD PDF (UNTUK SALES) ---
     public function downloadNota($id)
     {
-        try {
-            $penjualan = Penjualan::with(['user', 'cabang', 'stok'])->findOrFail($id);
-            
-            // Validasi Hak Akses (Opsional)
-            if(Auth::user()->role == 'sales' && $penjualan->user_id != Auth::id()) {
-                $this->dispatch('swal', ['icon' => 'error', 'title' => 'Akses Ditolak', 'text' => 'Anda tidak berhak mengunduh nota ini.']);
-                return;
-            }
-
-            // Generate PDF
-            $pdf = Pdf::loadView('pdf.nota_penjualan', ['penjualan' => $penjualan])
-                      ->setPaper('a5', 'portrait');
-
-            return response()->streamDownload(function () use ($pdf) {
-                echo $pdf->output();
-            }, 'Nota_TRX-'.$penjualan->id.'.pdf');
-
-        } catch (Exception $e) {
-            // Jika error, tampilkan notifikasi biar ga loading terus
-            $this->dispatch('swal', [
-                'icon' => 'error', 
-                'title' => 'Gagal Download PDF', 
-                'text' => 'Terjadi kesalahan saat membuat PDF: ' . $e->getMessage()
-            ]);
-        }
+        // Kita redirect ke route controller yang baru dibuat agar logicnya satu pintu
+        return redirect()->route('nota.print', ['id' => $id]);
     }
 
-    // --- FITUR KIRIM WA ---
+    // --- KIRIM WA (DENGAN LINK PDF) ---
     public function kirimWa($id)
     {
         $penjualan = Penjualan::findOrFail($id);
         
+        // 1. Format Nomor WA
         $wa = $penjualan->nomor_wa;
-        // Bersihkan nomor (hapus spasi, strip)
-        $wa = preg_replace('/[^0-9]/', '', $wa);
-        
-        // Ubah 08 jadi 628
+        $wa = preg_replace('/[^0-9]/', '', $wa); // Hapus karakter aneh
         if(substr($wa, 0, 1) == '0') {
             $wa = '62' . substr($wa, 1);
         }
 
+        // 2. Generate Link PDF
+        // route() akan membuat link otomatis: https://websiteanda.com/nota/print/1
+        $linkPdf = route('nota.print', ['id' => $penjualan->id]);
+
+        // 3. Susun Pesan
         $pesan = "Halo Kak *{$penjualan->nama_customer}*,\n\n";
         $pesan .= "Terima kasih telah berbelanja di *PSTORE {$penjualan->cabang->nama_cabang}*.\n\n";
         $pesan .= "Berikut detail pesanan Anda:\n";
-        $pesan .= "Unit: {$penjualan->nama_produk}\n";
-        $pesan .= "IMEI: {$penjualan->imei_terjual}\n";
-        $pesan .= "Total: Rp " . number_format($penjualan->harga_jual_real, 0, ',', '.') . "\n\n";
-        $pesan .= "Simpan pesan ini sebagai bukti transaksi yang sah.\nSehat selalu kak!";
+        $pesan .= "🛍️ Unit: *{$penjualan->nama_produk}*\n";
+        $pesan .= "📱 IMEI: {$penjualan->imei_terjual}\n";
+        $pesan .= "💰 Total: Rp " . number_format($penjualan->harga_jual_real, 0, ',', '.') . "\n\n";
+        $pesan .= "📄 *DOWNLOAD NOTA RESMI:*\n";
+        $pesan .= $linkPdf . "\n\n";
+        $pesan .= "Harap simpan nota ini sebagai bukti garansi/transaksi yang sah.\n";
+        $pesan .= "Sehat selalu kak!";
 
+        // 4. Encode & Kirim
         $encodedPesan = urlencode($pesan);
-        
-        // Gunakan dispatch browser event untuk buka tab baru (lebih aman drpd redirect)
         $this->dispatch('open-wa', ['url' => "https://wa.me/{$wa}?text={$encodedPesan}"]);
     }
 
