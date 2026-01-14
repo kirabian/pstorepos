@@ -5,6 +5,8 @@ namespace App\Livewire\Sales;
 use App\Models\Penjualan;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Illuminate\Support\Facades\Auth; // Make sure this is here
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
@@ -14,16 +16,17 @@ class PenjualanHistory extends Component
     use WithPagination;
     protected $paginationTheme = 'bootstrap';
 
-    // ... (property search, filter, mount, updatedSearch tetap sama) ...
     public $search = '';
     public $filterStatus = ''; 
     public $bulan = '';
     public $tahun = '';
 
-    public function mount() {
+    public function mount()
+    {
         $this->bulan = date('m');
         $this->tahun = date('Y');
     }
+
     public function updatedSearch() { $this->resetPage(); }
 
     public function downloadNota($id)
@@ -31,7 +34,6 @@ class PenjualanHistory extends Component
         return redirect()->route('nota.print', ['id' => $id]);
     }
 
-    // --- FUNGSI KIRIM WA (PERBAIKAN URL) ---
     public function kirimWa($id)
     {
         $penjualan = Penjualan::with(['user', 'cabang'])->find($id);
@@ -45,26 +47,19 @@ class PenjualanHistory extends Component
         if(substr($target, 0, 1) == '0') $target = '62' . substr($target, 1);
 
         try {
-            // 1. Generate & Save PDF
             $pdf = Pdf::loadView('pdf.nota_penjualan', ['penjualan' => $penjualan])->setPaper('a5', 'portrait');
-            $fileName = 'Nota-' . $penjualan->id . '-' . time() . '.pdf'; // Tambah time() biar unik
+            $fileName = 'Nota-' . $penjualan->id . '.pdf';
+            $filePath = 'temp_nota/' . $fileName;
+            Storage::disk('public')->put($filePath, $pdf->output());
             
-            // Simpan ke storage public
-            Storage::disk('public')->put('temp_nota/' . $fileName, $pdf->output());
-            
-            // 2. GENERATE URL (FORCE HTTPS)
-            // Kita paksa pakai https agar Fonnte mau baca
-            $fileUrl = asset('storage/temp_nota/' . $fileName);
-            if (!str_contains($fileUrl, 'https://')) {
-                $fileUrl = str_replace('http://', 'https://', $fileUrl);
-            }
+            $fileUrl = asset('storage/' . $filePath);
 
-            // 3. Pesan Caption
             $pesan = "Halo Kak *{$penjualan->nama_customer}*,\n";
-            $pesan .= "Terima kasih telah berbelanja di *PSTORE {$penjualan->cabang->nama_cabang}*.\n";
-            $pesan .= "Berikut Nota Resmi (PDF) Anda 👇";
+            $pesan .= "Terima kasih telah berbelanja di *PSTORE {$penjualan->cabang->nama_cabang}*.\n\n";
+            $pesan .= "Unit: {$penjualan->nama_produk}\n";
+            $pesan .= "Total: Rp " . number_format($penjualan->harga_jual_real, 0, ',', '.') . "\n\n";
+            $pesan .= "Berikut Nota Resmi Anda 👇";
 
-            // 4. Kirim Pakai CURL
             $token = env('FONNTE_TOKEN');
             
             $curl = curl_init();
@@ -80,7 +75,7 @@ class PenjualanHistory extends Component
               CURLOPT_CUSTOMREQUEST => 'POST',
               CURLOPT_POSTFIELDS => array(
                 'target' => $target,
-                'url' => $fileUrl, // Kirim URL File yang sudah HTTPS
+                'url' => $fileUrl,
                 'filename' => 'Nota-PStore.pdf',
                 'message' => $pesan,
               ),
@@ -94,18 +89,10 @@ class PenjualanHistory extends Component
             
             $res = json_decode($response, true);
 
-            // 5. Cek Berhasil atau Gagal
             if (isset($res['status']) && $res['status'] == true) {
                 $this->dispatch('swal', ['icon' => 'success', 'title' => 'Terkirim', 'text' => 'Nota PDF berhasil dikirim!']);
             } else {
-                // --- FALLBACK (PLAN B) ---
-                // Jika kirim file gagal, kirim LINK DOWNLOAD saja.
-                // Ini pasti berhasil karena cuma kirim teks.
-                
-                // Gunakan route nota.print yang sudah kita buat sebelumnya
-                $linkDownload = route('nota.print', ['id' => $penjualan->id]);
-                
-                $pesanFallback = $pesan . "\n\n(Mohon maaf, file PDF gagal terlampir otomatis. Silakan download melalui link di bawah ini):\n" . $linkDownload;
+                $pesanFallback = $pesan . "\n\nDownload Nota: " . route('nota.print', ['id' => $penjualan->id]);
                 
                 $curl2 = curl_init();
                 curl_setopt_array($curl2, array(
@@ -114,7 +101,7 @@ class PenjualanHistory extends Component
                   CURLOPT_CUSTOMREQUEST => 'POST',
                   CURLOPT_POSTFIELDS => array(
                     'target' => $target,
-                    'message' => $pesanFallback, 
+                    'message' => $pesanFallback,
                   ),
                   CURLOPT_HTTPHEADER => array(
                     'Authorization: ' . $token
@@ -123,21 +110,20 @@ class PenjualanHistory extends Component
                 curl_exec($curl2);
                 curl_close($curl2);
 
-                $this->dispatch('swal', [
-                    'icon' => 'warning', 
-                    'title' => 'Info', 
-                    'text' => 'File PDF gagal terkirim (Fonnte tidak bisa akses server), tapi Link Download sudah dikirim sebagai gantinya.'
-                ]);
+                $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Info', 'text' => 'PDF gagal terkirim (mungkin koneksi), tapi Link Nota sudah dikirim ke WA.']);
             }
 
         } catch (Exception $e) {
-            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Error', 'text' => $e->getMessage()]);
+            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Error', 'text' => 'System error: ' . $e->getMessage()]);
         }
     }
 
     public function render()
     {
-        $user = Auth::user();
+        // FIX: Use fully qualified name or alias if import fails, or simply Auth::user() if imported correctly.
+        // To be safe, I'll use Auth::user() and ensure the import is present at the top.
+        $user = Auth::user(); 
+
         $query = Penjualan::with(['stok', 'auditor'])->where('user_id', $user->id);
 
         if ($this->search) {
