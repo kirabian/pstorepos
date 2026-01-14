@@ -6,10 +6,8 @@ use App\Models\Penjualan;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
-use CURLFile; 
 
 class PenjualanHistory extends Component
 {
@@ -31,7 +29,7 @@ class PenjualanHistory extends Component
         return redirect()->route('nota.print', ['id' => $id]);
     }
 
-    // --- FUNGSI KIRIM WA (METODE UPLOAD FILE - STABIL) ---
+    // --- FUNGSI KIRIM WA VIA WASENDERAPI (METODE UPLOAD V2) ---
     public function kirimWa($id)
     {
         $penjualan = Penjualan::with(['user', 'cabang'])->find($id);
@@ -41,117 +39,113 @@ class PenjualanHistory extends Component
             return;
         }
         
-        // 1. Format Nomor WA (Wajib 62xxx)
+        // 1. Format Nomor WA (E.164 Format: +62...)
         $target = preg_replace('/[^0-9]/', '', $penjualan->nomor_wa);
-        if(substr($target, 0, 1) == '0') $target = '62' . substr($target, 1);
+        if(substr($target, 0, 1) == '0') {
+            $target = '+62' . substr($target, 1);
+        } elseif(substr($target, 0, 2) == '62') {
+            $target = '+' . $target;
+        }
 
         try {
-            // 2. Generate PDF & Simpan Fisik di Server
-            // Kita simpan dulu filenya agar bisa di-upload oleh CURL
+            // ==========================================
+            // LANGKAH 1: GENERATE PDF (BINARY)
+            // ==========================================
             $pdf = Pdf::loadView('pdf.nota_penjualan', ['penjualan' => $penjualan])->setPaper('a5', 'portrait');
-            $fileName = 'Nota-' . $penjualan->id . '.pdf';
+            $pdfContent = $pdf->output(); // Ambil raw binary data PDF
             
-            // Path folder penyimpanan (local storage)
-            $storagePath = storage_path('app/public/temp_nota');
-            $fullPath = $storagePath . '/' . $fileName;
+            $token = env('WASENDER_TOKEN');
             
-            // Pastikan folder ada
-            if(!file_exists($storagePath)) {
-                mkdir($storagePath, 0755, true);
-            }
-            
-            $pdf->save($fullPath);
+            // ==========================================
+            // LANGKAH 2: UPLOAD FILE KE WASENDERAPI
+            // Docs: https://wasenderapi.com/api/upload
+            // ==========================================
+            $curlUpload = curl_init();
 
-            // 3. Konfigurasi Pesan & API
+            curl_setopt_array($curlUpload, [
+                CURLOPT_URL => "https://wasenderapi.com/api/upload",
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => "",
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => "POST",
+                CURLOPT_POSTFIELDS => $pdfContent, // Kirim Raw Binary
+                CURLOPT_HTTPHEADER => [
+                    "Authorization: Bearer " . $token,
+                    "Content-Type: application/pdf" // Wajib sesuai tipe file
+                ],
+            ]);
+
+            $responseUpload = curl_exec($curlUpload);
+            $errUpload = curl_error($curlUpload);
+            curl_close($curlUpload);
+
+            if ($errUpload) {
+                throw new Exception("Gagal Upload ke Server WA: " . $errUpload);
+            }
+
+            $resUpload = json_decode($responseUpload, true);
+
+            // Cek apakah upload berhasil dan dapat URL
+            if (!isset($resUpload['success']) || !$resUpload['success'] || !isset($resUpload['publicUrl'])) {
+                // Jika gagal upload, fallback ke kirim link website saja
+                throw new Exception("Gagal mendapatkan URL File dari Wasender: " . json_encode($resUpload));
+            }
+
+            $documentUrl = $resUpload['publicUrl']; // URL Publik dari Wasender
+
+            // ==========================================
+            // LANGKAH 3: KIRIM PESAN DENGAN URL DOKUMEN
+            // Docs: https://www.wasenderapi.com/api/send-message
+            // ==========================================
             $pesan = "Halo Kak *{$penjualan->nama_customer}*,\n";
             $pesan .= "Terima kasih telah berbelanja di *PSTORE {$penjualan->cabang->nama_cabang}*.\n";
-            $pesan .= "Berikut Nota Resmi (PDF) transaksi Anda.\n";
+            $pesan .= "Berikut Nota Resmi transaksi Anda.\n";
             $pesan .= "Total: Rp " . number_format($penjualan->harga_jual_real, 0, ',', '.') . "\n\n";
             $pesan .= "Sehat selalu!";
 
-            $domain = env('WABLAS_DOMAIN'); 
-            $token  = env('WABLAS_TOKEN');
-            $secret = env('WABLAS_SECRET'); 
-
-            // Pastikan tidak ada slash di akhir domain
-            $domain = rtrim($domain, '/');
-
-            // 4. Kirim Request (UPLOAD FILE LANGSUNG)
-            $curl = curl_init();
+            $curlSend = curl_init();
             
-            // Siapkan File untuk Upload
-            $cfile = new CURLFile($fullPath, 'application/pdf', $fileName);
-
-            $data = [
-                'phone' => $target,
-                'message' => $pesan,
-                'document' => $cfile, // Kirim file fisik
+            $payload = [
+                "to" => $target,
+                "text" => $pesan,
+                "documentUrl" => $documentUrl, // URL yang didapat dari langkah 2
+                "fileName" => "Nota-PStore-{$penjualan->id}.pdf"
             ];
 
-            curl_setopt_array($curl, [
-                CURLOPT_URL => "$domain/api/send-message",
+            curl_setopt_array($curlSend, [
+                CURLOPT_URL => "https://www.wasenderapi.com/api/send-message",
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => '',
+                CURLOPT_ENCODING => "",
                 CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 30, // Timeout 30 detik
-                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT => 30,
                 CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => 'POST',
-                CURLOPT_POSTFIELDS => $data, // Kirim array data (otomatis multipart)
+                CURLOPT_CUSTOMREQUEST => "POST",
+                CURLOPT_POSTFIELDS => json_encode($payload),
                 CURLOPT_HTTPHEADER => [
-                    "Authorization: $token",
-                    "Secret: $secret", 
-                    // JANGAN ADA Content-Type DISINI! Biarkan CURL yang atur boundary.
+                    "Authorization: Bearer " . $token,
+                    "Content-Type: application/json"
                 ],
-                CURLOPT_SSL_VERIFYHOST => 0,
-                CURLOPT_SSL_VERIFYPEER => 0,
             ]);
 
-            $result = curl_exec($curl);
-            $error  = curl_error($curl);
-            curl_close($curl);
+            $responseSend = curl_exec($curlSend);
+            $errSend = curl_error($curlSend);
+            curl_close($curlSend);
 
-            // Hapus file sementara setelah proses kirim selesai
-            if(file_exists($fullPath)) unlink($fullPath);
+            $resSend = json_decode($responseSend, true);
 
-            $response = json_decode($result, true);
-
-            // 5. Cek Response & Fallback
-            // Wablas sukses jika status = true
-            if (isset($response['status']) && $response['status'] == true) {
-                $this->dispatch('swal', ['icon' => 'success', 'title' => 'Terkirim!', 'text' => 'Nota PDF berhasil dikirim via Wablas.']);
+            // Cek Respon Akhir
+            if (!$errSend && isset($resSend['success']) && $resSend['success'] == true) {
+                $this->dispatch('swal', ['icon' => 'success', 'title' => 'Terkirim!', 'text' => 'Nota PDF berhasil dikirim via WasenderAPI.']);
             } else {
-                // --- FALLBACK: KIRIM LINK DOWNLOAD JIKA FILE GAGAL ---
-                // Ini Plan B agar customer tetap dapat nota meskipun upload file gagal
-                
-                $linkDownload = route('nota.print', ['id' => $penjualan->id]);
-                $pesanLink = $pesan . "\n\n(Gagal melampirkan file, silakan download nota di sini):\n" . $linkDownload;
-                
-                $curl2 = curl_init();
-                $data2 = ['phone' => $target, 'message' => $pesanLink];
-                
-                curl_setopt_array($curl2, [
-                    CURLOPT_URL => "$domain/api/send-message",
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_CUSTOMREQUEST => 'POST',
-                    CURLOPT_POSTFIELDS => http_build_query($data2), // Kirim text biasa
-                    CURLOPT_HTTPHEADER => [
-                        "Authorization: $token",
-                        "Secret: $secret"
-                    ],
-                    CURLOPT_SSL_VERIFYHOST => 0,
-                    CURLOPT_SSL_VERIFYPEER => 0,
-                ]);
-                
-                curl_exec($curl2);
-                curl_close($curl2);
-
-                $reason = $response['message'] ?? 'Unknown Error';
-                $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Info', 'text' => "File gagal ($reason), Link dikirim sebagai gantinya."]);
+                $reason = $resSend['message'] ?? 'Unknown Error';
+                $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Gagal Kirim', 'text' => "Pesan gagal: $reason"]);
             }
 
         } catch (Exception $e) {
-            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Error', 'text' => $e->getMessage()]);
+            // Error Handling: Jika semua gagal, info errornya
+            $this->dispatch('swal', ['icon' => 'error', 'title' => 'System Error', 'text' => $e->getMessage()]);
         }
     }
 
