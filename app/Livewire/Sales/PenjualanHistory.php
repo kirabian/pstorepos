@@ -3,9 +3,9 @@
 namespace App\Livewire\Sales;
 
 use App\Models\Penjualan;
-use Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
@@ -14,10 +14,24 @@ use CURLFile;
 class PenjualanHistory extends Component
 {
     use WithPagination;
-    // ... (property search, filter, mount, updatedSearch tetap sama) ...
-    public function downloadNota($id) { return redirect()->route('nota.print', ['id' => $id]); }
+    protected $paginationTheme = 'bootstrap';
 
-    // --- FUNGSI KIRIM WA (METODE V1 STANDARD) ---
+    public $search = '';
+    public $filterStatus = ''; 
+    public $bulan = '';
+    public $tahun = '';
+
+    public function mount() {
+        $this->bulan = date('m');
+        $this->tahun = date('Y');
+    }
+    public function updatedSearch() { $this->resetPage(); }
+
+    public function downloadNota($id) {
+        return redirect()->route('nota.print', ['id' => $id]);
+    }
+
+    // --- FUNGSI KIRIM WA (METODE UPLOAD FILE - STABIL) ---
     public function kirimWa($id)
     {
         $penjualan = Penjualan::with(['user', 'cabang'])->find($id);
@@ -27,70 +41,113 @@ class PenjualanHistory extends Component
             return;
         }
         
+        // 1. Format Nomor WA (Wajib 62xxx)
         $target = preg_replace('/[^0-9]/', '', $penjualan->nomor_wa);
         if(substr($target, 0, 1) == '0') $target = '62' . substr($target, 1);
 
         try {
-            // 1. Generate & Save PDF Locally
+            // 2. Generate PDF & Simpan Fisik di Server
+            // Kita simpan dulu filenya agar bisa di-upload oleh CURL
             $pdf = Pdf::loadView('pdf.nota_penjualan', ['penjualan' => $penjualan])->setPaper('a5', 'portrait');
             $fileName = 'Nota-' . $penjualan->id . '.pdf';
-            $path = storage_path('app/public/temp_nota/' . $fileName);
             
-            if(!file_exists(dirname($path))) mkdir(dirname($path), 0777, true);
-            $pdf->save($path);
+            // Path folder penyimpanan (local storage)
+            $storagePath = storage_path('app/public/temp_nota');
+            $fullPath = $storagePath . '/' . $fileName;
+            
+            // Pastikan folder ada
+            if(!file_exists($storagePath)) {
+                mkdir($storagePath, 0755, true);
+            }
+            
+            $pdf->save($fullPath);
 
-            $domain = env('WABLAS_DOMAIN'); // https://bdg.wablas.com
+            // 3. Konfigurasi Pesan & API
+            $pesan = "Halo Kak *{$penjualan->nama_customer}*,\n";
+            $pesan .= "Terima kasih telah berbelanja di *PSTORE {$penjualan->cabang->nama_cabang}*.\n";
+            $pesan .= "Berikut Nota Resmi (PDF) transaksi Anda.\n";
+            $pesan .= "Total: Rp " . number_format($penjualan->harga_jual_real, 0, ',', '.') . "\n\n";
+            $pesan .= "Sehat selalu!";
+
+            $domain = env('WABLAS_DOMAIN'); 
             $token  = env('WABLAS_TOKEN');
+            $secret = env('WABLAS_SECRET'); 
 
-            // 2. KIRIM VIA ENDPOINT V1 (STANDARD)
+            // Pastikan tidak ada slash di akhir domain
+            $domain = rtrim($domain, '/');
+
+            // 4. Kirim Request (UPLOAD FILE LANGSUNG)
             $curl = curl_init();
             
-            // Gunakan CURLFile
-            $cfile = new CURLFile($path, 'application/pdf', $fileName);
+            // Siapkan File untuk Upload
+            $cfile = new CURLFile($fullPath, 'application/pdf', $fileName);
 
             $data = [
                 'phone' => $target,
-                'message' => "Halo Kak *{$penjualan->nama_customer}*,\nBerikut Nota Resmi pembelian Anda.\nSehat selalu!",
+                'message' => $pesan,
                 'document' => $cfile, // Kirim file fisik
             ];
 
-            curl_setopt($curl, CURLOPT_HTTPHEADER, [
-                "Authorization: $token",
-                // JANGAN ada Content-Type di sini
+            curl_setopt_array($curl, [
+                CURLOPT_URL => "$domain/api/send-message",
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => '',
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 30, // Timeout 30 detik
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => 'POST',
+                CURLOPT_POSTFIELDS => $data, // Kirim array data (otomatis multipart)
+                CURLOPT_HTTPHEADER => [
+                    "Authorization: $token",
+                    "Secret: $secret", 
+                    // JANGAN ADA Content-Type DISINI! Biarkan CURL yang atur boundary.
+                ],
+                CURLOPT_SSL_VERIFYHOST => 0,
+                CURLOPT_SSL_VERIFYPEER => 0,
             ]);
-            curl_setopt($curl, CURLOPT_URL, "$domain/api/send-message"); // v1 Endpoint
-            curl_setopt($curl, CURLOPT_POST, true);
-            curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
-            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
-            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
-            
+
             $result = curl_exec($curl);
+            $error  = curl_error($curl);
             curl_close($curl);
 
-            if(file_exists($path)) unlink($path); // Hapus file
+            // Hapus file sementara setelah proses kirim selesai
+            if(file_exists($fullPath)) unlink($fullPath);
 
             $response = json_decode($result, true);
 
-            // 3. Validasi Response
+            // 5. Cek Response & Fallback
+            // Wablas sukses jika status = true
             if (isset($response['status']) && $response['status'] == true) {
                 $this->dispatch('swal', ['icon' => 'success', 'title' => 'Terkirim!', 'text' => 'Nota PDF berhasil dikirim via Wablas.']);
             } else {
-                // --- FALLBACK (KIRIM LINK) ---
+                // --- FALLBACK: KIRIM LINK DOWNLOAD JIKA FILE GAGAL ---
+                // Ini Plan B agar customer tetap dapat nota meskipun upload file gagal
+                
                 $linkDownload = route('nota.print', ['id' => $penjualan->id]);
-                $pesanLink = "Halo Kak *{$penjualan->nama_customer}*,\n(Gagal melampirkan file, download nota di sini):\n" . $linkDownload;
+                $pesanLink = $pesan . "\n\n(Gagal melampirkan file, silakan download nota di sini):\n" . $linkDownload;
                 
                 $curl2 = curl_init();
-                curl_setopt($curl2, CURLOPT_HTTPHEADER, ["Authorization: $token"]);
-                curl_setopt($curl2, CURLOPT_URL, "$domain/api/send-message");
-                curl_setopt($curl2, CURLOPT_POST, true);
-                curl_setopt($curl2, CURLOPT_POSTFIELDS, http_build_query(['phone' => $target, 'message' => $pesanLink]));
-                curl_setopt($curl2, CURLOPT_RETURNTRANSFER, true);
+                $data2 = ['phone' => $target, 'message' => $pesanLink];
+                
+                curl_setopt_array($curl2, [
+                    CURLOPT_URL => "$domain/api/send-message",
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_CUSTOMREQUEST => 'POST',
+                    CURLOPT_POSTFIELDS => http_build_query($data2), // Kirim text biasa
+                    CURLOPT_HTTPHEADER => [
+                        "Authorization: $token",
+                        "Secret: $secret"
+                    ],
+                    CURLOPT_SSL_VERIFYHOST => 0,
+                    CURLOPT_SSL_VERIFYPEER => 0,
+                ]);
+                
                 curl_exec($curl2);
                 curl_close($curl2);
 
                 $reason = $response['message'] ?? 'Unknown Error';
-                $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Info', 'text' => "File gagal ($reason), Link dikirim."]);
+                $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Info', 'text' => "File gagal ($reason), Link dikirim sebagai gantinya."]);
             }
 
         } catch (Exception $e) {
@@ -100,7 +157,7 @@ class PenjualanHistory extends Component
 
     public function render()
     {
-        $user = \Illuminate\Support\Facades\Auth::user();
+        $user = Auth::user();
         $query = Penjualan::with(['stok', 'auditor'])->where('user_id', $user->id);
 
         if ($this->search) {
