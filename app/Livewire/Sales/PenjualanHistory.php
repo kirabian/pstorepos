@@ -23,41 +23,50 @@ class PenjualanHistory extends Component
         $this->bulan = date('m');
         $this->tahun = date('Y');
     }
+
     public function updatedSearch() { $this->resetPage(); }
 
     public function downloadNota($id) {
         return redirect()->route('nota.print', ['id' => $id]);
     }
 
-    // --- FUNGSI KIRIM WA VIA WASENDERAPI (METODE UPLOAD V2) ---
+    // --- FUNGSI KIRIM WA VIA WASENDERAPI (INDONESIA) ---
     public function kirimWa($id)
     {
         $penjualan = Penjualan::with(['user', 'cabang'])->find($id);
 
         if(!$penjualan) {
-            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Gagal', 'text' => 'Data tidak ditemukan']);
+            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Gagal', 'text' => 'Data penjualan tidak ditemukan.']);
             return;
         }
         
-        // 1. Format Nomor WA (E.164 Format: +62...)
-        $target = preg_replace('/[^0-9]/', '', $penjualan->nomor_wa);
-        if(substr($target, 0, 1) == '0') {
-            $target = '+62' . substr($target, 1);
-        } elseif(substr($target, 0, 2) == '62') {
-            $target = '+' . $target;
+        // --- PERBAIKAN FORMAT NOMOR HP (AGAR LEBIH KEBAL ERROR) ---
+        $originalNo = $penjualan->nomor_wa;
+        $target = preg_replace('/[^0-9]/', '', $originalNo); // Hapus spasi, strip, dll
+
+        // Logika perbaikan awalan nomor
+        if (substr($target, 0, 2) == '62') {
+            $target = '+' . $target; // Sudah 62, tambah +
+        } elseif (substr($target, 0, 1) == '0') {
+            $target = '+62' . substr($target, 1); // Ubah 08 jadi +628
+        } elseif (substr($target, 0, 1) == '8') {
+            $target = '+62' . $target; // Lupa 0, langsung 8 -> jadi +628
+        } else {
+            // Jika format aneh (misal 09...), tetap coba kirim tapi kemungkinan gagal
+            $target = '+' . $target; 
         }
 
         try {
             // ==========================================
-            // LANGKAH 1: GENERATE PDF (BINARY)
+            // LANGKAH 1: BUAT PDF (DALAM BENTUK BINER)
             // ==========================================
             $pdf = Pdf::loadView('pdf.nota_penjualan', ['penjualan' => $penjualan])->setPaper('a5', 'portrait');
-            $pdfContent = $pdf->output(); // Ambil raw binary data PDF
+            $pdfContent = $pdf->output(); 
             
             $token = env('WASENDER_TOKEN');
             
             // ==========================================
-            // LANGKAH 2: UPLOAD FILE KE WASENDERAPI
+            // LANGKAH 2: UPLOAD FILE KE SERVER WA (WASENDER)
             // Docs: https://wasenderapi.com/api/upload
             // ==========================================
             $curlUpload = curl_init();
@@ -70,10 +79,10 @@ class PenjualanHistory extends Component
                 CURLOPT_TIMEOUT => 30,
                 CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
                 CURLOPT_CUSTOMREQUEST => "POST",
-                CURLOPT_POSTFIELDS => $pdfContent, // Kirim Raw Binary
+                CURLOPT_POSTFIELDS => $pdfContent, // Kirim isi file PDF
                 CURLOPT_HTTPHEADER => [
                     "Authorization: Bearer " . $token,
-                    "Content-Type: application/pdf" // Wajib sesuai tipe file
+                    "Content-Type: application/pdf"
                 ],
             ]);
 
@@ -87,16 +96,15 @@ class PenjualanHistory extends Component
 
             $resUpload = json_decode($responseUpload, true);
 
-            // Cek apakah upload berhasil dan dapat URL
+            // Cek apakah upload berhasil
             if (!isset($resUpload['success']) || !$resUpload['success'] || !isset($resUpload['publicUrl'])) {
-                // Jika gagal upload, fallback ke kirim link website saja
-                throw new Exception("Gagal mendapatkan URL File dari Wasender: " . json_encode($resUpload));
+                throw new Exception("Gagal mendapatkan Link File dari Server WA. Respon: " . json_encode($resUpload));
             }
 
-            $documentUrl = $resUpload['publicUrl']; // URL Publik dari Wasender
+            $documentUrl = $resUpload['publicUrl']; // Link File Publik
 
             // ==========================================
-            // LANGKAH 3: KIRIM PESAN DENGAN URL DOKUMEN
+            // LANGKAH 3: KIRIM PESAN + LINK DOKUMEN
             // Docs: https://www.wasenderapi.com/api/send-message
             // ==========================================
             $pesan = "Halo Kak *{$penjualan->nama_customer}*,\n";
@@ -110,7 +118,7 @@ class PenjualanHistory extends Component
             $payload = [
                 "to" => $target,
                 "text" => $pesan,
-                "documentUrl" => $documentUrl, // URL yang didapat dari langkah 2
+                "documentUrl" => $documentUrl, // Link dari langkah 2
                 "fileName" => "Nota-PStore-{$penjualan->id}.pdf"
             ];
 
@@ -136,15 +144,22 @@ class PenjualanHistory extends Component
             $resSend = json_decode($responseSend, true);
 
             // Cek Respon Akhir
-            if (!$errSend && isset($resSend['success']) && $resSend['success'] == true) {
-                $this->dispatch('swal', ['icon' => 'success', 'title' => 'Terkirim!', 'text' => 'Nota PDF berhasil dikirim via WasenderAPI.']);
+            // Wasender sukses jika status = 'success' atau true
+            if (!$errSend && isset($resSend['status']) && ($resSend['status'] == 'success' || $resSend['status'] == true)) {
+                $this->dispatch('swal', ['icon' => 'success', 'title' => 'Terkirim!', 'text' => 'Nota PDF berhasil dikirim ke nomor ' . $target]);
             } else {
-                $reason = $resSend['message'] ?? 'Unknown Error';
-                $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Gagal Kirim', 'text' => "Pesan gagal: $reason"]);
+                // Ambil pesan error dari API
+                $reason = $resSend['message'] ?? 'Kesalahan Tidak Diketahui';
+                
+                // Tambahkan info nomor agar sales sadar jika nomor salah
+                $this->dispatch('swal', [
+                    'icon' => 'warning', 
+                    'title' => 'Gagal Kirim', 
+                    'text' => "Pesan gagal dikirim ke $target. Alasan: $reason. Pastikan nomor WA valid dan terdaftar."
+                ]);
             }
 
         } catch (Exception $e) {
-            // Error Handling: Jika semua gagal, info errornya
             $this->dispatch('swal', ['icon' => 'error', 'title' => 'System Error', 'text' => $e->getMessage()]);
         }
     }
@@ -154,6 +169,7 @@ class PenjualanHistory extends Component
         $user = Auth::user();
         $query = Penjualan::with(['stok', 'auditor'])->where('user_id', $user->id);
 
+        // Filter Pencarian
         if ($this->search) {
             $query->where(function($q) {
                 $q->where('nama_customer', 'like', '%' . $this->search . '%')
@@ -173,9 +189,11 @@ class PenjualanHistory extends Component
 
         $penjualans = $query->latest()->paginate(10);
 
+        // Ringkasan Data
         $omset = Penjualan::where('user_id', $user->id)
             ->whereMonth('created_at', $this->bulan)->whereYear('created_at', $this->tahun)
             ->where('status_audit', '!=', 'Rejected')->sum('harga_jual_real');
+            
         $unit = Penjualan::where('user_id', $user->id)
             ->whereMonth('created_at', $this->bulan)->whereYear('created_at', $this->tahun)
             ->where('status_audit', '!=', 'Rejected')->count();
