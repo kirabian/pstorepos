@@ -1,16 +1,7 @@
 <div class="container-fluid">
     
-    {{-- LOADING INDICATOR (Pocok Kanan Atas) --}}
-    <div wire:loading class="position-fixed top-0 end-0 p-3" style="z-index: 9999;">
-        <div class="toast show align-items-center text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Sedang memproses...
-                </div>
-            </div>
-        </div>
-    </div>
+    {{-- FIX: TAMBAHKAN LIBRARY SWEETALERT DISINI --}}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     {{-- HEADER & SUMMARY --}}
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
@@ -162,13 +153,18 @@
                                         <i class="fas fa-file-pdf"></i>
                                     </button>
 
-                                    {{-- Tombol Kirim WA (PENTING: type="button") --}}
+                                    {{-- Tombol Kirim WA --}}
                                     <button type="button" 
                                             wire:click="kirimWa({{ $p->id }})" 
                                             wire:loading.attr="disabled"
-                                            class="btn btn-sm btn-success rounded-circle text-white shadow-sm" 
+                                            class="btn btn-sm btn-success rounded-circle text-white shadow-sm position-relative" 
                                             title="Kirim ke WhatsApp">
-                                        <i class="fab fa-whatsapp"></i>
+                                        
+                                        {{-- Icon Normal --}}
+                                        <i class="fab fa-whatsapp" wire:loading.remove wire:target="kirimWa({{ $p->id }})"></i>
+                                        
+                                        {{-- Icon Loading --}}
+                                        <span wire:loading wire:target="kirimWa({{ $p->id }})" class="spinner-border spinner-border-sm text-white" role="status" aria-hidden="true"></span>
                                     </button>
                                 </div>
                             </td>
@@ -200,13 +196,19 @@
         .fw-black { font-weight: 900; }
     </style>
     
+    {{-- Script untuk buka WA & SweetAlert --}}
     <script>
         document.addEventListener('livewire:initialized', () => {
+            Livewire.on('open-wa', (data) => {
+                window.open(data[0].url, '_blank');
+            });
+            
             Livewire.on('swal', (data) => {
                 Swal.fire({
                     icon: data[0].icon,
                     title: data[0].title,
                     text: data[0].text,
+                    confirmButtonColor: '#0d6efd'
                 });
             });
         });
