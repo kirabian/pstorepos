@@ -20,20 +20,17 @@ class PenjualanHistory extends Component
     public $bulan = '';
     public $tahun = '';
 
-    public function mount()
-    {
+    public function mount() {
         $this->bulan = date('m');
         $this->tahun = date('Y');
     }
-
     public function updatedSearch() { $this->resetPage(); }
 
-    public function downloadNota($id)
-    {
+    public function downloadNota($id) {
         return redirect()->route('nota.print', ['id' => $id]);
     }
 
-    // --- FUNGSI KIRIM WA VIA WABLAS (BDG SERVER) ---
+    // --- FUNGSI KIRIM WA (FIX ACCESS DENIED) ---
     public function kirimWa($id)
     {
         $penjualan = Penjualan::with(['user', 'cabang'])->find($id);
@@ -43,49 +40,45 @@ class PenjualanHistory extends Component
             return;
         }
         
-        // 1. Format Nomor WA (Wablas support 08/62, tapi 62 lebih aman)
         $target = preg_replace('/[^0-9]/', '', $penjualan->nomor_wa);
         if(substr($target, 0, 1) == '0') $target = '62' . substr($target, 1);
 
         try {
-            // 2. Generate PDF & Simpan Sementara (Agar punya URL Publik)
+            // 1. Generate & Save PDF
             $pdf = Pdf::loadView('pdf.nota_penjualan', ['penjualan' => $penjualan])->setPaper('a5', 'portrait');
-            
             $fileName = 'Nota-' . $penjualan->id . '-' . time() . '.pdf';
             $filePath = 'temp_nota/' . $fileName;
-            
             Storage::disk('public')->put($filePath, $pdf->output());
             
-            // Generate URL HTTPS (Wajib Publik)
+            // URL File (Force HTTPS)
             $fileUrl = asset('storage/' . $filePath);
             if (!str_contains($fileUrl, 'https://')) {
                 $fileUrl = str_replace('http://', 'https://', $fileUrl);
             }
 
-            // 3. Susun Pesan Caption
+            // 2. Pesan Caption
             $pesan = "Halo Kak *{$penjualan->nama_customer}*,\n";
             $pesan .= "Terima kasih telah berbelanja di *PSTORE {$penjualan->cabang->nama_cabang}*.\n\n";
             $pesan .= "Berikut Nota Resmi (PDF) transaksi Anda.\n";
             $pesan .= "Total: Rp " . number_format($penjualan->harga_jual_real, 0, ',', '.') . "\n\n";
             $pesan .= "Sehat selalu!";
 
-            // 4. Konfigurasi Wablas
-            $domain = env('WABLAS_DOMAIN', 'https://bdg.wablas.com'); // Default ke BDG jika env kosong
-            $token  = env('WABLAS_TOKEN', 'QgffWDNJaN3DAnQ8FQmIgK1rqdf0WC7M9qMewKlolXtJNfb5tc22aJl'); // Default token anda
+            // 3. Konfigurasi Wablas (AMBIL SECRET KEY)
+            $domain = env('WABLAS_DOMAIN', 'https://bdg.wablas.com');
+            $token  = env('WABLAS_TOKEN');
+            $secret = env('WABLAS_SECRET'); // <--- PENTING
 
-            // 5. Kirim Request ke Wablas
-            // Endpoint: /api/send-message
-            // Parameter: phone, message, document (untuk file)
-            
+            // 4. Kirim Request (FILE)
             $curl = curl_init();
             $data = [
                 'phone' => $target,
                 'message' => $pesan,
-                'document' => $fileUrl, // Wablas akan download file dari sini
+                'document' => $fileUrl,
             ];
 
             curl_setopt($curl, CURLOPT_HTTPHEADER, [
                 "Authorization: $token",
+                "Secret: $secret" // <--- TAMBAHKAN HEADER INI
             ]);
             curl_setopt($curl, CURLOPT_URL, "$domain/api/send-message");
             curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");
@@ -98,30 +91,22 @@ class PenjualanHistory extends Component
             $error  = curl_error($curl);
             curl_close($curl);
 
-            // 6. Cek Response
-            // Wablas biasanya return JSON: {"status":true, "message":"...", "data":...}
             $response = json_decode($result, true);
 
-            if ($error) {
-                throw new Exception("CURL Error: $error");
-            }
-
+            // 5. Cek Response
             if (isset($response['status']) && $response['status'] == true) {
                 $this->dispatch('swal', ['icon' => 'success', 'title' => 'Terkirim!', 'text' => 'Nota PDF berhasil dikirim via Wablas.']);
             } else {
-                // --- FALLBACK (PLAN B) ---
-                // Jika Wablas gagal download file (misal fileUrl tidak bisa diakses server wablas),
-                // Kita kirim LINK DOWNLOAD saja.
-                
+                // --- FALLBACK (KIRIM LINK) ---
                 $linkDownload = route('nota.print', ['id' => $penjualan->id]);
-                $pesanLink = $pesan . "\n\n(Gagal melampirkan file, silakan download nota di sini):\n" . $linkDownload;
+                $pesanLink = $pesan . "\n\n(Gagal melampirkan file PDF, silakan download nota di sini):\n" . $linkDownload;
                 
                 $curl2 = curl_init();
-                $data2 = [
-                    'phone' => $target,
-                    'message' => $pesanLink,
-                ];
-                curl_setopt($curl2, CURLOPT_HTTPHEADER, ["Authorization: $token"]);
+                $data2 = ['phone' => $target, 'message' => $pesanLink];
+                curl_setopt($curl2, CURLOPT_HTTPHEADER, [
+                    "Authorization: $token",
+                    "Secret: $secret" // <--- TAMBAHKAN HEADER INI JUGA
+                ]);
                 curl_setopt($curl2, CURLOPT_URL, "$domain/api/send-message");
                 curl_setopt($curl2, CURLOPT_CUSTOMREQUEST, "POST");
                 curl_setopt($curl2, CURLOPT_RETURNTRANSFER, true);
@@ -129,8 +114,8 @@ class PenjualanHistory extends Component
                 curl_exec($curl2);
                 curl_close($curl2);
 
-                $reason = $response['message'] ?? 'Unknown error';
-                $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Info', 'text' => "File PDF gagal, link download dikirim sebagai gantinya. ($reason)"]);
+                $reason = $response['message'] ?? json_encode($response);
+                $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Info', 'text' => "Gagal kirim File ($reason), Link download dikirim sebagai gantinya."]);
             }
 
         } catch (Exception $e) {
@@ -162,7 +147,6 @@ class PenjualanHistory extends Component
 
         $penjualans = $query->latest()->paginate(10);
 
-        // Summary
         $omset = Penjualan::where('user_id', $user->id)
             ->whereMonth('created_at', $this->bulan)->whereYear('created_at', $this->tahun)
             ->where('status_audit', '!=', 'Rejected')->sum('harga_jual_real');
