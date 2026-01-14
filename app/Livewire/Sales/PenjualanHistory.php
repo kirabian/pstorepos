@@ -30,7 +30,7 @@ class PenjualanHistory extends Component
         return redirect()->route('nota.print', ['id' => $id]);
     }
 
-    // --- FUNGSI KIRIM WA VIA WASENDERAPI (INDONESIA) ---
+    // --- FUNGSI KIRIM WA VIA WASENDERAPI ---
     public function kirimWa($id)
     {
         $penjualan = Penjualan::with(['user', 'cabang'])->find($id);
@@ -40,21 +40,19 @@ class PenjualanHistory extends Component
             return;
         }
         
-        // --- PERBAIKAN FORMAT NOMOR HP (AGAR LEBIH KEBAL ERROR) ---
-        $originalNo = $penjualan->nomor_wa;
-        $target = preg_replace('/[^0-9]/', '', $originalNo); // Hapus spasi, strip, dll
+        // --- 1. FORMAT NOMOR WA (SESUAI REQUEST: PAKAI 0, JANGAN +62) ---
+        $target = preg_replace('/[^0-9]/', '', $penjualan->nomor_wa); // Hanya ambil angka
 
-        // Logika perbaikan awalan nomor
+        // Jika diawali 62, ubah jadi 0 (Misal: 62812... jadi 0812...)
         if (substr($target, 0, 2) == '62') {
-            $target = '+' . $target; // Sudah 62, tambah +
-        } elseif (substr($target, 0, 1) == '0') {
-            $target = '+62' . substr($target, 1); // Ubah 08 jadi +628
-        } elseif (substr($target, 0, 1) == '8') {
-            $target = '+62' . $target; // Lupa 0, langsung 8 -> jadi +628
-        } else {
-            // Jika format aneh (misal 09...), tetap coba kirim tapi kemungkinan gagal
-            $target = '+' . $target; 
+            $target = '0' . substr($target, 2);
         }
+        // Jika tidak diawali 0, tambahkan 0 di depan (Misal: 812... jadi 0812...)
+        elseif (substr($target, 0, 1) != '0') {
+            $target = '0' . $target;
+        }
+        
+        // Hasil akhir variabel $target akan selalu: 08xxxxxxxx
 
         try {
             // ==========================================
@@ -98,7 +96,8 @@ class PenjualanHistory extends Component
 
             // Cek apakah upload berhasil
             if (!isset($resUpload['success']) || !$resUpload['success'] || !isset($resUpload['publicUrl'])) {
-                throw new Exception("Gagal mendapatkan Link File dari Server WA. Respon: " . json_encode($resUpload));
+                // Info detail error upload untuk debugging
+                throw new Exception("Gagal Upload File. Respon Server: " . json_encode($resUpload));
             }
 
             $documentUrl = $resUpload['publicUrl']; // Link File Publik
@@ -145,7 +144,7 @@ class PenjualanHistory extends Component
 
             // Cek Respon Akhir
             // Wasender sukses jika status = 'success' atau true
-            if (!$errSend && isset($resSend['status']) && ($resSend['status'] == 'success' || $resSend['status'] == true)) {
+            if (!$errSend && isset($resSend['success']) && $resSend['success'] == true) {
                 $this->dispatch('swal', ['icon' => 'success', 'title' => 'Terkirim!', 'text' => 'Nota PDF berhasil dikirim ke nomor ' . $target]);
             } else {
                 // Ambil pesan error dari API
