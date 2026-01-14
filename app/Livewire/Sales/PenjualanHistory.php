@@ -33,7 +33,7 @@ class PenjualanHistory extends Component
         return redirect()->route('nota.print', ['id' => $id]);
     }
 
-    // --- FUNGSI KIRIM WA VIA WABLAS ---
+    // --- FUNGSI KIRIM WA VIA WABLAS (BDG SERVER) ---
     public function kirimWa($id)
     {
         $penjualan = Penjualan::with(['user', 'cabang'])->find($id);
@@ -43,13 +43,12 @@ class PenjualanHistory extends Component
             return;
         }
         
-        // 1. Format Nomor WA (Wablas butuh 62xxx)
+        // 1. Format Nomor WA (Wablas support 08/62, tapi 62 lebih aman)
         $target = preg_replace('/[^0-9]/', '', $penjualan->nomor_wa);
         if(substr($target, 0, 1) == '0') $target = '62' . substr($target, 1);
 
         try {
-            // 2. Generate PDF & Simpan Sementara
-            // Kita butuh URL Publik agar Wablas bisa download file ini
+            // 2. Generate PDF & Simpan Sementara (Agar punya URL Publik)
             $pdf = Pdf::loadView('pdf.nota_penjualan', ['penjualan' => $penjualan])->setPaper('a5', 'portrait');
             
             $fileName = 'Nota-' . $penjualan->id . '-' . time() . '.pdf';
@@ -57,34 +56,32 @@ class PenjualanHistory extends Component
             
             Storage::disk('public')->put($filePath, $pdf->output());
             
-            // Generate URL HTTPS
+            // Generate URL HTTPS (Wajib Publik)
             $fileUrl = asset('storage/' . $filePath);
             if (!str_contains($fileUrl, 'https://')) {
                 $fileUrl = str_replace('http://', 'https://', $fileUrl);
             }
 
-            // 3. Susun Pesan
+            // 3. Susun Pesan Caption
             $pesan = "Halo Kak *{$penjualan->nama_customer}*,\n";
             $pesan .= "Terima kasih telah berbelanja di *PSTORE {$penjualan->cabang->nama_cabang}*.\n\n";
-            $pesan .= "Berikut kami lampirkan Nota Resmi pembelian Anda (PDF).\n";
+            $pesan .= "Berikut Nota Resmi (PDF) transaksi Anda.\n";
             $pesan .= "Total: Rp " . number_format($penjualan->harga_jual_real, 0, ',', '.') . "\n\n";
             $pesan .= "Sehat selalu!";
 
-            // 4. Siapkan Config Wablas
-            $domain = env('WABLAS_DOMAIN'); // Ambil dari .env
-            $token  = env('WABLAS_TOKEN');  // Ambil dari .env
+            // 4. Konfigurasi Wablas
+            $domain = env('WABLAS_DOMAIN', 'https://bdg.wablas.com'); // Default ke BDG jika env kosong
+            $token  = env('WABLAS_TOKEN', 'QgffWDNJaN3DAnQ8FQmIgK1rqdf0WC7M9qMewKlolXtJNfb5tc22aJl'); // Default token anda
 
-            if(empty($domain) || empty($token)) {
-                throw new Exception("API Wablas belum disetting di .env");
-            }
-
-            // 5. Kirim Request ke Wablas (Endpoint: /api/send-message)
-            // Wablas cukup pintar, kalau ada parameter 'document', dia akan kirim file
+            // 5. Kirim Request ke Wablas
+            // Endpoint: /api/send-message
+            // Parameter: phone, message, document (untuk file)
+            
             $curl = curl_init();
-            $payload = [
+            $data = [
                 'phone' => $target,
                 'message' => $pesan,
-                'document' => $fileUrl, // URL PDF Publik
+                'document' => $fileUrl, // Wablas akan download file dari sini
             ];
 
             curl_setopt($curl, CURLOPT_HTTPHEADER, [
@@ -93,7 +90,7 @@ class PenjualanHistory extends Component
             curl_setopt($curl, CURLOPT_URL, "$domain/api/send-message");
             curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");
             curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($payload));
+            curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($data));
             curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
 
@@ -102,22 +99,25 @@ class PenjualanHistory extends Component
             curl_close($curl);
 
             // 6. Cek Response
+            // Wablas biasanya return JSON: {"status":true, "message":"...", "data":...}
             $response = json_decode($result, true);
 
             if ($error) {
                 throw new Exception("CURL Error: $error");
             }
 
-            // Wablas biasanya return status: true/false
             if (isset($response['status']) && $response['status'] == true) {
-                $this->dispatch('swal', ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Nota PDF sedang dikirim oleh Wablas!']);
+                $this->dispatch('swal', ['icon' => 'success', 'title' => 'Terkirim!', 'text' => 'Nota PDF berhasil dikirim via Wablas.']);
             } else {
-                // Fallback: Jika gagal kirim file, kirim Link Download saja
-                $pesanLink = $pesan . "\n\n(Jika file tidak muncul, download disini): " . route('nota.print', ['id' => $penjualan->id]);
+                // --- FALLBACK (PLAN B) ---
+                // Jika Wablas gagal download file (misal fileUrl tidak bisa diakses server wablas),
+                // Kita kirim LINK DOWNLOAD saja.
                 
-                // Kirim ulang teks saja
+                $linkDownload = route('nota.print', ['id' => $penjualan->id]);
+                $pesanLink = $pesan . "\n\n(Gagal melampirkan file, silakan download nota di sini):\n" . $linkDownload;
+                
                 $curl2 = curl_init();
-                $payload2 = [
+                $data2 = [
                     'phone' => $target,
                     'message' => $pesanLink,
                 ];
@@ -125,12 +125,12 @@ class PenjualanHistory extends Component
                 curl_setopt($curl2, CURLOPT_URL, "$domain/api/send-message");
                 curl_setopt($curl2, CURLOPT_CUSTOMREQUEST, "POST");
                 curl_setopt($curl2, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($curl2, CURLOPT_POSTFIELDS, http_build_query($payload2));
+                curl_setopt($curl2, CURLOPT_POSTFIELDS, http_build_query($data2));
                 curl_exec($curl2);
                 curl_close($curl2);
 
                 $reason = $response['message'] ?? 'Unknown error';
-                $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Info', 'text' => "Gagal kirim File ($reason), Link download dikirim sebagai gantinya."]);
+                $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Info', 'text' => "File PDF gagal, link download dikirim sebagai gantinya. ($reason)"]);
             }
 
         } catch (Exception $e) {
