@@ -1,7 +1,17 @@
 <div class="container-fluid">
     
-    {{-- HAPUS LOADING LAYAR PENUH YANG BIKIN MACET --}}
-    
+    {{-- LOADING INDICATOR (Pocok Kanan Atas) --}}
+    <div wire:loading class="position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+        <div class="toast show align-items-center text-white bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Sedang memproses...
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- HEADER & SUMMARY --}}
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
         <div>
@@ -126,11 +136,6 @@
                             </td>
                             <td class="text-end">
                                 <span class="fw-bold text-dark fs-6">Rp {{ number_format($p->harga_jual_real, 0,',','.') }}</span>
-                                @if($p->catatan)
-                                    <div class="text-muted small fst-italic text-truncate" style="max-width: 150px; margin-left: auto;" title="{{ $p->catatan }}">
-                                        {{ $p->catatan }}
-                                    </div>
-                                @endif
                             </td>
                             <td class="text-center">
                                 @if($p->status_audit == 'Pending')
@@ -150,25 +155,19 @@
                             <td class="text-end px-4">
                                 <div class="d-flex justify-content-end gap-2">
                                     {{-- Tombol Download PDF --}}
-                                    <button wire:click="downloadNota({{ $p->id }})" 
-                                            wire:loading.attr="disabled"
-                                            class="btn btn-sm btn-outline-danger rounded-circle shadow-sm position-relative" 
-                                            title="Download Nota PDF"
-                                            data-bs-toggle="tooltip">
-                                        
-                                        {{-- Icon Normal --}}
-                                        <i class="fas fa-file-pdf" wire:loading.remove wire:target="downloadNota({{ $p->id }})"></i>
-                                        
-                                        {{-- Icon Loading (Muter cuma di tombol ini) --}}
-                                        <span wire:loading wire:target="downloadNota({{ $p->id }})" class="spinner-border spinner-border-sm text-danger" role="status" aria-hidden="true"></span>
+                                    <button type="button" 
+                                            wire:click="downloadNota({{ $p->id }})" 
+                                            class="btn btn-sm btn-outline-danger rounded-circle shadow-sm" 
+                                            title="Download Nota PDF">
+                                        <i class="fas fa-file-pdf"></i>
                                     </button>
 
-                                    {{-- Tombol Kirim WA --}}
-                                    <button wire:click="kirimWa({{ $p->id }})" 
+                                    {{-- Tombol Kirim WA (PENTING: type="button") --}}
+                                    <button type="button" 
+                                            wire:click="kirimWa({{ $p->id }})" 
                                             wire:loading.attr="disabled"
                                             class="btn btn-sm btn-success rounded-circle text-white shadow-sm" 
-                                            title="Kirim ke WhatsApp Customer"
-                                            data-bs-toggle="tooltip">
+                                            title="Kirim ke WhatsApp">
                                         <i class="fab fa-whatsapp"></i>
                                     </button>
                                 </div>
@@ -181,7 +180,6 @@
                                     <i class="fas fa-receipt fa-4x"></i>
                                 </div>
                                 <h6 class="fw-bold text-secondary">Belum ada riwayat penjualan</h6>
-                                <p class="text-muted small mb-0">Transaksi yang Anda input akan muncul di sini.</p>
                             </td>
                         </tr>
                     @endforelse
@@ -202,13 +200,8 @@
         .fw-black { font-weight: 900; }
     </style>
     
-    {{-- Script untuk buka WA di tab baru --}}
     <script>
         document.addEventListener('livewire:initialized', () => {
-            Livewire.on('open-wa', (data) => {
-                window.open(data[0].url, '_blank');
-            });
-            
             Livewire.on('swal', (data) => {
                 Swal.fire({
                     icon: data[0].icon,
