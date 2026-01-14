@@ -5,8 +5,7 @@ namespace App\Livewire\Sales;
 use App\Models\Penjualan;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Illuminate\Support\Facades\Auth; // Make sure this is here
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
@@ -34,6 +33,7 @@ class PenjualanHistory extends Component
         return redirect()->route('nota.print', ['id' => $id]);
     }
 
+    // --- FUNGSI KIRIM WA VIA WABLAS ---
     public function kirimWa($id)
     {
         $penjualan = Penjualan::with(['user', 'cabang'])->find($id);
@@ -43,87 +43,104 @@ class PenjualanHistory extends Component
             return;
         }
         
+        // 1. Format Nomor WA (Wablas butuh 62xxx)
         $target = preg_replace('/[^0-9]/', '', $penjualan->nomor_wa);
         if(substr($target, 0, 1) == '0') $target = '62' . substr($target, 1);
 
         try {
+            // 2. Generate PDF & Simpan Sementara
+            // Kita butuh URL Publik agar Wablas bisa download file ini
             $pdf = Pdf::loadView('pdf.nota_penjualan', ['penjualan' => $penjualan])->setPaper('a5', 'portrait');
-            $fileName = 'Nota-' . $penjualan->id . '.pdf';
+            
+            $fileName = 'Nota-' . $penjualan->id . '-' . time() . '.pdf';
             $filePath = 'temp_nota/' . $fileName;
+            
             Storage::disk('public')->put($filePath, $pdf->output());
             
+            // Generate URL HTTPS
             $fileUrl = asset('storage/' . $filePath);
+            if (!str_contains($fileUrl, 'https://')) {
+                $fileUrl = str_replace('http://', 'https://', $fileUrl);
+            }
 
+            // 3. Susun Pesan
             $pesan = "Halo Kak *{$penjualan->nama_customer}*,\n";
             $pesan .= "Terima kasih telah berbelanja di *PSTORE {$penjualan->cabang->nama_cabang}*.\n\n";
-            $pesan .= "Unit: {$penjualan->nama_produk}\n";
+            $pesan .= "Berikut kami lampirkan Nota Resmi pembelian Anda (PDF).\n";
             $pesan .= "Total: Rp " . number_format($penjualan->harga_jual_real, 0, ',', '.') . "\n\n";
-            $pesan .= "Berikut Nota Resmi Anda 👇";
+            $pesan .= "Sehat selalu!";
 
-            $token = env('FONNTE_TOKEN');
-            
+            // 4. Siapkan Config Wablas
+            $domain = env('WABLAS_DOMAIN'); // Ambil dari .env
+            $token  = env('WABLAS_TOKEN');  // Ambil dari .env
+
+            if(empty($domain) || empty($token)) {
+                throw new Exception("API Wablas belum disetting di .env");
+            }
+
+            // 5. Kirim Request ke Wablas (Endpoint: /api/send-message)
+            // Wablas cukup pintar, kalau ada parameter 'document', dia akan kirim file
             $curl = curl_init();
-
-            curl_setopt_array($curl, array(
-              CURLOPT_URL => 'https://api.fonnte.com/send',
-              CURLOPT_RETURNTRANSFER => true,
-              CURLOPT_ENCODING => '',
-              CURLOPT_MAXREDIRS => 10,
-              CURLOPT_TIMEOUT => 0,
-              CURLOPT_FOLLOWLOCATION => true,
-              CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-              CURLOPT_CUSTOMREQUEST => 'POST',
-              CURLOPT_POSTFIELDS => array(
-                'target' => $target,
-                'url' => $fileUrl,
-                'filename' => 'Nota-PStore.pdf',
+            $payload = [
+                'phone' => $target,
                 'message' => $pesan,
-              ),
-              CURLOPT_HTTPHEADER => array(
-                'Authorization: ' . $token
-              ),
-            ));
+                'document' => $fileUrl, // URL PDF Publik
+            ];
 
-            $response = curl_exec($curl);
+            curl_setopt($curl, CURLOPT_HTTPHEADER, [
+                "Authorization: $token",
+            ]);
+            curl_setopt($curl, CURLOPT_URL, "$domain/api/send-message");
+            curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($payload));
+            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
+            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
+
+            $result = curl_exec($curl);
+            $error  = curl_error($curl);
             curl_close($curl);
-            
-            $res = json_decode($response, true);
 
-            if (isset($res['status']) && $res['status'] == true) {
-                $this->dispatch('swal', ['icon' => 'success', 'title' => 'Terkirim', 'text' => 'Nota PDF berhasil dikirim!']);
+            // 6. Cek Response
+            $response = json_decode($result, true);
+
+            if ($error) {
+                throw new Exception("CURL Error: $error");
+            }
+
+            // Wablas biasanya return status: true/false
+            if (isset($response['status']) && $response['status'] == true) {
+                $this->dispatch('swal', ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Nota PDF sedang dikirim oleh Wablas!']);
             } else {
-                $pesanFallback = $pesan . "\n\nDownload Nota: " . route('nota.print', ['id' => $penjualan->id]);
+                // Fallback: Jika gagal kirim file, kirim Link Download saja
+                $pesanLink = $pesan . "\n\n(Jika file tidak muncul, download disini): " . route('nota.print', ['id' => $penjualan->id]);
                 
+                // Kirim ulang teks saja
                 $curl2 = curl_init();
-                curl_setopt_array($curl2, array(
-                  CURLOPT_URL => 'https://api.fonnte.com/send',
-                  CURLOPT_RETURNTRANSFER => true,
-                  CURLOPT_CUSTOMREQUEST => 'POST',
-                  CURLOPT_POSTFIELDS => array(
-                    'target' => $target,
-                    'message' => $pesanFallback,
-                  ),
-                  CURLOPT_HTTPHEADER => array(
-                    'Authorization: ' . $token
-                  ),
-                ));
+                $payload2 = [
+                    'phone' => $target,
+                    'message' => $pesanLink,
+                ];
+                curl_setopt($curl2, CURLOPT_HTTPHEADER, ["Authorization: $token"]);
+                curl_setopt($curl2, CURLOPT_URL, "$domain/api/send-message");
+                curl_setopt($curl2, CURLOPT_CUSTOMREQUEST, "POST");
+                curl_setopt($curl2, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($curl2, CURLOPT_POSTFIELDS, http_build_query($payload2));
                 curl_exec($curl2);
                 curl_close($curl2);
 
-                $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Info', 'text' => 'PDF gagal terkirim (mungkin koneksi), tapi Link Nota sudah dikirim ke WA.']);
+                $reason = $response['message'] ?? 'Unknown error';
+                $this->dispatch('swal', ['icon' => 'warning', 'title' => 'Info', 'text' => "Gagal kirim File ($reason), Link download dikirim sebagai gantinya."]);
             }
 
         } catch (Exception $e) {
-            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Error', 'text' => 'System error: ' . $e->getMessage()]);
+            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Error', 'text' => $e->getMessage()]);
         }
     }
 
     public function render()
     {
-        // FIX: Use fully qualified name or alias if import fails, or simply Auth::user() if imported correctly.
-        // To be safe, I'll use Auth::user() and ensure the import is present at the top.
-        $user = Auth::user(); 
-
+        $user = Auth::user();
         $query = Penjualan::with(['stok', 'auditor'])->where('user_id', $user->id);
 
         if ($this->search) {
