@@ -6,6 +6,8 @@ use App\Models\Penjualan;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
 
 class PenjualanHistory extends Component
@@ -29,8 +31,7 @@ class PenjualanHistory extends Component
         return redirect()->route('nota.print', ['id' => $id]);
     }
 
-    // --- FUNGSI KIRIM WA MANUAL (VIA WA.ME) ---
-    // Gratis, Tanpa API, Tanpa Error Token, Paling Stabil
+    // --- FUNGSI KIRIM WA (METODE GOOGLE DRIVE) ---
     public function kirimWa($id)
     {
         $penjualan = Penjualan::with(['user', 'cabang'])->find($id);
@@ -40,7 +41,7 @@ class PenjualanHistory extends Component
             return;
         }
         
-        // 1. Format Nomor WA (Format Internasional +62)
+        // 1. Format Nomor WA (Internasional tanpa +)
         $target = preg_replace('/[^0-9]/', '', $penjualan->nomor_wa);
         if(substr($target, 0, 1) == '0') {
             $target = '62' . substr($target, 1);
@@ -49,28 +50,45 @@ class PenjualanHistory extends Component
         }
         
         try {
-            // 2. Ambil Link Nota (Dari website stokps.com sendiri)
-            // Ini fungsinya sama dengan Link Google Drive: Customer klik -> Download PDF
-            $linkNota = route('nota.print', ['id' => $penjualan->id]);
+            // 2. Generate PDF Binary
+            $pdf = Pdf::loadView('pdf.nota_penjualan', ['penjualan' => $penjualan])->setPaper('a5', 'portrait');
+            
+            // Nama File Unik (Nota-ID-Timestamp.pdf)
+            $fileName = 'Nota-PStore-' . $penjualan->id . '-' . time() . '.pdf';
 
-            // 3. Susun Pesan
+            // 3. UPLOAD KE GOOGLE DRIVE
+            // Menggunakan disk 'google' yang sudah disetting di config/filesystems.php
+            Storage::disk('google')->put($fileName, $pdf->output());
+
+            // 4. AMBIL LINK PUBLIK
+            // Ini akan menghasilkan link: https://drive.google.com/file/d/ID_FILE/view
+            $linkGoogleDrive = Storage::disk('google')->url($fileName);
+
+            // 5. Susun Pesan WhatsApp
             $pesan = "Halo Kak *{$penjualan->nama_customer}*,\n";
             $pesan .= "Terima kasih telah berbelanja di *PSTORE {$penjualan->cabang->nama_cabang}*.\n\n";
-            $pesan .= "Berikut Link Nota Resmi transaksi Anda:\n";
-            $pesan .= "📄 $linkNota \n\n";
+            $pesan .= "Berikut Link Nota Resmi transaksi Anda (Google Drive):\n";
+            $pesan .= "$linkGoogleDrive \n\n";
             $pesan .= "Total: Rp " . number_format($penjualan->harga_jual_real, 0, ',', '.') . "\n";
-            $pesan .= "Harap simpan link ini sebagai bukti transaksi yang sah.\nSehat selalu!";
+            $pesan .= "Link ini aman dan valid. Sehat selalu!";
 
-            // 4. Encode Pesan untuk URL
+            // 6. Buka WhatsApp di Tab Baru
             $encodedPesan = urlencode($pesan);
-
-            // 5. Buka WhatsApp di Tab Baru
             $waUrl = "https://wa.me/{$target}?text={$encodedPesan}";
             
             $this->dispatch('open-wa', ['url' => $waUrl]);
+            
+            // Notifikasi Sukses
+            $this->dispatch('swal', ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Nota berhasil diupload ke Drive & siap dikirim!']);
 
         } catch (Exception $e) {
-            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Error', 'text' => $e->getMessage()]);
+            // Tangkap Error Khusus jika Driver Google belum disetting
+            $msg = $e->getMessage();
+            if(str_contains($msg, 'driver [google]')) {
+                $msg = "Driver Google belum disetting di config/filesystems.php!";
+            }
+            
+            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Gagal Upload', 'text' => $msg]);
         }
     }
 

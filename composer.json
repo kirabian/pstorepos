@@ -12,6 +12,7 @@
         "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.8",
         "livewire/livewire": "^3.7",
+        "masbug/flysystem-google-drive-ext": "*",
         "phpoffice/phpspreadsheet": "^5.3",
         "pusher/pusher-php-server": "^7.2"
     },
