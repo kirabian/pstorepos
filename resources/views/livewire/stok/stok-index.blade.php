@@ -55,7 +55,7 @@
                                 <input type="checkbox" class="form-check-input" wire:model.live="selectAll">
                             </th>
                             <th class="py-3 text-secondary small fw-bold">Produk</th>
-                            <th class="py-3 text-secondary small fw-bold">Lokasi Cabang</th> 
+                            <th class="py-3 text-secondary small fw-bold">Lokasi Cabang</th> {{-- TAMBAHAN KOLOM --}}
                             <th class="py-3 text-secondary small fw-bold">IMEI</th>
                             <th class="py-3 text-secondary small fw-bold text-center">Stok</th>
                             <th class="py-3 text-secondary small fw-bold text-end">Harga Jual</th>
@@ -130,7 +130,7 @@
                 </div>
                 <div class="modal-body p-4">
                     <form wire:submit.prevent="store">
-                        {{-- FORM INPUT STOK (Tetap Sama) --}}
+                        {{-- (Isi Form Tambah Stok Tetap Sama) --}}
                         <div class="row g-2 mb-3">
                             <div class="col-6">
                                 <label class="form-label small fw-bold text-secondary">Merk <span class="text-danger">*</span></label>
@@ -214,8 +214,8 @@
             <div class="modal-content rounded-4 border-0 shadow-lg">
                 <div class="modal-header border-0 px-4 pt-4 pb-2">
                     <div>
-                        <h5 class="modal-title fw-bold">Stok Keluar</h5>
-                        <p class="text-secondary small mb-0">Isi form berikut untuk memproses stok.</p>
+                        <h5 class="modal-title fw-bold">Proses Stok (Keluar / Pindah)</h5>
+                        <p class="text-secondary small mb-0">Pilih kategori untuk memproses stok terpilih.</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
@@ -223,11 +223,11 @@
                     <form wire:submit.prevent="storeKeluarStok">
                         
                         <div class="mb-4">
-                            <label class="form-label-custom">Kategori <span class="required-star">*</span></label>
+                            <label class="form-label-custom">Kategori Aksi <span class="required-star">*</span></label>
                             <select class="form-select rounded-3 py-2 fw-bold {{ $errors->has('kategoriKeluar') ? 'is-invalid' : '' }}" 
                                     wire:model.live="kategoriKeluar">
                                 <option value="">Pilih Kategori...</option>
-                                <option value="Pindah Cabang" class="fw-bold text-primary">Pindah Cabang</option>
+                                <option value="Pindah Cabang" class="fw-bold text-primary">📦 Pindah Cabang (Mutasi)</option>
                                 <option disabled>----------------</option>
                                 @foreach($opsiKategori as $key => $label)
                                     @if($key != 'Pindah Cabang')
@@ -241,40 +241,25 @@
                         @if($kategoriKeluar)
                             <div class="bg-light p-3 rounded-3 mb-4 border animate__animated animate__fadeIn">
                                 
-                                {{-- FORM KHUSUS PINDAH CABANG SESUAI GAMBAR --}}
                                 @if($kategoriKeluar == 'Pindah Cabang')
                                     <div class="mb-3">
-                                        <label class="form-label-custom">Cabang <span class="required-star">*</span></label>
+                                        <label class="form-label-custom">Ke Cabang Mana? <span class="required-star">*</span></label>
                                         <select class="form-select rounded-3 py-2" wire:model="target_cabang_id">
-                                            <option value="">Pilih Cabang</option>
+                                            <option value="">-- Pilih Cabang Tujuan --</option>
                                             @foreach($cabangs as $c) <option value="{{ $c->id }}">{{ $c->nama_cabang }}</option> @endforeach
                                         </select>
                                         @error('target_cabang_id') <span class="text-danger small">{{ $message }}</span> @enderror
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label-custom">Nama <span class="required-star">*</span></label>
-                                        <input type="text" class="form-control rounded-3 py-2" wire:model="nama_penerima" placeholder="Masukkan nama penerima">
+                                        <label class="form-label-custom">Nama Penerima / PIC <span class="required-star">*</span></label>
+                                        <input type="text" class="form-control rounded-3 py-2" wire:model="nama_penerima">
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label-custom">Nomor Handphone <span class="required-star">*</span></label>
-                                        <input type="text" class="form-control rounded-3 py-2" wire:model="nomor_handphone" placeholder="Masukkan nomor handphone penerima">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label-custom">Alamat <span class="required-star">*</span></label>
-                                        <textarea class="form-control rounded-3 py-2" rows="2" wire:model="alamat" placeholder="Masukkan alamat penerima"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label-custom">Catatan <span class="required-star">*</span></label>
-                                        <textarea class="form-control rounded-3 py-2" rows="2" wire:model="catatan" placeholder="Masukkan catatan"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label-custom fw-bold text-primary">Jumlah yang Dibawa <span class="required-star">*</span></label>
-                                        <input type="number" class="form-control rounded-3 py-2 border-primary" wire:model="jumlah_pindah" min="1">
-                                        <small class="text-muted">Masukkan jumlah unit yang akan dipindahkan per item.</small>
+                                        <label class="form-label-custom">Catatan Mutasi <span class="required-star">*</span></label>
+                                        <textarea class="form-control rounded-3 py-2" rows="2" wire:model="catatan"></textarea>
                                     </div>
                                 @endif
 
-                                {{-- FORM LAINNYA --}}
                                 @if(in_array($kategoriKeluar, ['Admin WhatsApp', 'Shopee', 'Tokopedia', 'Giveaway']))
                                     <div class="mb-3">
                                         <label class="form-label-custom">Nama Penerima <span class="required-star">*</span></label>
@@ -313,12 +298,12 @@
                         @endif
 
                         <div class="mb-4">
-                            <label class="form-label-custom">List Barang Terpilih ({{ count($selectedItems) }} Item)</label>
+                            <label class="form-label-custom">List Barang ({{ count($selectedItems) }} Unit)</label>
                             <div class="border rounded-3 overflow-hidden bg-white">
                                 <div class="table-responsive" style="max-height: 150px;">
                                     <table class="table table-sm table-striped mb-0 small">
                                         <thead class="bg-light sticky-top">
-                                            <tr><th class="ps-3">Merk</th><th>Tipe</th><th>IMEI</th><th>Lokasi</th></tr>
+                                            <tr><th class="ps-3">Merk</th><th>Tipe</th><th>IMEI</th><th>Lokasi Sekarang</th></tr>
                                         </thead>
                                         <tbody>
                                             @forelse($selectedItems as $item)
@@ -341,9 +326,9 @@
                             <button type="button" class="btn btn-outline-dark rounded-pill w-100 py-2" data-bs-dismiss="modal">Batal</button>
                             <button type="submit" class="btn btn-black rounded-pill w-100 py-2 fw-bold text-white" style="background-color: #000;">
                                 @if($kategoriKeluar == 'Pindah Cabang')
-                                    Simpan & Pindahkan
+                                    <i class="fas fa-exchange-alt me-1"></i> Pindahkan Stok
                                 @else
-                                    Simpan & Keluarkan
+                                    <i class="fas fa-sign-out-alt me-1"></i> Keluarkan Stok
                                 @endif
                             </button>
                         </div>
