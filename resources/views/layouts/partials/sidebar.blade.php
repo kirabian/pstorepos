@@ -140,11 +140,12 @@
                     <a href="{{ route('audit.verifikasi') }}"
                         class="nav-link p-3 rounded-3 d-flex align-items-center {{ request()->routeIs('audit.verifikasi') ? 'active' : '' }}">
                         <div class="icon-wrapper d-flex justify-content-center align-items-center">
-                            <i class="fas fa-store fs-5"></i>
+                            <i class="fas fa-check-circle fs-5"></i>
                         </div>
                         <span class="ms-3 sidebar-text text-nowrap fw-medium">Verifikasi Penjualan</span>
                     </a>
                 </li>
+            @endif
 
             {{-- KHUSUS SUPERADMIN: Master Data Lainnya --}}
             @if (Auth::user()->role === 'superadmin')
