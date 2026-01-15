@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
+use Illuminate\Support\Str; // Tambahan untuk merapikan nama folder
 
 class PenjualanHistory extends Component
 {
@@ -31,7 +32,7 @@ class PenjualanHistory extends Component
         return redirect()->route('nota.print', ['id' => $id]);
     }
 
-    // --- FUNGSI KIRIM WA (METODE GOOGLE DRIVE) ---
+    // --- FUNGSI KIRIM WA (VERSI CEPAT & RAPIH UNTUK 70 CABANG) ---
     public function kirimWa($id)
     {
         $penjualan = Penjualan::with(['user', 'cabang'])->find($id);
@@ -53,42 +54,50 @@ class PenjualanHistory extends Component
             // 2. Generate PDF Binary
             $pdf = Pdf::loadView('pdf.nota_penjualan', ['penjualan' => $penjualan])->setPaper('a5', 'portrait');
             
-            // Nama File Unik (Nota-ID-Timestamp.pdf)
-            $fileName = 'Nota-PStore-' . $penjualan->id . '-' . time() . '.pdf';
+            // 3. LOGIKA FOLDER OTOMATIS (PENTING BUAT BANYAK CABANG)
+            // Format Folder: Tahun / Bulan / Nama_Cabang
+            // Contoh: 2026/01/PSTORE-MAKASSAR/Nota-TRX-105.pdf
+            
+            $namaCabang = Str::slug($penjualan->cabang->nama_cabang ?? 'Pusat'); // Bersihkan spasi jadi strip
+            $folderPath = date('Y') . '/' . date('m') . '/' . strtoupper($namaCabang);
+            $fileName = $folderPath . '/Nota-TRX-' . $penjualan->id . '.pdf';
 
-            // 3. UPLOAD KE GOOGLE DRIVE
-            // Menggunakan disk 'google' yang sudah disetting di config/filesystems.php
-            Storage::disk('google')->put($fileName, $pdf->output());
+            // 4. UPLOAD KE GOOGLE DRIVE DENGAN AUTO-RETRY (BIAR STABIL)
+            // Jika gagal upload (koneksi kedip), sistem coba lagi max 3x
+            retry(3, function () use ($fileName, $pdf) {
+                Storage::disk('google')->put($fileName, $pdf->output());
+            }, 100); // Jeda 100ms antar percobaan
 
-            // 4. AMBIL LINK PUBLIK
-            // Ini akan menghasilkan link: https://drive.google.com/file/d/ID_FILE/view
+            // 5. AMBIL LINK PUBLIK
             $linkGoogleDrive = Storage::disk('google')->url($fileName);
 
-            // 5. Susun Pesan WhatsApp
+            // 6. Susun Pesan WhatsApp
             $pesan = "Halo Kak *{$penjualan->nama_customer}*,\n";
-            $pesan .= "Terima kasih telah berbelanja di *PSTORE {$penjualan->cabang->nama_cabang}*.\n\n";
-            $pesan .= "Berikut Link Nota Resmi transaksi Anda (Google Drive):\n";
+            $pesan .= "Terima kasih telah berbelanja di *{$penjualan->cabang->nama_cabang}*.\n\n";
+            $pesan .= "Berikut Link Nota Resmi transaksi Anda:\n";
             $pesan .= "$linkGoogleDrive \n\n";
             $pesan .= "Total: Rp " . number_format($penjualan->harga_jual_real, 0, ',', '.') . "\n";
             $pesan .= "Link ini aman dan valid. Sehat selalu!";
 
-            // 6. Buka WhatsApp di Tab Baru
+            // 7. Buka WhatsApp di Tab Baru
             $encodedPesan = urlencode($pesan);
             $waUrl = "https://wa.me/{$target}?text={$encodedPesan}";
             
             $this->dispatch('open-wa', ['url' => $waUrl]);
             
             // Notifikasi Sukses
-            $this->dispatch('swal', ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Nota berhasil diupload ke Drive & siap dikirim!']);
+            $this->dispatch('swal', ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Nota tersimpan & siap dikirim!']);
 
         } catch (Exception $e) {
-            // Tangkap Error Khusus jika Driver Google belum disetting
+            // Log error detail untuk IT Support
+            \Log::error('Gagal Upload Google Drive: ' . $e->getMessage());
+
             $msg = $e->getMessage();
             if(str_contains($msg, 'driver [google]')) {
                 $msg = "Driver Google belum disetting di config/filesystems.php!";
             }
             
-            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Gagal Upload', 'text' => $msg]);
+            $this->dispatch('swal', ['icon' => 'error', 'title' => 'Gagal Upload', 'text' => 'Gagal koneksi ke Drive. Coba lagi.']);
         }
     }
 
