@@ -172,7 +172,7 @@ class StokIndex extends Component
         $user = Auth::user();
         $count = 0;
 
-        // DB Transaction
+        // DB Transaction untuk keamanan data
         DB::transaction(function () use ($user, $keteranganDetail, &$count, $namaCabangTujuan) {
             
             foreach ($this->selectedStok as $id) {
@@ -182,42 +182,44 @@ class StokIndex extends Component
                     // === LOGIKA PINDAH CABANG ===
                     if ($this->kategoriKeluar == 'Pindah Cabang') {
                         
-                        // 1. Cek Stok Cukup?
+                        // 1. Cek Apakah Stok Cukup?
                         if ($stok->jumlah < $this->jumlah_pindah) {
                             $this->dispatch('swal', [
                                 'title' => 'Gagal!',
                                 'text' => "Stok {$stok->merk->nama} (IMEI: {$stok->imei}) cuma sisa {$stok->jumlah}, mau pindah {$this->jumlah_pindah}.",
                                 'icon' => 'error'
                             ]);
-                            throw new \Exception("Stok tidak cukup"); 
+                            throw new \Exception("Stok tidak cukup"); // Batalkan transaksi
                         }
 
-                        // 2. KURANGI STOK ASAL (LOKASI TETAP)
+                        // 2. KURANGI STOK ASAL (JANGAN UBAH LOKASI CABANGNYA)
+                        // Ini yang membuat stok tetap tertulis di Pusat tapi jumlah berkurang
                         $stok->decrement('jumlah', $this->jumlah_pindah);
 
                         // 3. BUAT STOK BARU DI CABANG TUJUAN
+                        // Ini yang membuat stok muncul di cabang baru
                         Stok::create([
                             'merk_id' => $stok->merk_id,
                             'tipe_id' => $stok->tipe_id,
                             'ram_storage' => $stok->ram_storage,
                             'kondisi' => $stok->kondisi,
                             'imei' => $stok->imei, 
-                            'jumlah' => $this->jumlah_pindah, 
+                            'jumlah' => $this->jumlah_pindah, // Jumlah yang dibawa
                             'harga_modal' => $stok->harga_modal,
                             'harga_jual' => $stok->harga_jual,
                             'cabang_id' => $this->target_cabang_id, // Lokasi Baru
                         ]);
 
-                        // 4. History Keluar
+                        // 4. CATAT HISTORY KELUAR (Untuk Laporan Barang Keluar)
                         StokHistory::create([
                             'imei' => $stok->imei,
                             'status' => 'Stok Keluar (Mutasi)', 
-                            'cabang_id' => $stok->cabang_id, 
+                            'cabang_id' => $stok->cabang_id, // Tercatat keluar dari Pusat
                             'keterangan' => "[Pindah Cabang] Ke: {$namaCabangTujuan} | PIC: {$this->nama_penerima} | Sisa di Pusat: " . ($stok->jumlah - $this->jumlah_pindah),
                             'user_id' => $user->id,
                         ]);
 
-                        // 5. History Masuk
+                        // 5. CATAT HISTORY MASUK (Untuk Laporan Barang Masuk di Cabang Baru)
                         StokHistory::create([
                             'imei' => $stok->imei,
                             'status' => 'Stok Masuk (Mutasi)', 
@@ -227,7 +229,7 @@ class StokIndex extends Component
                         ]);
 
                     } else {
-                        // === BARANG KELUAR BIASA ===
+                        // === LOGIKA BARANG KELUAR BIASA (JUAL/RUSAK/GIVEAWAY) ===
                         if ($stok->jumlah > 0) {
                             $stok->decrement('jumlah'); 
                         }
@@ -246,6 +248,7 @@ class StokIndex extends Component
             }
         });
 
+        // Sukses & Reset UI
         $this->selectedStok = [];
         $this->selectAll = false;
         $this->resetInputFields();
@@ -254,7 +257,7 @@ class StokIndex extends Component
         $this->dispatch('swal', ['title' => 'Berhasil!', 'text' => "$count unit berhasil diproses.", 'icon' => 'success']);
     }
 
-    // --- CRUD STORE ---
+    // --- CRUD STORE (INPUT BARU) ---
     public function store()
     {
         $cleanModal = $this->cleanRupiah($this->harga_modal);
@@ -329,36 +332,15 @@ class StokIndex extends Component
         $this->dispatch('open-keluar-modal');
     }
 
-    // =================================================================
-    // FIXING RENDER: HANYA TAMPILKAN STOK DI CABANG USER TERSEBUT
-    // =================================================================
     public function render() {
-        $user = Auth::user();
-
-        // Query Dasar
-        $query = Stok::with(['merk', 'tipe', 'cabang']);
-
-        // FILTER LOKASI STOK
-        // 1. Jika User punya cabang (Sales/Admin Cabang/Pusat)
-        if ($user->cabang_id) {
-            // Tampilkan HANYA stok yang ada di cabang user tersebut
-            $query->where('cabang_id', $user->cabang_id);
-        } else {
-            // 2. Jika User tidak punya cabang (Admin Global/Superadmin tanpa lokasi)
-            // Opsional: Tampilkan semua atau tampilkan yg null saja. 
-            // Biasanya superadmin ingin lihat semua, tapi untuk kasus ini agar rapi:
-            // Jika Anda login sebagai "Admin Produk" yang diset di Cabang Pusat (ID 1), 
-            // maka otomatis hanya stok ID 1 yang muncul.
-        }
-
-        // Filter Search
-        $query->where(function($q) {
-            $q->where('imei', 'like', '%' . $this->search . '%')
-              ->orWhereHas('merk', fn($q2) => $q2->where('nama', 'like', '%'.$this->search.'%'))
-              ->orWhereHas('tipe', fn($q2) => $q2->where('nama', 'like', '%'.$this->search.'%'));
-        });
-
-        $stoks = $query->latest()->paginate(10);
+        $stoks = Stok::with(['merk', 'tipe', 'cabang'])
+            ->where(function($q) {
+                $q->where('imei', 'like', '%' . $this->search . '%')
+                  ->orWhereHas('merk', fn($q2) => $q2->where('nama', 'like', '%'.$this->search.'%'))
+                  ->orWhereHas('tipe', fn($q2) => $q2->where('nama', 'like', '%'.$this->search.'%'));
+            })
+            ->latest()
+            ->paginate(10);
 
         $merks = Merk::orderBy('nama', 'asc')->get();
         $cabangs = Cabang::orderBy('nama_cabang', 'asc')->get(); 
