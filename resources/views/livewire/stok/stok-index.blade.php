@@ -214,8 +214,8 @@
             <div class="modal-content rounded-4 border-0 shadow-lg">
                 <div class="modal-header border-0 px-4 pt-4 pb-2">
                     <div>
-                        <h5 class="modal-title fw-bold">Stok Keluar / Pindah</h5>
-                        <p class="text-secondary small mb-0">Isi detail form berikut.</p>
+                        <h5 class="modal-title fw-bold">Stok Keluar</h5>
+                        <p class="text-secondary small mb-0">Isi form berikut untuk memproses stok.</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
@@ -241,7 +241,7 @@
                         @if($kategoriKeluar)
                             <div class="bg-light p-3 rounded-3 mb-4 border animate__animated animate__fadeIn">
                                 
-                                {{-- FORM KHUSUS PINDAH CABANG --}}
+                                {{-- FORM KHUSUS PINDAH CABANG SESUAI GAMBAR --}}
                                 @if($kategoriKeluar == 'Pindah Cabang')
                                     <div class="mb-3">
                                         <label class="form-label-custom">Cabang <span class="required-star">*</span></label>
@@ -256,18 +256,17 @@
                                         <input type="text" class="form-control rounded-3 py-2" wire:model="nama_penerima" placeholder="Masukkan nama penerima">
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label-custom">Nomor Handphone</label>
+                                        <label class="form-label-custom">Nomor Handphone <span class="required-star">*</span></label>
                                         <input type="text" class="form-control rounded-3 py-2" wire:model="nomor_handphone" placeholder="Masukkan nomor handphone penerima">
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label-custom">Alamat</label>
+                                        <label class="form-label-custom">Alamat <span class="required-star">*</span></label>
                                         <textarea class="form-control rounded-3 py-2" rows="2" wire:model="alamat" placeholder="Masukkan alamat penerima"></textarea>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label-custom">Catatan <span class="required-star">*</span></label>
                                         <textarea class="form-control rounded-3 py-2" rows="2" wire:model="catatan" placeholder="Masukkan catatan"></textarea>
                                     </div>
-                                    {{-- INPUT JUMLAH PINDAH --}}
                                     <div class="mb-3">
                                         <label class="form-label-custom fw-bold text-primary">Jumlah yang Dibawa <span class="required-star">*</span></label>
                                         <input type="number" class="form-control rounded-3 py-2 border-primary" wire:model="jumlah_pindah" min="1">
@@ -275,7 +274,7 @@
                                     </div>
                                 @endif
 
-                                {{-- FORM LAINNYA (SAMA SEPERTI SEBELUMNYA) --}}
+                                {{-- FORM LAINNYA --}}
                                 @if(in_array($kategoriKeluar, ['Admin WhatsApp', 'Shopee', 'Tokopedia', 'Giveaway']))
                                     <div class="mb-3">
                                         <label class="form-label-custom">Nama Penerima <span class="required-star">*</span></label>
