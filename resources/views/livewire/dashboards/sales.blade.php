@@ -1,5 +1,6 @@
-<div class="animate__animated animate__fadeIn">
-    
+<div class="container-fluid pb-5 animate__animated animate__fadeIn">
+    {{-- ^^^ ADDED pb-5 HERE: Memberi jarak di bawah agar tidak menabrak footer --}}
+
     {{-- HEADER SECTION --}}
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 gap-4">
         <div>
@@ -11,7 +12,7 @@
                     SALES FORCE
                 </span>
                 <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill px-3 py-2">
-                    <i class="fas fa-store me-1"></i> {{ strtoupper($cabang) }}
+                    <i class="fas fa-store me-1"></i> {{ strtoupper($cabang ?? 'Cabang') }}
                 </span>
             </div>
         </div>
@@ -34,7 +35,7 @@
                         </div>
                         <span class="badge bg-light text-muted border rounded-pill extra-small">Hari Ini</span>
                     </div>
-                    <h3 class="fw-black text-dark mb-1 tracking-tight">{{ $penjualan_hari_ini }} Unit</h3>
+                    <h3 class="fw-black text-dark mb-1 tracking-tight">{{ $penjualan_hari_ini ?? 0 }} Unit</h3>
                     <p class="text-secondary small fw-bold text-uppercase mb-0 tracking-wide">Terjual</p>
                 </div>
             </div>
@@ -50,7 +51,7 @@
                         </div>
                         <span class="badge bg-light text-muted border rounded-pill extra-small">Omset Harian</span>
                     </div>
-                    <h3 class="fw-black text-dark mb-1 tracking-tight">Rp {{ number_format($omset_hari_ini / 1000000, 1, ',', '.') }} Jt</h3>
+                    <h3 class="fw-black text-dark mb-1 tracking-tight">Rp {{ number_format(($omset_hari_ini ?? 0) / 1000000, 1, ',', '.') }} Jt</h3>
                     <p class="text-secondary small fw-bold text-uppercase mb-0 tracking-wide">Total Nilai</p>
                 </div>
             </div>
@@ -64,16 +65,20 @@
                         <div class="bg-warning bg-opacity-10 p-3 rounded-4 text-warning">
                             <i class="fas fa-bullseye fa-lg"></i>
                         </div>
+                        @php
+                            $target = $target_bulan > 0 ? $target_bulan : 1; // Prevent division by zero
+                            $percentage = round(($capaian_bulan / $target) * 100);
+                        @endphp
                         <span class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning-subtle rounded-pill extra-small">
-                            {{ round(($capaian_bulan / $target_bulan) * 100) }}% Achieved
+                            {{ $percentage }}% Achieved
                         </span>
                     </div>
                     <div class="mt-3">
                         <div class="d-flex justify-content-between mb-1">
-                            <span class="small fw-bold text-dark">{{ $capaian_bulan }} / {{ $target_bulan }} Unit</span>
+                            <span class="small fw-bold text-dark">{{ $capaian_bulan ?? 0 }} / {{ $target_bulan ?? 0 }} Unit</span>
                         </div>
                         <div class="progress rounded-pill" style="height: 8px;">
-                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ ($capaian_bulan / $target_bulan) * 100 }}%"></div>
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ $percentage }}%"></div>
                         </div>
                         <p class="text-secondary small fw-bold text-uppercase mt-2 mb-0 tracking-wide">Target Bulanan</p>
                     </div>
@@ -91,7 +96,7 @@
                         </div>
                         <span class="badge bg-white bg-opacity-25 text-white border border-white rounded-pill extra-small">Estimasi</span>
                     </div>
-                    <h3 class="fw-black text-white mb-1 tracking-tight">Rp {{ number_format($insentif_estimasi / 1000000, 1, ',', '.') }} Jt</h3>
+                    <h3 class="fw-black text-white mb-1 tracking-tight">Rp {{ number_format(($insentif_estimasi ?? 0) / 1000000, 1, ',', '.') }} Jt</h3>
                     <p class="text-white-50 small fw-bold text-uppercase mb-0 tracking-wide">Komisi / Bonus</p>
                 </div>
             </div>
@@ -99,7 +104,7 @@
     </div>
 
     {{-- MAIN CONTENT GRID --}}
-    <div class="row g-4">
+    <div class="row g-4 mb-5"> {{-- Added mb-5 --}}
         {{-- Quick Actions & Today's Sales --}}
         <div class="col-lg-8">
             {{-- Quick Action Buttons --}}
@@ -178,7 +183,11 @@
         <div class="col-lg-4">
             {{-- Card Ranking Personal (Hanya Ranking Dia) --}}
             <div class="card border-0 shadow-sm rounded-4 mb-4 position-relative overflow-hidden h-100">
-                <div class="card-body p-4 text-center d-flex flex-column justify-content-center align-items-center">
+                
+                {{-- Background Decoration --}}
+                <div class="position-absolute top-0 start-0 w-100 h-100 bg-gradient-soft" style="z-index: 0;"></div>
+                
+                <div class="card-body p-4 text-center d-flex flex-column justify-content-center align-items-center position-relative" style="z-index: 1;">
                     
                     {{-- Judul Kecil --}}
                     <h6 class="text-uppercase text-secondary fw-bold tracking-wider mb-4" style="font-size: 0.75rem;">
@@ -187,55 +196,61 @@
 
                     {{-- Icon Piala / Medali --}}
                     <div class="mb-3 position-relative">
-                        <div class="bg-warning bg-opacity-10 p-4 rounded-circle d-inline-flex align-items-center justify-content-center" 
-                             style="width: 100px; height: 100px; box-shadow: 0 0 0 8px rgba(255, 193, 7, 0.1);">
-                            <i class="fas fa-trophy fa-3x text-warning"></i>
+                        <div class="bg-warning bg-opacity-10 p-4 rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm" 
+                             style="width: 120px; height: 120px;">
+                            <i class="fas fa-trophy fa-4x text-warning animate__animated animate__pulse animate__infinite"></i>
                         </div>
                         
-                        {{-- Badge Cabang Kecil di sudut ikon --}}
-                        <span class="position-absolute bottom-0 start-50 translate-middle-x badge bg-dark text-white rounded-pill border border-2 border-white small">
-                            {{ $cabang }}
+                        {{-- Badge Cabang --}}
+                        <span class="position-absolute bottom-0 start-50 translate-middle-x badge bg-dark text-white rounded-pill border border-2 border-white small px-3">
+                            {{ $cabang ?? 'PStore' }}
                         </span>
                     </div>
 
-                    {{-- Angka Ranking Besar --}}
-                    <div class="mb-2">
-                        <h1 class="display-1 fw-black text-dark mb-0 lh-1">
-                            <span class="fs-4 text-muted align-top me-1 fw-bold">#</span>{{ $my_rank ?? '-' }}
-                        </h1>
+                    {{-- Angka Ranking Besar & Jelas --}}
+                    <div class="mb-2 mt-2">
+                        @if(isset($my_rank) && $my_rank > 0)
+                            <h1 class="fw-black text-primary mb-0" style="font-size: 5rem; line-height: 1;">
+                                <span class="fs-2 text-muted align-top me-1 fw-bold">#</span>{{ $my_rank }}
+                            </h1>
+                        @else
+                            {{-- Tampilan jika belum ada ranking --}}
+                            <h1 class="fw-black text-muted mb-0" style="font-size: 4rem; line-height: 1;">
+                                -
+                            </h1>
+                            <small class="text-muted fst-italic">Belum ada data</small>
+                        @endif
                     </div>
 
                     {{-- Keterangan Total Sales --}}
                     <p class="text-muted small mb-4">
-                        Dari total <span class="fw-bold text-dark">{{ $total_sales_people ?? '-' }} Sales</span> yang aktif di cabang ini.
+                        Dari total <span class="fw-bold text-dark">{{ $total_sales_people ?? 0 }} Sales</span><br>yang aktif di cabang ini.
                     </p>
 
                     {{-- Pesan Motivasi Berdasarkan Ranking --}}
                     <div class="w-100">
                         @if(isset($my_rank) && $my_rank == 1)
-                            <div class="alert alert-success border-0 bg-success-subtle text-success fw-bold py-2 px-3 rounded-pill small mb-0">
+                            <div class="alert alert-success border-0 bg-success-subtle text-success fw-bold py-3 px-3 rounded-4 shadow-sm mb-0">
                                 👑 Luar Biasa! Kamu Juara 1!
                             </div>
-                        @elseif(isset($my_rank) && $my_rank <= 5)
-                            <div class="alert alert-info border-0 bg-info-subtle text-info fw-bold py-2 px-3 rounded-pill small mb-0">
+                        @elseif(isset($my_rank) && $my_rank > 0 && $my_rank <= 5)
+                            <div class="alert alert-info border-0 bg-info-subtle text-info fw-bold py-3 px-3 rounded-4 shadow-sm mb-0">
                                 🔥 Keren! Kamu masuk Top 5!
                             </div>
                         @else
-                            <div class="alert alert-light border border-light-subtle text-secondary fw-bold py-2 px-3 rounded-pill small mb-0">
+                            <div class="alert alert-light border border-light-subtle text-secondary fw-bold py-3 px-3 rounded-4 shadow-sm mb-0">
                                 💪 Semangat! Kejar Top Ranking!
                             </div>
                         @endif
                     </div>
 
                 </div>
-                
-                {{-- Hiasan Background Abstrak --}}
-                <div class="position-absolute top-0 end-0 p-3 opacity-10">
-                    <i class="fas fa-crown fa-5x text-secondary"></i>
-                </div>
             </div>
         </div>
     </div>
+    
+    {{-- SPACER KHUSUS FOOTER --}}
+    <div style="height: 50px;"></div>
 
     <style>
         .hover-lift:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important; }
@@ -245,5 +260,6 @@
         .tracking-wide { letter-spacing: 0.025em; }
         .fw-black { font-weight: 900; }
         .extra-small { font-size: 0.7rem; }
+        .bg-gradient-soft { background: radial-gradient(circle at top right, rgba(0,173,181,0.05) 0%, rgba(255,255,255,0) 70%); }
     </style>
 </div>
