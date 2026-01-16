@@ -120,6 +120,22 @@
 
                         <form wire:submit.prevent="storePenjualan">
                             <div class="row g-3">
+                                {{-- NEW: PILIHAN SALES --}}
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold text-secondary">Sales / Akun <span class="text-danger">*</span></label>
+                                    <select class="form-select rounded-3 p-2 bg-light border-primary" wire:model="sales_id">
+                                        <option value="">-- Pilih Sales --</option>
+                                        @foreach($salesUsers as $sales)
+                                            <option value="{{ $sales->id }}">
+                                                {{ $sales->nama_lengkap ?? $sales->name }} 
+                                                @if($sales->id == Auth::id()) (Saya) @endif
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <div class="form-text small text-primary">Pilih nama sales yang melakukan penjualan ini.</div>
+                                    @error('sales_id') <span class="text-danger small mt-1 d-block">{{ $message }}</span> @enderror
+                                </div>
+
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-secondary">Nama Customer <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control rounded-3 p-2" wire:model="nama_customer" placeholder="Contoh: Budi Santoso">

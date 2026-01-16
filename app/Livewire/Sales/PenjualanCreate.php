@@ -5,6 +5,7 @@ namespace App\Livewire\Sales;
 use App\Models\Stok;
 use App\Models\Penjualan;
 use App\Models\StokHistory;
+use App\Models\User; // Tambahkan Model User
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
@@ -25,6 +26,11 @@ class PenjualanCreate extends Component
     public $selectedStokDetail = null;
 
     // --- STEP 2: FORM PENJUALAN ---
+    
+    // Tambahan: Pilihan Sales
+    #[Rule('required', as: 'Sales / Akun')]
+    public $sales_id = '';
+
     #[Rule('required', as: 'Nama Customer')] 
     public $nama_customer = '';
 
@@ -39,6 +45,12 @@ class PenjualanCreate extends Component
 
     #[Rule('nullable')] 
     public $catatan = '';
+
+    // Set default sales ke user yang login saat halaman dibuka
+    public function mount()
+    {
+        $this->sales_id = Auth::id();
+    }
 
     // Reset pagination saat search berubah
     public function updatedSearchStok()
@@ -60,7 +72,9 @@ class PenjualanCreate extends Component
     {
         $this->selectedStokId = null;
         $this->selectedStokDetail = null;
+        // Reset form tapi biarkan sales_id tetap default (atau user login)
         $this->reset(['nama_customer', 'nomor_wa', 'foto_bukti', 'harga_deal', 'catatan']);
+        $this->sales_id = Auth::id(); 
         $this->resetValidation();
     }
 
@@ -88,11 +102,15 @@ class PenjualanCreate extends Component
             return;
         }
 
-        DB::transaction(function () use ($user, $stok) {
+        // Ambil data sales yang dipilih untuk nama di history (opsional)
+        $selectedSales = User::find($this->sales_id);
+        $namaSales = $selectedSales ? $selectedSales->nama_lengkap : $user->nama_lengkap;
+
+        DB::transaction(function () use ($user, $stok, $namaSales) {
             $path = $this->foto_bukti->store('bukti-penjualan', 'public');
 
             Penjualan::create([
-                'user_id' => $user->id,
+                'user_id' => $this->sales_id, // MENGGUNAKAN ID SALES YANG DIPILIH
                 'cabang_id' => $user->cabang_id,
                 'stok_id' => $stok->id,
                 'tipe_penjualan' => 'Unit',
@@ -112,8 +130,9 @@ class PenjualanCreate extends Component
                 'imei' => $stok->imei,
                 'status' => 'Stok Keluar', 
                 'cabang_id' => $user->cabang_id,
-                'keterangan' => "[PENJUALAN] Sold to {$this->nama_customer} by {$user->nama_lengkap}",
-                'user_id' => $user->id
+                // Mencatat bahwa dijual ke customer X oleh Sales Y (Input by Operator Z)
+                'keterangan' => "[PENJUALAN] Sold to {$this->nama_customer} by Sales: {$namaSales}",
+                'user_id' => $user->id // Tetap mencatat ID user yang login sebagai operator input (audit trail)
             ]);
         });
 
@@ -126,11 +145,16 @@ class PenjualanCreate extends Component
     {
         $user = Auth::user();
 
+        // LOGIKA AMBIL LIST SALES: Hanya user di cabang yang sama
+        $salesUsers = User::where('cabang_id', $user->cabang_id)
+                        ->orderBy('nama_lengkap', 'asc')
+                        ->get();
+
         // FIX QUERY: Ambil stok cabang user ATAU stok yang cabang_id nya NULL (Pusat/Belum diset)
         $stoks = Stok::with(['merk', 'tipe'])
             ->where(function($q) use ($user) {
                 $q->where('cabang_id', $user->cabang_id)
-                  ->orWhereNull('cabang_id'); // <--- INI KUNCI PERBAIKANNYA
+                  ->orWhereNull('cabang_id'); 
             })
             ->where('jumlah', '>', 0)
             ->when($this->searchStok, function($query) {
@@ -144,7 +168,8 @@ class PenjualanCreate extends Component
             ->paginate(5);
 
         return view('livewire.sales.penjualan-create', [
-            'stoks' => $stoks
+            'stoks' => $stoks,
+            'salesUsers' => $salesUsers // Kirim data user sales ke view
         ])->title('Input Penjualan');
     }
 }
