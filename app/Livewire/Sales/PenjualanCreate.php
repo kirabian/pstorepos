@@ -5,7 +5,7 @@ namespace App\Livewire\Sales;
 use App\Models\Stok;
 use App\Models\Penjualan;
 use App\Models\StokHistory;
-use App\Models\User; // Tambahkan Model User
+use App\Models\User;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
@@ -20,6 +20,12 @@ class PenjualanCreate extends Component
 
     protected $paginationTheme = 'bootstrap';
 
+    // --- STATE KONTROL HALAMAN ---
+    // false = Tampilkan halaman pilih akun
+    // true  = Tampilkan halaman input penjualan
+    public $isSalesSelected = false; 
+    public $salesUserDetail = null;
+
     // --- STEP 1: PILIH PRODUK ---
     public $searchStok = '';
     public $selectedStokId = null;
@@ -27,9 +33,9 @@ class PenjualanCreate extends Component
 
     // --- STEP 2: FORM PENJUALAN ---
     
-    // Tambahan: Pilihan Sales
-    #[Rule('required', as: 'Sales / Akun')]
-    public $sales_id = '';
+    // Kita hapus rule 'required' dari property ini di validasi otomatis
+    // karena kita set secara manual lewat fungsi chooseSales
+    public $sales_id = ''; 
 
     #[Rule('required', as: 'Nama Customer')] 
     public $nama_customer = '';
@@ -46,10 +52,33 @@ class PenjualanCreate extends Component
     #[Rule('nullable')] 
     public $catatan = '';
 
-    // Set default sales ke user yang login saat halaman dibuka
     public function mount()
     {
-        $this->sales_id = Auth::id();
+        // Default: Belum ada sales yang dipilih saat halaman load
+        $this->isSalesSelected = false;
+        $this->sales_id = null;
+    }
+
+    // --- FUNGSI BARU: PILIH AKUN SALES ---
+    public function chooseSales($id)
+    {
+        $user = User::find($id);
+        
+        // Validasi sederhana pastikan user ada dan satu cabang
+        if($user && $user->cabang_id == Auth::user()->cabang_id) {
+            $this->sales_id = $id;
+            $this->salesUserDetail = $user;
+            $this->isSalesSelected = true; // Pindah ke halaman form
+        }
+    }
+
+    // --- FUNGSI BARU: GANTI AKUN (KEMBALI KE DEPAN) ---
+    public function changeSalesAccount()
+    {
+        $this->resetForm();
+        $this->isSalesSelected = false;
+        $this->sales_id = null;
+        $this->salesUserDetail = null;
     }
 
     // Reset pagination saat search berubah
@@ -72,23 +101,34 @@ class PenjualanCreate extends Component
     {
         $this->selectedStokId = null;
         $this->selectedStokDetail = null;
-        // Reset form tapi biarkan sales_id tetap default (atau user login)
-        $this->reset(['nama_customer', 'nomor_wa', 'foto_bukti', 'harga_deal', 'catatan']);
-        $this->sales_id = Auth::id(); 
+        $this->resetForm();
+        // Jangan reset sales_id agar tidak terlempar ke halaman depan
         $this->resetValidation();
+    }
+
+    // Helper untuk reset input form saja
+    private function resetForm()
+    {
+        $this->reset(['nama_customer', 'nomor_wa', 'foto_bukti', 'harga_deal', 'catatan']);
     }
 
     public function storePenjualan()
     {
+        // Manual Validasi untuk Sales ID
+        if(empty($this->sales_id)) {
+            $this->addError('sales_id', 'Akun sales belum dipilih.');
+            return;
+        }
+
         $this->validate();
 
-        $user = Auth::user();
+        $user = Auth::user(); // User yang login (Operator/Tablet)
         
-        // FIX VALIDASI: Cek stok di cabang user ATAU stok pusat (null)
+        // Cek stok
         $stok = Stok::where('id', $this->selectedStokId)
             ->where(function($q) use ($user) {
                 $q->where('cabang_id', $user->cabang_id)
-                  ->orWhereNull('cabang_id'); // Izinkan jual stok pusat jika null
+                  ->orWhereNull('cabang_id'); 
             })
             ->where('jumlah', '>', 0)
             ->first();
@@ -102,15 +142,17 @@ class PenjualanCreate extends Component
             return;
         }
 
-        // Ambil data sales yang dipilih untuk nama di history (opsional)
-        $selectedSales = User::find($this->sales_id);
-        $namaSales = $selectedSales ? $selectedSales->nama_lengkap : $user->nama_lengkap;
+        // Pastikan data sales detail terisi
+        if(!$this->salesUserDetail) {
+            $this->salesUserDetail = User::find($this->sales_id);
+        }
+        $namaSales = $this->salesUserDetail->nama_lengkap;
 
         DB::transaction(function () use ($user, $stok, $namaSales) {
             $path = $this->foto_bukti->store('bukti-penjualan', 'public');
 
             Penjualan::create([
-                'user_id' => $this->sales_id, // MENGGUNAKAN ID SALES YANG DIPILIH
+                'user_id' => $this->sales_id, // ID Sales yang dipilih di awal
                 'cabang_id' => $user->cabang_id,
                 'stok_id' => $stok->id,
                 'tipe_penjualan' => 'Unit',
@@ -130,14 +172,17 @@ class PenjualanCreate extends Component
                 'imei' => $stok->imei,
                 'status' => 'Stok Keluar', 
                 'cabang_id' => $user->cabang_id,
-                // Mencatat bahwa dijual ke customer X oleh Sales Y (Input by Operator Z)
-                'keterangan' => "[PENJUALAN] Sold to {$this->nama_customer} by Sales: {$namaSales}",
-                'user_id' => $user->id // Tetap mencatat ID user yang login sebagai operator input (audit trail)
+                'keterangan' => "[PENJUALAN] Sold to {$this->nama_customer} (Sales: {$namaSales})",
+                'user_id' => $user->id // Operator (Log asli sistem)
             ]);
         });
 
-        $this->dispatch('swal', ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Penjualan berhasil disimpan!']);
-        $this->cancelSelection();
+        $this->dispatch('swal', ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Penjualan berhasil disimpan atas nama ' . $namaSales]);
+        
+        $this->cancelSelection(); // Reset form barang
+        // Kita biarkan tetap di halaman form sales tersebut (tidak kembali ke pemilihan akun)
+        // Agar sales tersebut bisa input lagi kalau ada transaksi beruntun.
+        // Jika mau ganti akun, user klik tombol "Ganti Akun".
         $this->updatedSearchStok(); 
     }
 
@@ -145,12 +190,13 @@ class PenjualanCreate extends Component
     {
         $user = Auth::user();
 
-        // LOGIKA AMBIL LIST SALES: Hanya user di cabang yang sama
+        // 1. Ambil List Sales untuk Halaman Depan
         $salesUsers = User::where('cabang_id', $user->cabang_id)
+                        ->where('role', 'sales') // Pastikan hanya role sales yang muncul
                         ->orderBy('nama_lengkap', 'asc')
                         ->get();
 
-        // FIX QUERY: Ambil stok cabang user ATAU stok yang cabang_id nya NULL (Pusat/Belum diset)
+        // 2. Ambil List Stok untuk Halaman Input
         $stoks = Stok::with(['merk', 'tipe'])
             ->where(function($q) use ($user) {
                 $q->where('cabang_id', $user->cabang_id)
@@ -169,7 +215,7 @@ class PenjualanCreate extends Component
 
         return view('livewire.sales.penjualan-create', [
             'stoks' => $stoks,
-            'salesUsers' => $salesUsers // Kirim data user sales ke view
+            'salesUsers' => $salesUsers
         ])->title('Input Penjualan');
     }
 }
