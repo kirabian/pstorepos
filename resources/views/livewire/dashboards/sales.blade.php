@@ -108,7 +108,6 @@
                     <h5 class="fw-bold text-dark mb-3">Aksi Cepat</h5>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            {{-- PERBAIKAN: Menggunakan tag <a> href ke route input penjualan --}}
                             <a href="{{ route('sales.input') }}" class="btn btn-dark w-100 py-3 rounded-4 d-flex align-items-center justify-content-center gap-3 hover-scale shadow-sm">
                                 <i class="fas fa-plus-circle fs-4 text-info"></i>
                                 <div class="text-start">
@@ -118,7 +117,6 @@
                             </a>
                         </div>
                         <div class="col-md-6">
-                            {{-- PERBAIKAN: Menggunakan tag <a> href ke route stok index --}}
                             <a href="{{ route('stok.index') }}" class="btn btn-light border w-100 py-3 rounded-4 d-flex align-items-center justify-content-center gap-3 hover-bg-light transition-all">
                                 <i class="fas fa-search fs-4 text-dark"></i>
                                 <div class="text-start">
@@ -176,51 +174,64 @@
             </div>
         </div>
 
-        {{-- Sidebar Right: Info --}}
+        {{-- Sidebar Right: Ranking Only --}}
         <div class="col-lg-4">
-            {{-- Promo / Info Card --}}
-            <div class="card border-0 shadow-sm rounded-4 bg-primary text-white mb-4 position-relative overflow-hidden">
-                <div class="card-body p-4 position-relative z-1">
-                    <span class="badge bg-white text-primary fw-bold mb-3">INFO PENTING</span>
-                    <h5 class="fw-bold mb-2">Promo Weekend Deal!</h5>
-                    <p class="small text-white-50 mb-3">Dapatkan insentif tambahan Rp 50.000 untuk setiap penjualan iPhone 13 series khusus hari Sabtu & Minggu ini.</p>
-                    <button class="btn btn-sm btn-white text-primary fw-bold rounded-pill px-3">Detail Promo</button>
-                </div>
-                {{-- Decorative Elements --}}
-                <div class="position-absolute top-0 end-0 p-3 opacity-25">
-                    <i class="fas fa-tags fa-5x"></i>
-                </div>
-            </div>
+            {{-- Card Ranking Personal (Hanya Ranking Dia) --}}
+            <div class="card border-0 shadow-sm rounded-4 mb-4 position-relative overflow-hidden h-100">
+                <div class="card-body p-4 text-center d-flex flex-column justify-content-center align-items-center">
+                    
+                    {{-- Judul Kecil --}}
+                    <h6 class="text-uppercase text-secondary fw-bold tracking-wider mb-4" style="font-size: 0.75rem;">
+                        <i class="fas fa-chart-line me-1"></i> Peringkat Penjualan
+                    </h6>
 
-            {{-- Top Selling Products in Branch --}}
-            <div class="card border-0 shadow-sm rounded-4">
-                <div class="card-header bg-transparent border-0 p-4 pb-0">
-                    <h6 class="fw-bold text-dark mb-0">Paling Laris di {{ $cabang }}</h6>
-                </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        <div class="list-group-item border-light-subtle px-4 py-3 d-flex align-items-center gap-3">
-                            <div class="bg-light p-2 rounded-3 text-dark fw-bold text-center" style="width: 40px;">1</div>
-                            <div class="flex-grow-1">
-                                <h6 class="fw-bold text-dark mb-0">iPhone 11 64GB</h6>
-                                <small class="text-muted">32 Unit terjual minggu ini</small>
-                            </div>
+                    {{-- Icon Piala / Medali --}}
+                    <div class="mb-3 position-relative">
+                        <div class="bg-warning bg-opacity-10 p-4 rounded-circle d-inline-flex align-items-center justify-content-center" 
+                             style="width: 100px; height: 100px; box-shadow: 0 0 0 8px rgba(255, 193, 7, 0.1);">
+                            <i class="fas fa-trophy fa-3x text-warning"></i>
                         </div>
-                        <div class="list-group-item border-light-subtle px-4 py-3 d-flex align-items-center gap-3">
-                            <div class="bg-light p-2 rounded-3 text-dark fw-bold text-center" style="width: 40px;">2</div>
-                            <div class="flex-grow-1">
-                                <h6 class="fw-bold text-dark mb-0">Samsung A55 5G</h6>
-                                <small class="text-muted">28 Unit terjual minggu ini</small>
-                            </div>
-                        </div>
-                        <div class="list-group-item border-light-subtle px-4 py-3 d-flex align-items-center gap-3">
-                            <div class="bg-light p-2 rounded-3 text-dark fw-bold text-center" style="width: 40px;">3</div>
-                            <div class="flex-grow-1">
-                                <h6 class="fw-bold text-dark mb-0">Xiaomi Redmi Note 13</h6>
-                                <small class="text-muted">25 Unit terjual minggu ini</small>
-                            </div>
-                        </div>
+                        
+                        {{-- Badge Cabang Kecil di sudut ikon --}}
+                        <span class="position-absolute bottom-0 start-50 translate-middle-x badge bg-dark text-white rounded-pill border border-2 border-white small">
+                            {{ $cabang }}
+                        </span>
                     </div>
+
+                    {{-- Angka Ranking Besar --}}
+                    <div class="mb-2">
+                        <h1 class="display-1 fw-black text-dark mb-0 lh-1">
+                            <span class="fs-4 text-muted align-top me-1 fw-bold">#</span>{{ $my_rank ?? '-' }}
+                        </h1>
+                    </div>
+
+                    {{-- Keterangan Total Sales --}}
+                    <p class="text-muted small mb-4">
+                        Dari total <span class="fw-bold text-dark">{{ $total_sales_people ?? '-' }} Sales</span> yang aktif di cabang ini.
+                    </p>
+
+                    {{-- Pesan Motivasi Berdasarkan Ranking --}}
+                    <div class="w-100">
+                        @if(isset($my_rank) && $my_rank == 1)
+                            <div class="alert alert-success border-0 bg-success-subtle text-success fw-bold py-2 px-3 rounded-pill small mb-0">
+                                👑 Luar Biasa! Kamu Juara 1!
+                            </div>
+                        @elseif(isset($my_rank) && $my_rank <= 5)
+                            <div class="alert alert-info border-0 bg-info-subtle text-info fw-bold py-2 px-3 rounded-pill small mb-0">
+                                🔥 Keren! Kamu masuk Top 5!
+                            </div>
+                        @else
+                            <div class="alert alert-light border border-light-subtle text-secondary fw-bold py-2 px-3 rounded-pill small mb-0">
+                                💪 Semangat! Kejar Top Ranking!
+                            </div>
+                        @endif
+                    </div>
+
+                </div>
+                
+                {{-- Hiasan Background Abstrak --}}
+                <div class="position-absolute top-0 end-0 p-3 opacity-10">
+                    <i class="fas fa-crown fa-5x text-secondary"></i>
                 </div>
             </div>
         </div>
