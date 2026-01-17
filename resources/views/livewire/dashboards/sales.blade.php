@@ -1,6 +1,5 @@
 <div class="container-fluid pb-5 animate__animated animate__fadeIn">
-    {{-- ^^^ ADDED pb-5 HERE: Memberi jarak di bawah agar tidak menabrak footer --}}
-
+    
     {{-- HEADER SECTION --}}
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 gap-4">
         <div>
@@ -23,7 +22,7 @@
         </div>
     </div>
 
-    {{-- STATS CARDS --}}
+    {{-- STATS CARDS (GRID 4 KOLOM) --}}
     <div class="row g-4 mb-5">
         {{-- Card 1: Penjualan Hari Ini --}}
         <div class="col-12 col-md-6 col-xl-3">
@@ -66,7 +65,7 @@
                             <i class="fas fa-bullseye fa-lg"></i>
                         </div>
                         @php
-                            $target = $target_bulan > 0 ? $target_bulan : 1; // Prevent division by zero
+                            $target = $target_bulan > 0 ? $target_bulan : 1; 
                             $percentage = round(($capaian_bulan / $target) * 100);
                         @endphp
                         <span class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning-subtle rounded-pill extra-small">
@@ -104,7 +103,7 @@
     </div>
 
     {{-- MAIN CONTENT GRID --}}
-    <div class="row g-4 mb-5"> {{-- Added mb-5 --}}
+    <div class="row g-4 mb-5">
         {{-- Quick Actions & Today's Sales --}}
         <div class="col-lg-8">
             {{-- Quick Action Buttons --}}
@@ -179,9 +178,8 @@
             </div>
         </div>
 
-        {{-- Sidebar Right: Ranking Only --}}
+        {{-- Sidebar Right: Ranking Only (UPDATED UI) --}}
         <div class="col-lg-4">
-            {{-- Card Ranking Personal (Hanya Ranking Dia) --}}
             <div class="card border-0 shadow-sm rounded-4 mb-4 position-relative overflow-hidden h-100">
                 
                 {{-- Background Decoration --}}
@@ -191,14 +189,23 @@
                     
                     {{-- Judul Kecil --}}
                     <h6 class="text-uppercase text-secondary fw-bold tracking-wider mb-4" style="font-size: 0.75rem;">
-                        <i class="fas fa-chart-line me-1"></i> Peringkat Penjualan
+                        <i class="fas fa-trophy me-1 text-warning"></i> Peringkat Sales
                     </h6>
 
                     {{-- Icon Piala / Medali --}}
-                    <div class="mb-3 position-relative">
-                        <div class="bg-warning bg-opacity-10 p-4 rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm" 
-                             style="width: 120px; height: 120px;">
-                            <i class="fas fa-trophy fa-4x text-warning animate__animated animate__pulse animate__infinite"></i>
+                    <div class="mb-2 position-relative">
+                        <div class="bg-white p-2 rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm border border-light" 
+                             style="width: 100px; height: 100px;">
+                             
+                             @if(isset($my_rank) && $my_rank == 1)
+                                <span style="font-size: 3.5rem;">🥇</span>
+                             @elseif(isset($my_rank) && $my_rank == 2)
+                                <span style="font-size: 3.5rem;">🥈</span>
+                             @elseif(isset($my_rank) && $my_rank == 3)
+                                <span style="font-size: 3.5rem;">🥉</span>
+                             @else
+                                <span style="font-size: 3.5rem;">🎖️</span>
+                             @endif
                         </div>
                         
                         {{-- Badge Cabang --}}
@@ -208,38 +215,52 @@
                     </div>
 
                     {{-- Angka Ranking Besar & Jelas --}}
-                    <div class="mb-2 mt-2">
+                    <div class="mb-1 mt-3">
                         @if(isset($my_rank) && $my_rank > 0)
-                            <h1 class="fw-black text-primary mb-0" style="font-size: 5rem; line-height: 1;">
+                            <h1 class="fw-black text-dark mb-0" style="font-size: 4.5rem; line-height: 1; letter-spacing: -2px;">
                                 <span class="fs-2 text-muted align-top me-1 fw-bold">#</span>{{ $my_rank }}
                             </h1>
                         @else
-                            {{-- Tampilan jika belum ada ranking --}}
-                            <h1 class="fw-black text-muted mb-0" style="font-size: 4rem; line-height: 1;">
-                                -
-                            </h1>
-                            <small class="text-muted fst-italic">Belum ada data</small>
+                            <h1 class="fw-black text-muted mb-0" style="font-size: 4rem; line-height: 1;">-</h1>
+                            <small class="text-muted fst-italic">No Rank</small>
                         @endif
                     </div>
 
-                    {{-- Keterangan Total Sales --}}
-                    <p class="text-muted small mb-4">
-                        Dari total <span class="fw-bold text-dark">{{ $total_sales_people ?? 0 }} Sales</span><br>yang aktif di cabang ini.
-                    </p>
+                    {{-- INFO PENJUALAN DIA (MENGGANTIKAN TOTAL SALES) --}}
+                    <div class="mt-2 mb-4 w-100 px-3">
+                        <div class="bg-white border rounded-3 p-3 shadow-sm">
+                            <h6 class="text-muted text-uppercase fw-bold small mb-2" style="font-size: 0.65rem;">Total Penjualan Kamu</h6>
+                            <div class="d-flex justify-content-center align-items-end gap-2">
+                                <span class="fw-black text-primary" style="font-size: 2rem; line-height: 1;">
+                                    {{ $capaian_bulan ?? 0 }}
+                                </span>
+                                <span class="fw-bold text-dark pb-1">Unit</span>
+                            </div>
+                            
+                            {{-- Mini Progress Bar --}}
+                            <div class="progress mt-2 rounded-pill" style="height: 4px;">
+                                <div class="progress-bar bg-primary" role="progressbar" style="width: {{ $percentage }}%"></div>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1">
+                                <small class="text-muted" style="font-size: 0.6rem;">0</small>
+                                <small class="text-muted fw-bold" style="font-size: 0.6rem;">Target: {{ $target_bulan }}</small>
+                            </div>
+                        </div>
+                    </div>
 
                     {{-- Pesan Motivasi Berdasarkan Ranking --}}
                     <div class="w-100">
                         @if(isset($my_rank) && $my_rank == 1)
-                            <div class="alert alert-success border-0 bg-success-subtle text-success fw-bold py-3 px-3 rounded-4 shadow-sm mb-0">
-                                👑 Luar Biasa! Kamu Juara 1!
+                            <div class="alert alert-success border-0 bg-success-subtle text-success fw-bold py-2 px-3 rounded-3 shadow-sm mb-0 small">
+                                👑 Pertahankan Juara 1!
                             </div>
                         @elseif(isset($my_rank) && $my_rank > 0 && $my_rank <= 5)
-                            <div class="alert alert-info border-0 bg-info-subtle text-info fw-bold py-3 px-3 rounded-4 shadow-sm mb-0">
-                                🔥 Keren! Kamu masuk Top 5!
+                            <div class="alert alert-info border-0 bg-info-subtle text-info fw-bold py-2 px-3 rounded-3 shadow-sm mb-0 small">
+                                🔥 Sedikit lagi ke puncak!
                             </div>
                         @else
-                            <div class="alert alert-light border border-light-subtle text-secondary fw-bold py-3 px-3 rounded-4 shadow-sm mb-0">
-                                💪 Semangat! Kejar Top Ranking!
+                            <div class="alert alert-light border border-light-subtle text-secondary fw-bold py-2 px-3 rounded-3 shadow-sm mb-0 small">
+                                💪 Ayo Push Rank Lagi!
                             </div>
                         @endif
                     </div>
@@ -260,6 +281,6 @@
         .tracking-wide { letter-spacing: 0.025em; }
         .fw-black { font-weight: 900; }
         .extra-small { font-size: 0.7rem; }
-        .bg-gradient-soft { background: radial-gradient(circle at top right, rgba(0,173,181,0.05) 0%, rgba(255,255,255,0) 70%); }
+        .bg-gradient-soft { background: linear-gradient(135deg, rgba(248,249,250,1) 0%, rgba(233,236,239,0.5) 100%); }
     </style>
 </div>
