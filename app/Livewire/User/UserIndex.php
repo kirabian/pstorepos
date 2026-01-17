@@ -30,7 +30,7 @@ class UserIndex extends Component
     // ID Locations
     public $distributor_id, $cabang_id, $gudang_id; 
 
-    // Logic Penempatan Kerja untuk Inventory Staff
+    // Logic Penempatan Kerja
     // Values: 'distributor', 'gudang', 'toko_offline', 'toko_online'
     public $placement_type = ''; 
 
@@ -55,18 +55,16 @@ class UserIndex extends Component
             $this->placement_type = '';
             $this->gudang_id = null;
             $this->distributor_id = null;
-            // Jangan reset cabang_id dulu karena role lain butuh cabang_id
         }
         
-        // Reset ID jika pindah ke role operasional cabang biasa
-        // Note: toko_offline dan toko_online butuh cabang_id
-        if (in_array($value, ['adminproduk', 'analis', 'leader', 'sales', 'security', 'toko_offline', 'toko_online'])) {
+        // Reset ID Lokasi
+        if (in_array($value, ['adminproduk', 'analis', 'leader', 'sales', 'security'])) {
             $this->distributor_id = null;
             $this->gudang_id = null;
         }
     }
 
-    // Logic Reset Dropdown saat Radio Button Inventory Berubah
+    // Logic Reset Dropdown saat Radio Button Berubah
     public function updatedPlacementType()
     {
         $this->distributor_id = null;
@@ -94,14 +92,12 @@ class UserIndex extends Component
         // 2. LOGIKA PROTEKSI DATA AUDIT
         if ($currentUser->role === 'audit') {
             $myBranchIds = $currentUser->access_cabang_ids ?? []; 
-            
             $query->where(function($q) use ($myBranchIds) {
                 $q->whereIn('cabang_id', $myBranchIds)
                   ->orWhereHas('branches', function($sq) use ($myBranchIds) {
                       $sq->whereIn('cabangs.id', $myBranchIds);
                   });
             });
-            
             $query->where('role', '!=', 'superadmin');
         }
 
@@ -112,8 +108,7 @@ class UserIndex extends Component
             $cabangs = Cabang::orderBy('nama_cabang', 'asc')->get();
         } else {
             $cabangs = Cabang::whereIn('id', $currentUser->access_cabang_ids ?? [])
-                             ->orderBy('nama_cabang', 'asc')
-                             ->get();
+                             ->orderBy('nama_cabang', 'asc')->get();
         }
 
         $distributors = Distributor::orderBy('nama_distributor', 'asc')->get();
@@ -163,7 +158,7 @@ class UserIndex extends Component
             'email'        => ['required', 'email', Rule::unique('users')->ignore($this->userId)],
         ];
 
-        // 2. Logic Validasi Inventory Staff (UPDATE: Tambah Toko Offline/Online)
+        // 2. Logic Validasi Inventory Staff (Termasuk Toko Offline/Online)
         if ($this->role === 'inventory_staff') {
             $rules['placement_type'] = 'required|in:distributor,gudang,toko_offline,toko_online';
             
@@ -173,13 +168,13 @@ class UserIndex extends Component
             elseif ($this->placement_type === 'gudang') {
                 $rules['gudang_id'] = 'required';
             } 
-            // Jika ditempatkan di Toko Offline/Online, butuh Cabang ID
+            // Jika Toko Offline/Online, butuh Cabang ID
             elseif (in_array($this->placement_type, ['toko_offline', 'toko_online'])) {
                 $rules['cabang_id'] = 'required';
             }
         }
-        // Validasi Role Lain (Operasional Cabang + Toko Offline/Online Role)
-        elseif (in_array($this->role, ['adminproduk', 'analis', 'leader', 'sales', 'security', 'toko_offline', 'toko_online'])) {
+        // Validasi Role Lain
+        elseif (in_array($this->role, ['adminproduk', 'analis', 'leader', 'sales', 'security'])) {
             $rules['cabang_id'] = 'required';
         }
         // Validasi Audit Superadmin
@@ -220,29 +215,33 @@ class UserIndex extends Component
             'is_active'    => $this->is_active,
         ];
 
-        // Reset semua ID lokasi agar bersih
+        // Reset semua ID lokasi
         $data['distributor_id'] = null;
         $data['cabang_id'] = null;
         $data['gudang_id'] = null;
 
-        // Logic Assignment ID
+        // --- LOGIC UTAMA: ASSIGN ROLE & LOCATION ---
         if ($this->role === 'inventory_staff') {
-            if ($this->placement_type === 'distributor') {
-                $data['distributor_id'] = $this->distributor_id;
+            // Override Role sesuai placement
+            if ($this->placement_type === 'toko_offline') {
+                $data['role'] = 'toko_offline'; // Simpan sebagai Toko Offline (Kasir)
+                $data['cabang_id'] = $this->cabang_id;
             } 
-            elseif ($this->placement_type === 'gudang') {
-                $data['gudang_id'] = $this->gudang_id; 
-            }
-            // Jika inventory staff ditaruh di toko/cabang
-            elseif (in_array($this->placement_type, ['toko_offline', 'toko_online'])) {
+            elseif ($this->placement_type === 'toko_online') {
+                $data['role'] = 'toko_online'; // Simpan sebagai Toko Online
                 $data['cabang_id'] = $this->cabang_id;
             }
+            elseif ($this->placement_type === 'distributor') {
+                $data['role'] = 'inventory_staff';
+                $data['distributor_id'] = $this->distributor_id;
+            }
+            elseif ($this->placement_type === 'gudang') {
+                $data['role'] = 'inventory_staff';
+                $data['gudang_id'] = $this->gudang_id;
+            }
         }
-        elseif (in_array($this->role, ['superadmin', 'audit'])) {
-            // Role global/multi-cabang tidak simpan ID spesifik disini
-        }
-        else {
-            // Role operasional cabang (Sales, Leader, Toko Offline, Toko Online)
+        elseif (!in_array($this->role, ['superadmin', 'audit'])) {
+            // Role operasional cabang lainnya
             $data['cabang_id'] = $this->cabang_id;
         }
 
@@ -279,7 +278,7 @@ class UserIndex extends Component
         $user = User::findOrFail($id);
         $currentUser = Auth::user();
 
-        // Validasi Akses Audit saat Edit
+        // Validasi Akses Audit
         if ($currentUser->role === 'audit') {
             if ($user->role === 'superadmin') {
                 $this->dispatch('swal', ['title'=>'Akses Ditolak', 'text'=>'Anda tidak bisa mengedit Superadmin.', 'icon'=>'error']);
@@ -296,7 +295,6 @@ class UserIndex extends Component
         $this->idlogin = $user->idlogin;
         $this->email = $user->email;
         $this->tanggal_lahir = $user->tanggal_lahir;
-        $this->role = $user->role;
         $this->is_active = (bool) $user->is_active;
         
         // Load IDs
@@ -304,64 +302,49 @@ class UserIndex extends Component
         $this->cabang_id = $user->cabang_id;
         $this->gudang_id = $user->gudang_id;
 
-        // Tentukan Placement Type saat Edit untuk Inventory Staff
-        $this->placement_type = '';
-        if ($user->role === 'inventory_staff') {
-            if ($user->distributor_id) {
-                $this->placement_type = 'distributor';
-            } elseif ($user->gudang_id) {
-                $this->placement_type = 'gudang';
-            } elseif ($user->cabang_id) {
-                // Asumsi default jika ada di cabang, kita set ke toko_offline (karena di DB tidak ada pembeda offline/online khusus inventory)
-                // User bisa ganti manual nanti di UI
-                $this->placement_type = 'toko_offline';
-            }
+        // --- LOGIC REVERSE ENGINEER UI ---
+        // Kembalikan Tampilan UI 'Inventory Staff' jika role adalah toko_offline/online
+        if (in_array($user->role, ['toko_offline', 'toko_online'])) {
+            $this->role = 'inventory_staff';
+            $this->placement_type = $user->role; // 'toko_offline' atau 'toko_online'
+        } elseif ($user->role === 'inventory_staff') {
+            $this->role = 'inventory_staff';
+            if ($user->distributor_id) $this->placement_type = 'distributor';
+            elseif ($user->gudang_id) $this->placement_type = 'gudang';
+        } else {
+            $this->role = $user->role;
+            $this->placement_type = '';
         }
 
-        $this->selected_branches = $user->branches->pluck('id')
-            ->map(fn($id) => (string) $id) 
-            ->toArray();
+        $this->selected_branches = $user->branches->pluck('id')->map(fn($id) => (string) $id)->toArray();
 
         $this->isEdit = true;
         $this->resetErrorBag();
     }
 
-    // === DELETE ===
+    // === DELETE & TOGGLE (Sama seperti sebelumnya) ===
     public function delete($id)
     {
         if ($id === auth()->id()) return;
-        
         $user = User::findOrFail($id);
         $currentUser = Auth::user();
-        
         if ($currentUser->role === 'audit') {
             if ($user->role === 'superadmin') return;
-            if ($user->cabang_id && !in_array($user->cabang_id, $currentUser->access_cabang_ids ?? [])) {
-                $this->dispatch('swal', ['title'=>'Gagal', 'text'=>'User diluar akses cabang Anda.', 'icon'=>'error']);
-                return;
-            }
+            if ($user->cabang_id && !in_array($user->cabang_id, $currentUser->access_cabang_ids ?? [])) return;
         }
-
         $user->delete();
         $this->dispatch('swal', ['title'=>'Terhapus!', 'text'=>'User berhasil dihapus.', 'icon'=>'success']);
     }
     
-    // === TOGGLE STATUS ===
     public function toggleStatus($id)
     {
         if ($id === auth()->id()) return; 
-
         $user = User::findOrFail($id);
         $currentUser = Auth::user();
-        
         if ($currentUser->role === 'audit') {
             if ($user->role === 'superadmin') return;
-            if ($user->cabang_id && !in_array($user->cabang_id, $currentUser->access_cabang_ids ?? [])) {
-                $this->dispatch('swal', ['title'=>'Gagal', 'text'=>'User diluar akses cabang Anda.', 'icon'=>'error']);
-                return;
-            }
+            if ($user->cabang_id && !in_array($user->cabang_id, $currentUser->access_cabang_ids ?? [])) return;
         }
-
         $user->is_active = !$user->is_active;
         $user->save();
     }
