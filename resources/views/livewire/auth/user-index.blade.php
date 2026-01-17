@@ -142,7 +142,7 @@
                                         </div>
                                     </div>
                                 @elseif($user->role === 'inventory_staff')
-                                    {{-- DISPLAY LOKASI INVENTORY STAFF (Distributor atau Gudang Fisik) --}}
+                                    {{-- DISPLAY LOKASI INVENTORY STAFF (Distributor, Gudang, atau Cabang) --}}
                                     @if($user->distributor_id)
                                         <div class="d-flex align-items-center gap-2 text-primary fw-bold small">
                                             <div class="bg-primary bg-opacity-10 p-1 rounded-circle"><i class="fas fa-truck"></i></div>
@@ -152,6 +152,11 @@
                                         <div class="d-flex align-items-center gap-2 text-dark fw-bold small">
                                             <div class="bg-info bg-opacity-10 text-info p-1 rounded-circle"><i class="fas fa-warehouse"></i></div>
                                             {{ $user->gudang->nama_gudang }} (Warehouse)
+                                        </div>
+                                    @elseif($user->cabang_id)
+                                        <div class="d-flex align-items-center gap-2 text-warning-emphasis fw-bold small">
+                                            <div class="bg-warning bg-opacity-10 text-warning p-1 rounded-circle"><i class="fas fa-store"></i></div>
+                                            {{ $user->cabang->nama_cabang }} (In Store)
                                         </div>
                                     @else
                                         <span class="text-muted small italic">-</span>
@@ -297,21 +302,23 @@
                                 <div class="bg-dark p-1 rounded-4">
                                     <div class="form-floating">
                                         <select class="form-select border-0 bg-white text-dark fw-bold rounded-4" 
-                                                id="roleSelect" 
-                                                wire:model.live="role"
-                                                @if($isEdit && Auth::user()->role !== 'superadmin') disabled @endif>
-                                            
-                                            <option value="">Select Role</option>
-                                            @if(Auth::user()->role === 'superadmin')
-                                                <option value="superadmin">SUPERADMIN (Full Access)</option>
-                                                <option value="audit">AUDIT (Multi-Branch Access)</option>
-                                            @endif
-                                            <option value="adminproduk">ADMIN PRODUK</option>
-                                            <option value="analis">ANALIST DATA</option>
-                                            <option value="leader">TEAM LEADER</option>
-                                            <option value="sales">SALES / CASHIER</option>
-                                            <option value="inventory_staff">INVENTORY STAFF (Staff Inventory)</option>
-                                            <option value="security">SECURITY</option>
+                                            id="roleSelect" 
+                                            wire:model.live="role"
+                                            @if($isEdit && Auth::user()->role !== 'superadmin') disabled @endif>
+                                        
+                                        <option value="">Select Role</option>
+                                        @if(Auth::user()->role === 'superadmin')
+                                            <option value="superadmin">SUPERADMIN (Full Access)</option>
+                                            <option value="audit">AUDIT (Multi-Branch Access)</option>
+                                        @endif
+                                        <option value="toko_offline">TOKO OFFLINE (Kasir/POS)</option>
+                                        <option value="toko_online">TOKO ONLINE (E-Commerce)</option>
+                                        <option value="adminproduk">ADMIN PRODUK</option>
+                                        <option value="analis">ANALIST DATA</option>
+                                        <option value="leader">TEAM LEADER</option>
+                                        <option value="sales">SALES / CASHIER</option>
+                                        <option value="inventory_staff">INVENTORY STAFF (Staff Inventory)</option>
+                                        <option value="security">SECURITY</option>
                                         </select>
                                         <label for="roleSelect" class="text-dark fw-bold">User Role</label>
                                     </div>
@@ -326,22 +333,34 @@
                                 @error('role') <span class="text-danger extra-small fw-bold ms-2">{{ $message }}</span> @enderror
                             </div>
 
-                            {{-- LOGIC BARU: Jika Inventory Staff -> Pilih Penempatan (Distributor / Gudang) --}}
+                            {{-- LOGIC BARU: Inventory Staff Placement (Distributor, Gudang, Toko Offline, Toko Online) --}}
                             @if($role === 'inventory_staff')
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="p-4 bg-light border rounded-4">
                                         <label class="d-block text-secondary small fw-bold text-uppercase mb-3">Penempatan Inventory</label>
-                                        <div class="d-flex gap-3">
+                                        <div class="d-flex flex-wrap gap-3">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="radio" name="placement" id="plc_dist" value="distributor" wire:model.live="placement_type">
                                                 <label class="form-check-label fw-bold text-dark cursor-pointer" for="plc_dist">
-                                                    <i class="fas fa-truck me-1"></i> Di Distributor
+                                                    <i class="fas fa-truck me-1"></i> Distributor
                                                 </label>
                                             </div>
                                             <div class="form-check">
                                                 <input class="form-check-input" type="radio" name="placement" id="plc_gudang" value="gudang" wire:model.live="placement_type">
                                                 <label class="form-check-label fw-bold text-dark cursor-pointer" for="plc_gudang">
-                                                    <i class="fas fa-warehouse me-1"></i> Di Gudang Fisik
+                                                    <i class="fas fa-warehouse me-1"></i> Gudang Fisik
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="placement" id="plc_offline" value="toko_offline" wire:model.live="placement_type">
+                                                <label class="form-check-label fw-bold text-dark cursor-pointer" for="plc_offline">
+                                                    <i class="fas fa-store me-1"></i> Toko Offline
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="placement" id="plc_online" value="toko_online" wire:model.live="placement_type">
+                                                <label class="form-check-label fw-bold text-dark cursor-pointer" for="plc_online">
+                                                    <i class="fas fa-globe me-1"></i> Toko Online
                                                 </label>
                                             </div>
                                         </div>
@@ -368,7 +387,7 @@
                                 </div>
                             @endif
 
-                            {{-- 2. Dropdown Gudang Fisik (NEW) --}}
+                            {{-- 2. Dropdown Gudang Fisik --}}
                             @if($role === 'gudang' || ($role === 'inventory_staff' && $placement_type === 'gudang'))
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="form-floating">
@@ -385,7 +404,7 @@
                             @endif
 
                             {{-- 3. Dropdown Cabang --}}
-                            @if($role && !in_array($role, ['superadmin', 'audit', 'distributor', 'inventory_staff', 'gudang']))
+                            @if(($role && !in_array($role, ['superadmin', 'audit', 'distributor', 'inventory_staff', 'gudang'])) || ($role === 'inventory_staff' && in_array($placement_type, ['toko_offline', 'toko_online'])))
                                 <div class="col-12 animate__animated animate__fadeIn">
                                     <div class="form-floating">
                                         <select class="form-select bg-warning-subtle border-0 text-dark fw-bold rounded-4" id="branchSelect" wire:model="cabang_id">
@@ -424,24 +443,24 @@
                                         
                                         {{-- Trigger --}}
                                         <div @click="if(!isReadOnly) open = !open" 
-                                             class="form-control bg-light border-0 rounded-4 py-3 px-4 d-flex justify-content-between align-items-center shadow-sm transition-all"
-                                             :class="isReadOnly ? 'cursor-not-allowed opacity-75' : 'cursor-pointer hover-bg-light'">
-                                            <div>
-                                                <span class="text-secondary fw-semibold small text-uppercase d-block mb-1" style="font-size: 0.7rem;">Audit Coverage</span>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <i class="fas fa-building text-dark opacity-50"></i>
-                                                    <span class="fw-bold text-dark" x-text="selected.length > 0 ? selected.length + ' Branches Selected' : 'Select Target Branches...'"></span>
+                                           class="form-control bg-light border-0 rounded-4 py-3 px-4 d-flex justify-content-between align-items-center shadow-sm transition-all"
+                                           :class="isReadOnly ? 'cursor-not-allowed opacity-75' : 'cursor-pointer hover-bg-light'">
+                                        <div>
+                                            <span class="text-secondary fw-semibold small text-uppercase d-block mb-1" style="font-size: 0.7rem;">Audit Coverage</span>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="fas fa-building text-dark opacity-50"></i>
+                                                <span class="fw-bold text-dark" x-text="selected.length > 0 ? selected.length + ' Branches Selected' : 'Select Target Branches...'"></span>
+                                            </div>
+                                            <template x-if="isReadOnly">
+                                                <div class="text-danger extra-small fw-bold mt-1">
+                                                    <i class="fas fa-lock me-1"></i> Hubungi Superadmin untuk ubah
                                                 </div>
-                                                <template x-if="isReadOnly">
-                                                    <div class="text-danger extra-small fw-bold mt-1">
-                                                        <i class="fas fa-lock me-1"></i> Hubungi Superadmin untuk ubah
-                                                    </div>
-                                                </template>
-                                            </div>
-                                            <div class="bg-white rounded-circle p-2 shadow-sm">
-                                                <i class="fas text-dark transition-all" 
-                                                   :class="isReadOnly ? 'fa-lock text-muted' : (open ? 'fa-chevron-up' : 'fa-chevron-down')"></i>
-                                            </div>
+                                            </template>
+                                        </div>
+                                        <div class="bg-white rounded-circle p-2 shadow-sm">
+                                            <i class="fas text-dark transition-all" 
+                                               :class="isReadOnly ? 'fa-lock text-muted' : (open ? 'fa-chevron-up' : 'fa-chevron-down')"></i>
+                                        </div>
                                         </div>
 
                                         {{-- Dropdown --}}
@@ -449,35 +468,35 @@
                                             <div x-show="open" x-transition.opacity.duration.300ms
                                                  class="mt-3 bg-white rounded-4 border border-light-subtle shadow-sm overflow-hidden" 
                                                  style="display: none;">
-                                                
-                                                <div class="p-3 bg-light border-bottom border-light-subtle d-flex justify-content-between align-items-center">
-                                                    <span class="text-muted small fw-bold text-uppercase tracking-wide">Available Branches</span>
-                                                    <span class="badge bg-dark text-white rounded-pill px-2 extra-small">Multiple Select</span>
-                                                </div>
+                                            
+                                            <div class="p-3 bg-light border-bottom border-light-subtle d-flex justify-content-between align-items-center">
+                                                <span class="text-muted small fw-bold text-uppercase tracking-wide">Available Branches</span>
+                                                <span class="badge bg-dark text-white rounded-pill px-2 extra-small">Multiple Select</span>
+                                            </div>
 
-                                                <div class="custom-scrollbar" style="max-height: 250px; overflow-y: auto;">
-                                                    <div class="p-2">
-                                                        @foreach($cabangs as $c)
-                                                            <div @click="toggle('{{ $c->id }}')" 
-                                                                 class="d-flex align-items-center justify-content-between p-3 rounded-3 cursor-pointer mb-1 transition-all"
-                                                                 :class="selected.includes('{{ $c->id }}') ? 'bg-dark text-white shadow-sm transform-scale' : 'bg-white text-dark hover-bg-light'">
-                                                                
-                                                                <div class="d-flex align-items-center gap-3">
-                                                                    <div class="rounded-circle p-1 d-flex align-items-center justify-content-center" 
-                                                                         :class="selected.includes('{{ $c->id }}') ? 'bg-white bg-opacity-25' : 'bg-light'">
-                                                                        <i class="fas fa-store fa-sm"></i>
-                                                                    </div>
-                                                                    <span class="fw-bold small">{{ $c->nama_cabang }}</span>
+                                            <div class="custom-scrollbar" style="max-height: 250px; overflow-y: auto;">
+                                                <div class="p-2">
+                                                    @foreach($cabangs as $c)
+                                                        <div @click="toggle('{{ $c->id }}')" 
+                                                             class="d-flex align-items-center justify-content-between p-3 rounded-3 cursor-pointer mb-1 transition-all"
+                                                             :class="selected.includes('{{ $c->id }}') ? 'bg-dark text-white shadow-sm transform-scale' : 'bg-white text-dark hover-bg-light'">
+                                                            
+                                                            <div class="d-flex align-items-center gap-3">
+                                                                <div class="rounded-circle p-1 d-flex align-items-center justify-content-center" 
+                                                                     :class="selected.includes('{{ $c->id }}') ? 'bg-white bg-opacity-25' : 'bg-light'">
+                                                                    <i class="fas fa-store fa-sm"></i>
                                                                 </div>
-                                                                
-                                                                <div x-show="selected.includes('{{ $c->id }}')">
-                                                                    <i class="fas fa-check-circle text-success"></i>
-                                                                </div>
+                                                                <span class="fw-bold small">{{ $c->nama_cabang }}</span>
                                                             </div>
-                                                        @endforeach
-                                                    </div>
+                                                            
+                                                            <div x-show="selected.includes('{{ $c->id }}')">
+                                                                <i class="fas fa-check-circle text-success"></i>
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
                                                 </div>
                                             </div>
+                                        </div>
                                         </template>
 
                                         {{-- Badges --}}

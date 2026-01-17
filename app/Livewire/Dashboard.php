@@ -4,7 +4,7 @@ namespace App\Livewire;
 
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB; // <--- PENTING: Tambahan untuk fungsi DB::raw
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\User;
@@ -45,7 +45,6 @@ class Dashboard extends Component
         elseif ($user->role === 'analis') {
             $cabangs = Cabang::all();
             $performanceData = $cabangs->map(function($cabang) {
-                // Simulasi data analis (tetap dummy karena analis biasanya main prediksi)
                 $baseOmset = rand(150000000, 500000000); 
                 $margin = rand(15, 35); 
                 $profit = $baseOmset * ($margin / 100);
@@ -83,12 +82,10 @@ class Dashboard extends Component
             $cabang = Cabang::find($user->cabang_id);
             $namaCabang = $cabang ? $cabang->nama_cabang : 'Cabang Tidak Diketahui';
 
-            // Ambil Data Realtime Penjualan Cabang Ini
             $omsetHariIni = Penjualan::where('cabang_id', $user->cabang_id)->whereDate('created_at', today())->sum('harga_jual_real');
             $omsetBulanIni = Penjualan::where('cabang_id', $user->cabang_id)->whereMonth('created_at', now()->month)->sum('harga_jual_real');
             $transaksiHariIni = Penjualan::where('cabang_id', $user->cabang_id)->whereDate('created_at', today())->count();
             
-            // Cari Top Sales
             $topSales = Penjualan::where('cabang_id', $user->cabang_id)
                 ->whereMonth('created_at', now()->month)
                 ->selectRaw('user_id, sum(harga_jual_real) as total_omset')
@@ -114,7 +111,6 @@ class Dashboard extends Component
         // 4. LOGIKA INVENTORY STAFF
         elseif ($user->role === 'inventory_staff') {
             if ($user->distributor_id) {
-                // ... (Logic Distributor Inventory tetap sama/dummy dulu jika belum ada tabel distribusi)
                 $viewData = [
                     'mode' => 'distributor',
                     'location_name' => $user->distributor->nama_distributor,
@@ -153,42 +149,16 @@ class Dashboard extends Component
             return view('livewire.dashboards.owner-distributor', $viewData);
         }
 
-        // 6. LOGIKA SALES (DIPERBARUI DENGAN RANKING & FILTER STATUS)
+        // 6. LOGIKA SALES
         elseif ($user->role === 'sales') {
             $now = now();
-
-            // A. Hitung Penjualan Hari Ini (Exclude Rejected)
-            $penjualanHariIni = Penjualan::where('user_id', $user->id)
-                ->whereDate('created_at', $now->today())
-                ->where('status_audit', '!=', 'Rejected') 
-                ->count();
-
-            // B. Hitung Omset Hari Ini
-            $omsetHariIni = Penjualan::where('user_id', $user->id)
-                ->whereDate('created_at', $now->today())
-                ->where('status_audit', '!=', 'Rejected')
-                ->sum('harga_jual_real');
-
-            // C. Hitung Capaian Bulan Ini
-            $capaianBulan = Penjualan::where('user_id', $user->id)
-                ->whereMonth('created_at', $now->month)
-                ->whereYear('created_at', $now->year)
-                ->where('status_audit', '!=', 'Rejected')
-                ->count();
-
-            // D. Target Bulanan
+            $penjualanHariIni = Penjualan::where('user_id', $user->id)->whereDate('created_at', $now->today())->where('status_audit', '!=', 'Rejected')->count();
+            $omsetHariIni = Penjualan::where('user_id', $user->id)->whereDate('created_at', $now->today())->where('status_audit', '!=', 'Rejected')->sum('harga_jual_real');
+            $capaianBulan = Penjualan::where('user_id', $user->id)->whereMonth('created_at', $now->month)->whereYear('created_at', $now->year)->where('status_audit', '!=', 'Rejected')->count();
             $targetBulan = 100; 
-
-            // E. Hitung Estimasi Insentif (1% dari omset bulanan valid)
-            $totalOmsetBulan = Penjualan::where('user_id', $user->id)
-                ->whereMonth('created_at', $now->month)
-                ->whereYear('created_at', $now->year)
-                ->where('status_audit', '!=', 'Rejected')
-                ->sum('harga_jual_real');
-            
+            $totalOmsetBulan = Penjualan::where('user_id', $user->id)->whereMonth('created_at', $now->month)->whereYear('created_at', $now->year)->where('status_audit', '!=', 'Rejected')->sum('harga_jual_real');
             $insentifEstimasi = $totalOmsetBulan * 0.01; 
 
-            // F. HITUNG RANKING SALES OTOMATIS
             $leaderboard = Penjualan::query()
                 ->select('user_id', DB::raw('SUM(harga_jual_real) as total_omset'))
                 ->where('cabang_id', $user->cabang_id)
@@ -199,33 +169,18 @@ class Dashboard extends Component
                 ->orderByDesc('total_omset')
                 ->get();
 
-            $my_rank = 0; // Default jika belum ada penjualan
-            $position = 1;
-            
+            $my_rank = 0; $position = 1;
             foreach($leaderboard as $entry) {
-                if($entry->user_id == $user->id) {
-                    $my_rank = $position;
-                    break;
-                }
+                if($entry->user_id == $user->id) { $my_rank = $position; break; }
                 $position++;
             }
 
-            // G. Hitung Total Sales Aktif di Cabang Ini
-            $total_sales_people = User::where('cabang_id', $user->cabang_id)
-                                    ->where('role', 'sales')
-                                    ->count();
-
-            // H. Ambil 5 Transaksi Terakhir
-            $recentSalesRaw = Penjualan::where('user_id', $user->id)
-                ->latest()
-                ->take(5)
-                ->get();
-
+            $total_sales_people = User::where('cabang_id', $user->cabang_id)->where('role', 'sales')->count();
+            $recentSalesRaw = Penjualan::where('user_id', $user->id)->latest()->take(5)->get();
             $recentSales = $recentSalesRaw->map(function($sale) {
                 $statusLabel = 'Proses';
                 if ($sale->status_audit == 'Approved') $statusLabel = 'Lunas';
                 if ($sale->status_audit == 'Rejected') $statusLabel = 'Ditolak';
-
                 return [
                     'customer' => $sale->nama_customer,
                     'unit' => $sale->nama_produk,
@@ -244,7 +199,6 @@ class Dashboard extends Component
                 'capaian_bulan' => $capaianBulan, 
                 'insentif_estimasi' => $insentifEstimasi,
                 'recent_sales' => $recentSales,
-                // Variabel Ranking Baru
                 'my_rank' => $my_rank,
                 'total_sales_people' => $total_sales_people,
             ];
@@ -252,7 +206,82 @@ class Dashboard extends Component
             return view('livewire.dashboards.sales', $viewData);
         }
 
-        // 7. FALLBACK
+        // ============================================
+        // 7. LOGIKA BARU: TOKO OFFLINE
+        // ============================================
+        elseif ($user->role === 'toko_offline') {
+            $cabangId = $user->cabang_id;
+            
+            $trxToday = Penjualan::where('cabang_id', $cabangId)->whereDate('created_at', today())->count();
+            $omsetToday = Penjualan::where('cabang_id', $cabangId)->whereDate('created_at', today())->sum('harga_jual_real');
+            
+            $stokReady = Stok::where('cabang_id', $cabangId)->where('jumlah', '>', 0)->count();
+
+            $lastTrxRaw = Penjualan::with('user')->where('cabang_id', $cabangId)->latest()->take(5)->get();
+            $lastTrx = $lastTrxRaw->map(function($sale) {
+                return [
+                    'invoice' => '#TRX-' . $sale->id,
+                    'kasir' => $sale->user->nama_lengkap ?? '-',
+                    'customer' => $sale->nama_customer,
+                    'total' => number_format($sale->harga_jual_real, 0, ',', '.'),
+                    'time' => $sale->created_at->format('H:i'),
+                    'method' => 'CASH/QRIS' 
+                ];
+            });
+
+            $viewData = [
+                'mode' => 'toko_offline',
+                'cabang_name' => $user->cabang->nama_cabang ?? 'Unknown Store',
+                'trx_today' => $trxToday,
+                'omset_today' => $omsetToday,
+                'stok_ready' => $stokReady,
+                'last_transactions' => $lastTrx
+            ];
+            return view('livewire.dashboards.toko-offline', $viewData);
+        }
+
+        // ============================================
+        // 8. LOGIKA BARU: TOKO ONLINE
+        // ============================================
+        elseif ($user->role === 'toko_online') {
+            $cabangId = $user->cabang_id;
+
+            $pendingOrders = Penjualan::where('cabang_id', $cabangId)->where('status_audit', 'Pending')->count();
+            
+            $shippedToday = Penjualan::where('cabang_id', $cabangId)
+                ->where('status_audit', 'Approved')
+                ->whereDate('updated_at', today())
+                ->count();
+
+            $omsetMonth = Penjualan::where('cabang_id', $cabangId)
+                ->whereMonth('created_at', now()->month)
+                ->sum('harga_jual_real');
+
+            $recentOrdersRaw = Penjualan::where('cabang_id', $cabangId)->latest()->take(5)->get();
+            $recentOrders = $recentOrdersRaw->map(function($sale) {
+                return [
+                    'order_id' => 'ORD-' . $sale->id,
+                    'customer' => $sale->nama_customer,
+                    'platform' => 'WhatsApp', 
+                    'status' => $sale->status_audit == 'Approved' ? 'Dikirim' : 'Perlu Proses',
+                    'courier' => 'J&T Express', 
+                    'time' => $sale->created_at->diffForHumans()
+                ];
+            });
+
+            $viewData = [
+                'mode' => 'toko_online',
+                'store_name' => $user->cabang->nama_cabang ?? 'PStore Online',
+                'pending_orders' => $pendingOrders,
+                'shipped_today' => $shippedToday,
+                'omset_month' => $omsetMonth,
+                'recent_orders' => $recentOrders,
+                'chat_response_rate' => 98 
+            ];
+            return view('livewire.dashboards.toko-online', $viewData);
+        }
+
+        // 9. FALLBACK
         return view('livewire.dashboards.general-fallback', [
             'role_name' => str_replace('_', ' ', strtoupper($user->role)),
             'mode' => 'general'

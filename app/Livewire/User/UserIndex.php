@@ -31,7 +31,8 @@ class UserIndex extends Component
     public $distributor_id, $cabang_id, $gudang_id; 
 
     // Logic Penempatan Kerja untuk Inventory Staff
-    public $placement_type = ''; // Values: 'distributor' atau 'gudang'
+    // Values: 'distributor', 'gudang', 'toko_offline', 'toko_online'
+    public $placement_type = ''; 
 
     // Khusus Audit: Multi Cabang Selection
     public $selected_branches = []; 
@@ -54,16 +55,18 @@ class UserIndex extends Component
             $this->placement_type = '';
             $this->gudang_id = null;
             $this->distributor_id = null;
+            // Jangan reset cabang_id dulu karena role lain butuh cabang_id
         }
         
         // Reset ID jika pindah ke role operasional cabang biasa
-        if (in_array($value, ['adminproduk', 'analis', 'leader', 'sales', 'security'])) {
+        // Note: toko_offline dan toko_online butuh cabang_id
+        if (in_array($value, ['adminproduk', 'analis', 'leader', 'sales', 'security', 'toko_offline', 'toko_online'])) {
             $this->distributor_id = null;
             $this->gudang_id = null;
         }
     }
 
-    // Logic Reset Dropdown saat Radio Button Berubah
+    // Logic Reset Dropdown saat Radio Button Inventory Berubah
     public function updatedPlacementType()
     {
         $this->distributor_id = null;
@@ -160,18 +163,23 @@ class UserIndex extends Component
             'email'        => ['required', 'email', Rule::unique('users')->ignore($this->userId)],
         ];
 
-        // 2. Logic Validasi Inventory Staff
+        // 2. Logic Validasi Inventory Staff (UPDATE: Tambah Toko Offline/Online)
         if ($this->role === 'inventory_staff') {
-            $rules['placement_type'] = 'required|in:distributor,gudang';
+            $rules['placement_type'] = 'required|in:distributor,gudang,toko_offline,toko_online';
             
             if ($this->placement_type === 'distributor') {
                 $rules['distributor_id'] = 'required';
-            } else {
+            } 
+            elseif ($this->placement_type === 'gudang') {
                 $rules['gudang_id'] = 'required';
+            } 
+            // Jika ditempatkan di Toko Offline/Online, butuh Cabang ID
+            elseif (in_array($this->placement_type, ['toko_offline', 'toko_online'])) {
+                $rules['cabang_id'] = 'required';
             }
         }
-        // Validasi Role Lain (Operasional Cabang)
-        elseif (in_array($this->role, ['adminproduk', 'analis', 'leader', 'sales', 'security'])) {
+        // Validasi Role Lain (Operasional Cabang + Toko Offline/Online Role)
+        elseif (in_array($this->role, ['adminproduk', 'analis', 'leader', 'sales', 'security', 'toko_offline', 'toko_online'])) {
             $rules['cabang_id'] = 'required';
         }
         // Validasi Audit Superadmin
@@ -217,20 +225,24 @@ class UserIndex extends Component
         $data['cabang_id'] = null;
         $data['gudang_id'] = null;
 
-        // Logic Assignment ID (FIXED)
+        // Logic Assignment ID
         if ($this->role === 'inventory_staff') {
             if ($this->placement_type === 'distributor') {
                 $data['distributor_id'] = $this->distributor_id;
-            } else {
-                // INI YANG SEBELUMNYA GAGAL KARENA MODEL TIDAK FILLABLE
+            } 
+            elseif ($this->placement_type === 'gudang') {
                 $data['gudang_id'] = $this->gudang_id; 
+            }
+            // Jika inventory staff ditaruh di toko/cabang
+            elseif (in_array($this->placement_type, ['toko_offline', 'toko_online'])) {
+                $data['cabang_id'] = $this->cabang_id;
             }
         }
         elseif (in_array($this->role, ['superadmin', 'audit'])) {
             // Role global/multi-cabang tidak simpan ID spesifik disini
         }
         else {
-            // Role operasional cabang
+            // Role operasional cabang (Sales, Leader, Toko Offline, Toko Online)
             $data['cabang_id'] = $this->cabang_id;
         }
 
@@ -299,6 +311,10 @@ class UserIndex extends Component
                 $this->placement_type = 'distributor';
             } elseif ($user->gudang_id) {
                 $this->placement_type = 'gudang';
+            } elseif ($user->cabang_id) {
+                // Asumsi default jika ada di cabang, kita set ke toko_offline (karena di DB tidak ada pembeda offline/online khusus inventory)
+                // User bisa ganti manual nanti di UI
+                $this->placement_type = 'toko_offline';
             }
         }
 
