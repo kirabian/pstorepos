@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB; // <--- PENTING: Tambahan untuk fungsi DB::raw
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\User;
@@ -11,7 +12,7 @@ use App\Models\Stok;
 use App\Models\Cabang;
 use App\Models\Distributor;
 use App\Models\Gudang;
-use App\Models\Penjualan; // <--- PASTIKAN MODEL INI DI-IMPORT
+use App\Models\Penjualan;
 
 #[Layout('layouts.master')]
 #[Title('Dashboard Sistem')]
@@ -152,52 +153,82 @@ class Dashboard extends Component
             return view('livewire.dashboards.owner-distributor', $viewData);
         }
 
-        // 6. SALES (FIXED: MENGGUNAKAN DATA REAL DATABASE)
+        // 6. LOGIKA SALES (DIPERBARUI DENGAN RANKING & FILTER STATUS)
         elseif ($user->role === 'sales') {
-            
-            // Hitung Penjualan Hari Ini (Milik Sales Ini Saja)
+            $now = now();
+
+            // A. Hitung Penjualan Hari Ini (Exclude Rejected)
             $penjualanHariIni = Penjualan::where('user_id', $user->id)
-                ->whereDate('created_at', today())
+                ->whereDate('created_at', $now->today())
+                ->where('status_audit', '!=', 'Rejected') 
                 ->count();
 
-            // Hitung Omset Hari Ini
+            // B. Hitung Omset Hari Ini
             $omsetHariIni = Penjualan::where('user_id', $user->id)
-                ->whereDate('created_at', today())
+                ->whereDate('created_at', $now->today())
+                ->where('status_audit', '!=', 'Rejected')
                 ->sum('harga_jual_real');
 
-            // Hitung Capaian Bulan Ini
+            // C. Hitung Capaian Bulan Ini
             $capaianBulan = Penjualan::where('user_id', $user->id)
-                ->whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year)
+                ->whereMonth('created_at', $now->month)
+                ->whereYear('created_at', $now->year)
+                ->where('status_audit', '!=', 'Rejected')
                 ->count();
 
-            // Target Bulanan (Bisa dibuat dinamis nanti, sementara hardcode 100)
+            // D. Target Bulanan
             $targetBulan = 100; 
 
-            // Hitung Estimasi Insentif (Misal 1% dari omset bulanan)
+            // E. Hitung Estimasi Insentif (1% dari omset bulanan valid)
             $totalOmsetBulan = Penjualan::where('user_id', $user->id)
-                ->whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year)
+                ->whereMonth('created_at', $now->month)
+                ->whereYear('created_at', $now->year)
+                ->where('status_audit', '!=', 'Rejected')
                 ->sum('harga_jual_real');
             
-            $insentifEstimasi = $totalOmsetBulan * 0.01; // 1 Persen
+            $insentifEstimasi = $totalOmsetBulan * 0.01; 
 
-            // Ambil 5 Transaksi Terakhir
+            // F. HITUNG RANKING SALES OTOMATIS
+            $leaderboard = Penjualan::query()
+                ->select('user_id', DB::raw('SUM(harga_jual_real) as total_omset'))
+                ->where('cabang_id', $user->cabang_id)
+                ->whereMonth('created_at', $now->month)
+                ->whereYear('created_at', $now->year)
+                ->where('status_audit', '!=', 'Rejected')
+                ->groupBy('user_id')
+                ->orderByDesc('total_omset')
+                ->get();
+
+            $my_rank = 0; // Default jika belum ada penjualan
+            $position = 1;
+            
+            foreach($leaderboard as $entry) {
+                if($entry->user_id == $user->id) {
+                    $my_rank = $position;
+                    break;
+                }
+                $position++;
+            }
+
+            // G. Hitung Total Sales Aktif di Cabang Ini
+            $total_sales_people = User::where('cabang_id', $user->cabang_id)
+                                    ->where('role', 'sales')
+                                    ->count();
+
+            // H. Ambil 5 Transaksi Terakhir
             $recentSalesRaw = Penjualan::where('user_id', $user->id)
                 ->latest()
                 ->take(5)
                 ->get();
 
-            // Format Data untuk View
             $recentSales = $recentSalesRaw->map(function($sale) {
-                // Tentukan Status berdasarkan Audit
-                $statusLabel = 'Proses'; // Default Pending
+                $statusLabel = 'Proses';
                 if ($sale->status_audit == 'Approved') $statusLabel = 'Lunas';
                 if ($sale->status_audit == 'Rejected') $statusLabel = 'Ditolak';
 
                 return [
                     'customer' => $sale->nama_customer,
-                    'unit' => $sale->nama_produk, // Mengambil dari kolom nama_produk di tabel penjualans
+                    'unit' => $sale->nama_produk,
                     'harga' => 'Rp ' . number_format($sale->harga_jual_real, 0, ',', '.'),
                     'status' => $statusLabel,
                     'time' => $sale->created_at->format('H:i'),
@@ -212,7 +243,10 @@ class Dashboard extends Component
                 'target_bulan' => $targetBulan, 
                 'capaian_bulan' => $capaianBulan, 
                 'insentif_estimasi' => $insentifEstimasi,
-                'recent_sales' => $recentSales // Data Real
+                'recent_sales' => $recentSales,
+                // Variabel Ranking Baru
+                'my_rank' => $my_rank,
+                'total_sales_people' => $total_sales_people,
             ];
             
             return view('livewire.dashboards.sales', $viewData);
