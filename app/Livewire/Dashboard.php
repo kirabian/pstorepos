@@ -35,7 +35,7 @@ class Dashboard extends Component
                 'active_users' => User::where('is_active', 1)->count(),
                 'mode' => 'superadmin'
             ];
-            return view('livewire.dashboards.superadmin', $viewData);
+            return view('livewire.dashboards.superadmin', $viewData)->title('Dashboard Superadmin');
         }
 
         // 2. ANALIS
@@ -62,7 +62,7 @@ class Dashboard extends Component
                 'sim_projected_profit' => $sim_projected_profit,
                 'sim_growth_val' => $sim_projected_omset - $totalOmset,
             ];
-            return view('livewire.dashboards.analis', $viewData);
+            return view('livewire.dashboards.analis', $viewData)->title('Dashboard Analyst');
         }
 
         // 3. LEADER
@@ -82,24 +82,25 @@ class Dashboard extends Component
                 'top_sales' => $topSales ? $topSales->user->nama_lengkap : '-',
                 'staff_list' => User::where('cabang_id', $user->cabang_id)->where('role', '!=', 'leader')->get(),
             ];
-            return view('livewire.dashboards.leader', $viewData);
+            return view('livewire.dashboards.leader', $viewData)->title('Dashboard Leader');
         }
 
-        // 4. INVENTORY STAFF (Gudang/Distributor)
+        // 4. INVENTORY STAFF
         elseif ($user->role === 'inventory_staff') {
             if ($user->distributor_id) {
                 $viewData = ['mode' => 'distributor', 'location_name' => $user->distributor->nama_distributor, 'stats' => [['label' => 'Masuk', 'value' => 150, 'trend' => '+12%', 'color' => 'primary', 'icon' => 'fa-box-open'], ['label' => 'Keluar', 'value' => 80, 'trend' => '-5%', 'color' => 'success', 'icon' => 'fa-truck-loading']]];
-                return view('livewire.dashboards.inventory-distributor', $viewData); 
-            } elseif ($user->gudang_id) {
+                return view('livewire.dashboards.inventory-distributor', $viewData)->title('Gudang Distributor'); 
+            } 
+            elseif ($user->gudang_id) {
                 $viewData = ['mode' => 'gudang', 'location_name' => $user->gudang->nama_gudang, 'stats' => [['label' => 'Total SKU', 'value' => '4,500', 'trend' => 'Stabil', 'color' => 'info', 'icon' => 'fa-tags'], ['label' => 'Stock Low', 'value' => 25, 'trend' => 'Alert', 'color' => 'warning', 'icon' => 'fa-exclamation-triangle']]];
-                return view('livewire.dashboards.inventory-gudang', $viewData);
+                return view('livewire.dashboards.inventory-gudang', $viewData)->title('Gudang Pusat');
             }
         }
 
         // 5. DISTRIBUTOR OWNER
         elseif ($user->role === 'distributor') {
             $viewData = ['nama_distributor' => $user->distributor->nama_distributor ?? 'Unit Distributor', 'omset_bulan_ini' => 'Rp 2.500.000.000', 'cabang_terlayan' => 15, 'mode' => 'owner_distributor'];
-            return view('livewire.dashboards.owner-distributor', $viewData);
+            return view('livewire.dashboards.owner-distributor', $viewData)->title('Dashboard Owner');
         }
 
         // 6. SALES
@@ -115,10 +116,10 @@ class Dashboard extends Component
             $recentSales = Penjualan::where('user_id', $user->id)->latest()->take(5)->get()->map(function($sale) { return ['customer' => $sale->nama_customer, 'unit' => $sale->nama_produk, 'harga' => 'Rp ' . number_format($sale->harga_jual_real, 0, ',', '.'), 'status' => $sale->status_audit == 'Approved' ? 'Lunas' : 'Proses', 'time' => $sale->created_at->format('H:i')]; });
 
             $viewData = ['mode' => 'sales', 'cabang' => $user->cabang->nama_cabang ?? 'PStore Pusat', 'penjualan_hari_ini' => $penjualanHariIni, 'omset_hari_ini' => $omsetHariIni, 'target_bulan' => 100, 'capaian_bulan' => $capaianBulan, 'insentif_estimasi' => 0, 'recent_sales' => $recentSales, 'my_rank' => $my_rank, 'total_sales_people' => 0];
-            return view('livewire.dashboards.sales', $viewData);
+            return view('livewire.dashboards.sales', $viewData)->title('Dashboard Sales');
         }
 
-        // 7. TOKO OFFLINE
+        // 7. TOKO OFFLINE (Kasir)
         elseif ($user->role === 'toko_offline') {
             $cabangId = $user->cabang_id;
             $trxToday = Penjualan::where('cabang_id', $cabangId)->whereDate('created_at', today())->count();
@@ -127,10 +128,12 @@ class Dashboard extends Component
             $lastTrx = Penjualan::with('user')->where('cabang_id', $cabangId)->latest()->take(5)->get()->map(function($sale) { return ['invoice' => '#TRX-' . $sale->id, 'kasir' => $sale->user->nama_lengkap ?? '-', 'customer' => $sale->nama_customer, 'total' => number_format($sale->harga_jual_real, 0, ',', '.'), 'time' => $sale->created_at->format('H:i'), 'method' => 'CASH/QRIS']; });
 
             $viewData = ['mode' => 'toko_offline', 'cabang_name' => $user->cabang->nama_cabang ?? 'Unknown Store', 'trx_today' => $trxToday, 'omset_today' => $omsetToday, 'stok_ready' => $stokReady, 'last_transactions' => $lastTrx];
-            return view('livewire.dashboards.toko-offline', $viewData);
+            
+            // JUDUL DISINI
+            return view('livewire.dashboards.toko-offline', $viewData)->title('POS Kasir - ' . ($user->cabang->nama_cabang ?? ''));
         }
 
-        // 8. TOKO ONLINE
+        // 8. TOKO ONLINE (Admin)
         elseif ($user->role === 'toko_online') {
             $cabangId = $user->cabang_id;
             $pendingOrders = Penjualan::where('cabang_id', $cabangId)->where('status_audit', 'Pending')->count();
@@ -139,7 +142,9 @@ class Dashboard extends Component
             $recentOrders = Penjualan::where('cabang_id', $cabangId)->latest()->take(5)->get()->map(function($sale) { return ['order_id' => 'ORD-' . $sale->id, 'customer' => $sale->nama_customer, 'platform' => 'WhatsApp', 'status' => $sale->status_audit == 'Approved' ? 'Dikirim' : 'Perlu Proses', 'courier' => 'J&T Express', 'time' => $sale->created_at->diffForHumans()]; });
 
             $viewData = ['mode' => 'toko_online', 'store_name' => $user->cabang->nama_cabang ?? 'PStore Online', 'pending_orders' => $pendingOrders, 'shipped_today' => $shippedToday, 'omset_month' => $omsetMonth, 'recent_orders' => $recentOrders, 'chat_response_rate' => 98];
-            return view('livewire.dashboards.toko-online', $viewData);
+            
+            // JUDUL DISINI
+            return view('livewire.dashboards.toko-online', $viewData)->title('Admin Online - ' . ($user->cabang->nama_cabang ?? ''));
         }
 
         return view('livewire.dashboards.general-fallback', ['role_name' => str_replace('_', ' ', strtoupper($user->role)), 'mode' => 'general']);
